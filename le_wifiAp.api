@@ -1,0 +1,339 @@
+//--------------------------------------------------------------------------------------------------
+/**
+ * @page c_le_wifiAp Wifi Access Point Service
+ *
+ * @ref le_wifiAp_interface.h "API Reference"
+ *
+ * <HR>
+ *
+ * This Wifi Service API provides Wifi Access Point setup.
+ * Please note that if there is only one wifi hardware the Wifi Access Point
+ * cannot be used at the same time as the Wifi Client service.
+ *
+ * @section le_wifi_binding IPC interfaces binding
+ *
+ *
+ * Here's a code sample binding to Wifi service:
+ * @verbatim
+   bindings:
+   {
+      clientExe.clientComponent.le_wifiAp -> wifiService.le_wifiAp
+   }
+   @endverbatim
+ *
+ *
+  *
+ * @section le_wifiAp_connect_to_ap Setting parameters for the Access Point.
+ * Note that these parameters must be set before the access point is started.
+ * See each function for it's default value.
+ *
+ * To set the SSID for the Access Point use the following function:
+ * - le_wifiAp_SetSsid()
+ *
+ * To set the pass phrase prior for the Access Point use the function:
+ * Also see le_wifiAp_SetPreSharedKey().
+ * - le_wifiAp_SetPassPhrase()
+ *
+ * Instead of setting the pass phrase, the Pre Shared Key (PSK), can be set explicitly.
+ * To set the Pre Shared Key prior for the Access Point start use the function:
+ * - le_wifiAp_SetPreSharedKey()
+ *
+ * Sets the security protocol to use.
+ * - le_wifiAp_SetSecurityProtocol()
+ *
+ * Sets is the Access Point should show up in network scans or not.
+ * - le_wifiAp_SetDiscoverable()
+ *
+ * Sets which channel to use.
+ * - le_wifiAp_SetChannel()
+ *
+ *
+ * @code
+ *
+ * static le_result_t MySetAccessPointCredentials
+ * (
+ *     void
+ * )
+ * {
+ *     le_result_t result = le_wifiAp_SetPassPhrase ( "Secret1" );
+ *
+ *     if (result == LE_OK)
+ *     {
+ *         result = le_wifiAp_SetSecurityProtocol ( LE_WIFIAPeht_SECURITY_WPA2 );
+ *     }
+ *
+ *     if (result == LE_OK)
+ *     {
+ *         result = le_wifiAp_SetDiscoverable ( true );
+ *     }
+ *
+ *     if (result == LE_OK)
+ *     {
+ *          LE_INFO("Successfully Set Credentials.");
+ *     }
+ *     else
+ *     {
+ *          LE_ERROR("ERROR setting credentials.");
+ *     }
+ *     return result;
+ * }
+ *
+ * @endcode
+ * @section le_wifiAp_Start Starting the Wifi Access Point
+ *
+ * The Wifi Access Point is started with the function le_wifiAp_Start(). Unless values have been changed, default values will be used:
+ * - le_wifiAp_Start():
+ *
+ * To subscribe to wifi events le_wifiAp_AddEventHandler() is to be called.
+ * - le_wifiAp_AddEventHandler()
+ *
+ * @code
+ *
+ * static void EventHandler
+ * (
+ *     le_wifiAp_Event_t accessPointEvent,
+ *     void *contextPtr
+ * )
+ * {
+ *     switch( accessPointEvent )
+ *     {
+ *          case LE_WIFIAP_EVENT_CLIENT_CONNECTED:
+ *          {
+ *              LE_INFO("Client connected to Wifi Access Point.");
+ *          }
+ *          break;
+ *          case LE_WIFIAP_EVENT_CLIENT_DISCONNECTED:
+ *          {
+ *              LE_INFO("Client disconnected from Wifi Access Point.");
+ *          }
+ *          break;
+ *     }
+ * }
+ *
+ * le_wifiAp_EventHandler WifiEventHandlerRef = NULL;
+ *
+ * static void MyInit
+ * (
+ *     void
+ * )
+ * {
+ *     le_result_t result;
+ *     MySetAccessPointsCredentials();
+ *     result = le_wifiAp_Start();
+ *
+ *     if ( LE_OK == result )
+ *     {
+ *         LE_INFO("Wifi Access Point started.");
+ *         WifiEventHandlerRef = le_wifiAp_AddEventHandler( EventHandler, NULL );
+ *     }
+ *     else if ( LE_BUSY == result )
+ *     {
+ *         LE_INFO("ERROR: Wifi Access Point already started.");
+ *     }
+ *     else
+ *     {
+ *         LE_INFO("ERROR: Wifi Access Point not started.");
+ *     }
+ *
+ * }
+ *
+ * @endcode
+
+ *
+ * <HR>
+ *
+ * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+ */
+//--------------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * @file le_wifiAp_interface.h
+ *
+ * Legato @ref c_le_wifiAp include file.
+ *
+ * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+ */
+//--------------------------------------------------------------------------------------------------
+
+USETYPES le_wifiDefs.api;
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Wifi Access Point Events.
+ */
+//--------------------------------------------------------------------------------------------------
+ENUM Event
+{
+    EVENT_CLIENT_CONNECTED,    ///< Client connected to Wifi Access Point.
+    EVENT_CLIENT_DISCONNECTED, ///< Client disconnected from Wifi Access Point.
+};
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Wifi Access Point Security levels.
+ */
+//--------------------------------------------------------------------------------------------------
+ENUM SecurityProtocol
+{
+    SECURITY_NONE,   ///< Wifi Access Point is open and has no password.
+    SECURITY_WPA2    ///< Wifi Access Point has WPA2 activated.
+};
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * These events provide information on Wifi Access Point
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+EVENT NewEvent
+(
+    handler EventHandler
+);
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Handler for Wifi Access Point changes
+ */
+//--------------------------------------------------------------------------------------------------
+HANDLER EventHandler
+(
+    Event event IN       ///< Handles the wifi events
+);
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function starts the WIFI Access Point.
+ * Note that all settings, if to be used, such as security, username, password must set prior to
+ * starting the Access Point.
+ *
+ * @return LE_FAULT         The function failed.
+ * @return LE_BUSY          If the WIFI device is already started.
+ * @return LE_OK            The function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t Start
+(
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function stops the WIFI Access Point.
+ *
+ * @return LE_FAULT         The function failed.
+ * @return LE_DUPLICATE     If the WIFI device is already stopped.
+ * @return LE_OK            The function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t Stop
+(
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the Service set identification (SSID) of the AccessPoint
+ * Default value is "LEGATO Access Point"
+ * @note that the SSID does not have to be human readable ASCII values, but often has.
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Some parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetSsid
+(
+    uint8 ssid[le_wifiDefs.MAX_SSID_BYTES] IN ///< The SSID to set as a octet array.
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the Security protocol to use.
+ * Default value is SECURITY_WPA2.
+ * @note that the SSID does not have to be human readable ASCII values, but often has.
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Some parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetSecurityProtocol
+(
+    SecurityProtocol securityProtocol IN ///< The security protocol to use.
+);
+
+
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the passphrase used to generate the PSK.
+ * Default value is "ChangeThisPassword".
+ *
+ * @note the difference between le_wifiAp_SetPreSharedKey() and this function
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetPassPhrase
+(
+    string passPhrase[le_wifiDefs.MAX_PASSPHRASE_BYTES] IN ///< pass-phrase for PSK
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the Pre Shared Key, PSK.
+ * There is no default value, since le_wifiAp_SetPassPhrase is used as default.
+ * @note the difference between le_wifiAp_SetPassPhrase() and this function
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetPreSharedKey
+(
+    string preSharedKey[le_wifiDefs.MAX_PSK_BYTES] IN ///< PSK. Note the difference between PSK and Pass Phrase.
+);
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set if the Access Point should announce it's presence.
+ * Default value is TRUE.
+ * If the value is set to FALSE, the Access Point will be hidden.
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetDiscoverable
+(
+    bool discoverable IN ///< If TRUE the Acces Point annonce will it's SSID, else it's hidden.
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set which Wifi Channel to use.
+ * Default value is 1.
+ * Some legal restrictions for values 12 - 14 might apply for your region.
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetChannel
+(
+    int8 channelNumber IN ///< the channel number must be between 1 and 14.
+);

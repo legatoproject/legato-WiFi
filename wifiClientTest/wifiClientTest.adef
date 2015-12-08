@@ -1,0 +1,24 @@
+executables:
+{
+    wifiClientTest = ( wifiClientTestComponent )
+}
+
+processes:
+{
+    envVars:
+    {
+        LE_LOG_LEVEL = DEBUG
+    }
+
+    run:
+    {
+        (wifiClientTest)
+    }
+}
+
+start: manual
+
+bindings:
+{
+    wifiClientTest.wifiClientTestComponent.le_wifiClient -> wifiService.le_wifiClient
+}

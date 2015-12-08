@@ -1,0 +1,35 @@
+sandboxed: false
+
+executables:
+{
+    wifiService = ( $MANGOH_ROOT_WIFI/wifiService/wifiClient )
+}
+
+start: auto
+
+processes:
+{
+    run:
+    {
+        (wifiService)
+    }
+
+    faultAction: restart
+}
+
+bindings:
+{
+}
+
+requires:
+{
+    configTree: { [r] system }
+}
+
+provides:
+{
+    api:
+    {
+        wifiService.wifiClient.le_wifiClient
+    }
+}

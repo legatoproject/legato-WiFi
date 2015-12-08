@@ -1,0 +1,15 @@
+provides:
+{
+    api:
+    {
+        le_wifiClient.api
+    }
+}
+
+
+
+sources:
+{
+    le_wifiClient.c
+    pa_wifi.c
+}

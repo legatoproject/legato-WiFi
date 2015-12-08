@@ -1,0 +1,12 @@
+sources:
+{
+    wifiClientTest.c
+}
+
+requires:
+{
+    api:
+    {
+        le_wifiClient.api
+    }
+}
