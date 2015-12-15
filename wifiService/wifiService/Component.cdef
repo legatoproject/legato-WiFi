@@ -3,6 +3,7 @@ provides:
     api:
     {
         le_wifiClient.api
+        le_wifiAp.api
     }
 }
 
@@ -10,6 +11,9 @@ provides:
 
 sources:
 {
+    wifiService.c
     le_wifiClient.c
+    le_wifiAp.c
     pa_wifi.c
+    pa_wifi_ap.c
 }

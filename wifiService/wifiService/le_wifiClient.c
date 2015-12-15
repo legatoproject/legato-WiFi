@@ -105,11 +105,9 @@ static void PaEventHandler
     void* contextPtr
 )
 {
-    le_wifiClient_Event_t wifiEvent = event;
+    LE_INFO( WIFIDEBUG "PaEventHandler event: %d ", event );
 
-    LE_INFO( WIFIDEBUG "PaEventHandler event: %d -> %d", event, wifiEvent );
-
-    le_event_Report( NewWifiEventId, (void*)&wifiEvent, sizeof( le_wifiClient_Event_t ) );
+    le_event_Report( NewWifiEventId, (void*)&event, sizeof( le_wifiClient_Event_t ) );
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -926,10 +924,13 @@ le_result_t le_wifiClient_Disconnect
 
 //--------------------------------------------------------------------------------------------------
 /**
- *  Server Init
+ *  Wifi Client COMPONENT Init
  */
 //--------------------------------------------------------------------------------------------------
-COMPONENT_INIT
+void wifiClientComponentInit
+(
+    void
+)
 {
     LE_INFO( WIFIDEBUG "Wifi Client Service is ready" );
 

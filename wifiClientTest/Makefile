@@ -9,7 +9,7 @@ ar86: app.ar86
 wp85: app.wp85
 
 app.%:
-	mkapp wifiClientTest.adef -t $* -v -i $(MANGOH_ROOT_WIFI)/
+	mkapp wifiClientTest.adef -t $* -v -i ../
 
 clean:
 	rm -rf _build_* *.localhost *.ar7 *.wp7 *.ar8 *.wp85

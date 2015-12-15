@@ -239,7 +239,6 @@ FUNCTION le_result_t Stop
  * Default value is "LEGATO Access Point"
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
  */
@@ -255,7 +254,6 @@ FUNCTION le_result_t SetSsid
  * Default value is SECURITY_WPA2.
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
  */
@@ -273,9 +271,8 @@ FUNCTION le_result_t SetSecurityProtocol
  * Set the passphrase used to generate the PSK.
  * Default value is "ChangeThisPassword".
  *
- * @note the difference between le_wifiAp_SetPreSharedKey() and this function
+ * @note the relationship between le_wifiAp_SetPreSharedKey() and this function
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -292,7 +289,6 @@ FUNCTION le_result_t SetPassPhrase
  * There is no default value, since le_wifiAp_SetPassPhrase is used as default.
  * @note the difference between le_wifiAp_SetPassPhrase() and this function
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -310,7 +306,6 @@ FUNCTION le_result_t SetPreSharedKey
  * Default value is TRUE.
  * If the value is set to FALSE, the Access Point will be hidden.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -327,7 +322,6 @@ FUNCTION le_result_t SetDiscoverable
  * Default value is 1.
  * Some legal restrictions for values 12 - 14 might apply for your region.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *

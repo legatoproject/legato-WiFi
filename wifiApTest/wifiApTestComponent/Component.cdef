@@ -1,0 +1,12 @@
+sources:
+{
+    wifiApTest.c
+}
+
+requires:
+{
+    api:
+    {
+        le_wifiAp.api
+    }
+}

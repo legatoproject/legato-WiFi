@@ -2,7 +2,7 @@ sandboxed: false
 
 executables:
 {
-    wifiService = ( $MANGOH_ROOT_WIFI/wifiService/wifiClient )
+    wifiService = ( ../wifiService/wifiService )
 }
 
 start: auto
@@ -30,6 +30,7 @@ provides:
 {
     api:
     {
-        wifiService.wifiClient.le_wifiClient
+        wifiService.wifiService.le_wifiAp
+        wifiService.wifiService.le_wifiClient
     }
 }
