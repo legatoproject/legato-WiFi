@@ -207,6 +207,20 @@ ENUM Event
     EVENT_SCAN_DONE      ///< Wifi Scan result for available Access Points available
 };
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * Wifi Client Security Protocol for connection
+ */
+//--------------------------------------------------------------------------------------------------
+ENUM SecurityProtocol
+{
+    SECURITY_NONE,                      ///< no security.
+    SECURITY_WEP,                       ///< Using WEP.
+    SECURITY_WPA_PSK_PERSONAL,          ///< Using WPA
+    SECURITY_WPA2_PSK_PERSONAL,         ///< Using WPA2
+    SECURITY_WPA_EAP_PEAP0_ENTERPRISE,  ///< Using WPA Enterprise
+    SECURITY_WPA2_EAP_PEAP0_ENTERPRISE  ///< Using WPA2 Enterprise
+};
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -371,6 +385,22 @@ FUNCTION le_result_t SetPreSharedKey
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Set the security protocol for connection
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetSecurityProtocol
+(
+    AccessPoint accessPointRef IN, ///< Wifi Access Point reference.
+    SecurityProtocol securityProtocol IN ///< Security Mode
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
  * WPA-Enterprise requires a username and password to authenticate.
  * This function sets these parameters.
  *
@@ -408,6 +438,7 @@ FUNCTION le_result_t SetWepKey
  * If an AccessPoint is not announcing it's precense, it will not show up in the scan.
  * But if the SSID is known, a connnection can be tried using this create function.
  * First create the AccessPoint, then le_wifiClient_Connect() to connect to it.
+ * Will fail if called while scan is running.
  *
  * @return AccessPoint reference to the current
  */
@@ -423,6 +454,7 @@ FUNCTION AccessPoint Create
  *
  * @note The handle becomes invalid after it has been deleted.
  * @return LE_BAD_PARAMETER accessPointRef was not found.
+ * @return LE_BUSY          Function called during scan.
  * @return LE_OK            Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------

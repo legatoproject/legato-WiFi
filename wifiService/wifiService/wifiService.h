@@ -1,19 +1,21 @@
-#ifndef WIFI_SERVICE_H
-#define WIFI_SERVICE_H
 // -------------------------------------------------------------------------------------------------
 /**
  *
+ *  Handles the component init for both Wifi Client and Access Point.
  *
  *  Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  *
  */
 // -------------------------------------------------------------------------------------------------
+#ifndef WIFI_SERVICE_H
+#define WIFI_SERVICE_H
+
 #include "legato.h"
 
 #include "interfaces.h"
 
-void wifiClientComponentInit( void );
+void le_wifiClient_Init( void );
 
-void wifiApComponentInit( void );
+void WifiApComponentInit( void );
 
 #endif //WIFI_SERVICE

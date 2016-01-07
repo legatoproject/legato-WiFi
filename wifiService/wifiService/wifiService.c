@@ -1,6 +1,6 @@
 // -------------------------------------------------------------------------------------------------
 /**
- *  Legato Wifi Client
+ *  Handles the component init for both Wifi Client and Access Point.
  *
  *  Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  *
@@ -14,8 +14,6 @@
 
 #include "wifiService.h"
 
-#define WIFIDEBUG "WIFI DEBUG:"
-
 //--------------------------------------------------------------------------------------------------
 /**
  *  Server Init
@@ -23,9 +21,9 @@
 //--------------------------------------------------------------------------------------------------
 COMPONENT_INIT
 {
-    LE_INFO( WIFIDEBUG "Wifi Service COMPONENT_INIT");
-    wifiClientComponentInit( );
-    wifiApComponentInit( );
+    LE_DEBUG( "Wifi Service COMPONENT_INIT");
+    le_wifiClient_Init( );
+    WifiApComponentInit( );
 }
 
 

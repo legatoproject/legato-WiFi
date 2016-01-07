@@ -320,7 +320,7 @@ le_result_t le_wifiAp_SetChannel
  *  Wifi Access Point COMPONENT Init
  */
 //--------------------------------------------------------------------------------------------------
-void wifiApComponentInit
+void WifiApComponentInit
 (
     void
 )
