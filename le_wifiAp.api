@@ -25,7 +25,7 @@
   *
  * @section le_wifiAp_connect_to_ap Setting parameters for the Access Point.
  * Note that these parameters must be set before the access point is started.
- * See each function for it's default value.
+ * See each function for its default value.
  *
  * To set the SSID for the Access Point use the following function:
  * - le_wifiAp_SetSsid()
@@ -206,7 +206,7 @@ HANDLER EventHandler
 //--------------------------------------------------------------------------------------------------
 /**
  * This function starts the WIFI Access Point.
- * Note that all settings, if to be used, such as security, username, password must set prior to
+ * @note that all settings, if to be used, such as security, username, password must set prior to
  * starting the Access Point.
  *
  * @return LE_FAULT         The function failed.
@@ -239,6 +239,7 @@ FUNCTION le_result_t Stop
  * Default value is "LEGATO Access Point"
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
+ * @return LE_FAULT         The function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
  */
@@ -254,6 +255,7 @@ FUNCTION le_result_t SetSsid
  * Default value is SECURITY_WPA2.
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
+ * @return LE_FAULT         The function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
  */
@@ -271,8 +273,9 @@ FUNCTION le_result_t SetSecurityProtocol
  * Set the passphrase used to generate the PSK.
  * Default value is "ChangeThisPassword".
  *
- * @note the relationship between le_wifiAp_SetPreSharedKey() and this function
+ * @note If the PSK is to be set directly, please use le_wifiAp_SetPreSharedKey()
  *
+ * @return LE_FAULT         The function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -289,6 +292,7 @@ FUNCTION le_result_t SetPassPhrase
  * There is no default value, since le_wifiAp_SetPassPhrase is used as default.
  * @note the difference between le_wifiAp_SetPassPhrase() and this function
  *
+ * @return LE_FAULT         The function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -302,10 +306,11 @@ FUNCTION le_result_t SetPreSharedKey
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set if the Access Point should announce it's presence.
+ * Set if the Access Point should announce its presence.
  * Default value is TRUE.
  * If the value is set to FALSE, the Access Point will be hidden.
  *
+ * @return LE_FAULT         The function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -313,7 +318,7 @@ FUNCTION le_result_t SetPreSharedKey
 //--------------------------------------------------------------------------------------------------
 FUNCTION le_result_t SetDiscoverable
 (
-    bool discoverable IN ///< If TRUE the Acces Point annonce will it's SSID, else it's hidden.
+    bool discoverable IN ///< If TRUE the Access Point shows up on scans, else it is hidden.
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -322,6 +327,7 @@ FUNCTION le_result_t SetDiscoverable
  * Default value is 1.
  * Some legal restrictions for values 12 - 14 might apply for your region.
  *
+ * @return LE_FAULT         The function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -330,4 +336,19 @@ FUNCTION le_result_t SetDiscoverable
 FUNCTION le_result_t SetChannel
 (
     int8 channelNumber IN ///< the channel number must be between 1 and 14.
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set number of maximally allowed clients to connect to the Access Point at the same time.
+ *
+ * @return LE_FAULT         The function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetMaxNumberOfClients
+(
+    int8 maxNumberOfClient IN ///< the maximum number of clients
 );

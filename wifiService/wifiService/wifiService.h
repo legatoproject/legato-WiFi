@@ -16,6 +16,6 @@
 
 void le_wifiClient_Init( void );
 
-void WifiApComponentInit( void );
+void le_wifiAp_Init( void );
 
 #endif //WIFI_SERVICE

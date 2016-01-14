@@ -23,7 +23,7 @@ COMPONENT_INIT
 {
     LE_DEBUG( "Wifi Service COMPONENT_INIT");
     le_wifiClient_Init( );
-    WifiApComponentInit( );
+    le_wifiAp_Init( );
 }
 
 

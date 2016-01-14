@@ -12,8 +12,6 @@
 
 #include "pa_wifi_ap.h"
 
-#define WIFIDEBUG "WIFI AP DEBUG:"
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -35,7 +33,7 @@ static void PaEventApHandler
 )
 {
 
-    LE_INFO( WIFIDEBUG "PaEventApHandler event: %d", event );
+    LE_DEBUG( "PaEventApHandler event: %d", event );
 
     le_event_Report( NewWifiApEventId, (void*)&event, sizeof( le_wifiAp_Event_t ) );
 }
@@ -60,30 +58,13 @@ static void FirstLayerWifiApEventHandler
 
     if ( NULL != wifiEvent)
     {
-        LE_INFO( WIFIDEBUG "FirstLayerWifiApEventHandler event: %d", *wifiEvent);
+        LE_DEBUG( "FirstLayerWifiApEventHandler event: %d", *wifiEvent );
         clientHandlerFunc( *wifiEvent, le_event_GetContextPtr());
     }
     else
     {
-        LE_ERROR( WIFIDEBUG "FirstLayerWifiApEventHandler event is NULL");
+        LE_ERROR( "FirstLayerWifiApEventHandler event is NULL" );
     }
-}
-
-//--------------------------------------------------------------------------------------------------
-/**
- * Handler function to the close session service to detect if the application crashed.
- *
- */
-//--------------------------------------------------------------------------------------------------
-static void ApCloseSessionEventHandler
-(
-    le_msg_SessionRef_t sessionRef,
-    void*               contextPtr
-)
-{
-    LE_INFO( WIFIDEBUG "ApCloseSessionEventHandler sessionRef %p",
-        sessionRef);
-    //TODO: clean something?
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -102,13 +83,12 @@ le_wifiAp_NewEventHandlerRef_t le_wifiAp_AddNewEventHandler
         ///< [IN]
 )
 {
-    // Note: THIS ONE REGISTERS THE CB function..
-    LE_INFO( WIFIDEBUG "le_wifiAp_AddNewEventHandler");
+    LE_DEBUG( "le_wifiAp_AddNewEventHandler");
     le_event_HandlerRef_t handlerRef;
 
     if( handlerFuncPtr == NULL )
     {
-        LE_KILL_CLIENT("handlerFuncPtr is NULL !");
+        LE_KILL_CLIENT("handlerFuncPtr is NULL !" );
         return NULL;
     }
 
@@ -162,7 +142,6 @@ le_result_t le_wifiAp_Start
  * @return LE_FAULT         The function failed.
  * @return LE_DUPLICATE     If the WIFI device is already stopped.
  * @return LE_OK            The function succeeded.
- *
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiAp_Stop
@@ -271,7 +250,7 @@ le_result_t le_wifiAp_SetPreSharedKey
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set if the Access Point should announce it's presence.
+ * Set if the Access Point should announce its presence.
  * Default value is TRUE.
  * If the value is set to FALSE, the Access Point will be hidden.
  *
@@ -285,7 +264,7 @@ le_result_t le_wifiAp_SetDiscoverable
 (
     bool discoverable
         ///< [IN]
-        ///< If TRUE the Acces Point annonce will it's SSID, else it's hidden.
+        ///< If TRUE the Access Point shows up on scans, else it is hidden.
 )
 {
     return pa_wifiAp_SetDiscoverable( discoverable );
@@ -320,25 +299,43 @@ le_result_t le_wifiAp_SetChannel
  *  Wifi Access Point COMPONENT Init
  */
 //--------------------------------------------------------------------------------------------------
-void WifiApComponentInit
+void le_wifiAp_Init
 (
     void
 )
 {
-    LE_INFO( WIFIDEBUG "Wifi Access Point Service is ready" );
-
+    LE_DEBUG( "Wifi Access Point Service is ready" );
 
     // Create an event Id for new Wifi Events
-    NewWifiApEventId = le_event_CreateId( "WifiApEvent", sizeof( le_wifiAp_Event_t ) );
+    NewWifiApEventId = le_event_CreateId( "WiFiApEventId", sizeof( le_wifiAp_Event_t ) );
 
     // register for events from PA.
     pa_wifiAp_AddEventHandler( PaEventApHandler );
 
+}
 
-    // Add a handler to handle the close
-    le_msg_AddServiceCloseHandler( le_wifiAp_GetServiceRef(),
-                                   ApCloseSessionEventHandler,
-                                   NULL );
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set number of maximally allowed clients to connect to the Access Point at the same time.
+ *
+ * @return LE_FAULT         The function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiAp_SetMaxNumberOfClients
+(
+    int8_t maxNumberOfClient
+        ///< [IN]
+        ///< the maximum number of clients
+)
+{
+    if( 0 == maxNumberOfClient )
+    {
+        return LE_BAD_PARAMETER;
+    }
 
-
+    //TODO: Add when exists in PA interface. return pa_wifiAp_SetMaxNumberOfClients( maxNumberOfClient);
+    return LE_FAULT;
 }

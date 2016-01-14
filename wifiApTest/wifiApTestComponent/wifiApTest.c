@@ -1,5 +1,5 @@
  /**
-  * This module implements a test for GNSS device starting.
+  * This module implements a test for Wifi Access Point
   *
   * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
   *
@@ -13,10 +13,9 @@
 //                                       Test Function
 //--------------------------------------------------------------------------------------------------
 
-#define TEST_SSID     ((const uint8_t *) "GustavNet")
+#define TEST_SSID     ((const uint8_t *) "ExampleSSID")
 #define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID)-1)
-#define TEST_PASSWORD "sten123456789"
-#define WIFIDEBUG     "WIFI TEST DEBUG:"
+#define TEST_PASSWORD "pass phrase"
 
 
 
@@ -44,46 +43,33 @@ static void myMsgHandler
     void* contextPtr
 )
 {
-    LE_INFO( WIFIDEBUG "Wifi Ap event received");
+    LE_INFO( "Wifi Ap event received");
     switch( event )
     {
         case LE_WIFIAP_EVENT_CLIENT_CONNECTED:
         {
             ///< A client connect to AP
-            LE_INFO( WIFIDEBUG "LE_WIFIAP_EVENT_CLIENT_CONNECTED");
+            LE_INFO( "LE_WIFIAP_EVENT_CLIENT_CONNECTED");
         }
         break;
 
         case LE_WIFIAP_EVENT_CLIENT_DISCONNECTED:
         {
             ///< A client connect to AP
-            LE_INFO( WIFIDEBUG "LE_WIFICLIENT_EVENT_DISCONNECTED");
+            LE_INFO( "LE_WIFICLIENT_EVENT_DISCONNECTED");
         }
         break;
 
 
         default:
-            LE_ERROR( WIFIDEBUG "ERROR Unknown event %d", event);
+            LE_ERROR( "ERROR Unknown event %d", event);
         break;
     }
 }
 
-
-
-/*
- * le_sms_RxMessageHandlerRef_t HdlrRef;
- *
- * // Add an handler function to handle message reception
- * HdlrRef=le_sms_AddRxMessageHandler(myMsgHandler);
- *
- * [...]
- *
- * // Remove Handler entry
- * le_sms_RemoveRxMessageHandler(HdlrRef);
-*/
 //--------------------------------------------------------------------------------------------------
 /**
- * Test: GNSS device.
+ * Tests the Wifi Access Point.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -92,26 +78,22 @@ void Testle_wifiAp
     void
 )
 {
-    LE_INFO( WIFIDEBUG "Start Test Testle_wifiClient");
+    LE_INFO( "Start Test Wifi Access Point");
 
     // Add an handler function to handle message reception
     HdlrRef=le_wifiAp_AddNewEventHandler( myMsgHandler, NULL );
 
     LE_ASSERT(HdlrRef != NULL);
 
-    LE_ASSERT(HdlrRef != NULL);
-
-    LE_ASSERT(LE_OK == le_wifiAp_SetSsid( TEST_SSID, TEST_SSID_NBR_BYTES ));
-
     LE_ASSERT(LE_OK == le_wifiAp_SetSsid( TEST_SSID, TEST_SSID_NBR_BYTES ));
 
     if( LE_OK == le_wifiAp_Start() )
     {
-        LE_INFO( WIFIDEBUG "le_wifiClient_Start OK");
+        LE_INFO( "le_wifiAp_Start OK");
     }
     else
     {
-        LE_ERROR(WIFIDEBUG "le_wifiClient_Start ERROR");
+        LE_ERROR( "le_wifiAp_Start ERROR");
     }
 
 }
@@ -127,6 +109,6 @@ void Testle_wifiAp
 COMPONENT_INIT
 {
     // Wifi Init
-    LE_INFO(WIFIDEBUG "======== Wifi Ap Test  ========");
+    LE_INFO( "======== Wifi Ap Test  ========");
     Testle_wifiAp();
 }
