@@ -9,23 +9,25 @@
  */
 // -------------------------------------------------------------------------------------------------
 #include "legato.h"
-
 #include "interfaces.h"
-
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Event Handler for PA Wifi Access Point changes
  *
  * @param event
- *        Handles the PA  wifi Access Point events.
+ *        Handles the PA  wifi events.
+ *        Two events are directly generated from the PA
+ *            LE_WIFIAP_EVENT_CONNECTED,
+ *            LE_WIFIAP_EVENT_DISCONNECTED,
+ * @param contextPtr
  */
 //--------------------------------------------------------------------------------------------------
 typedef void (*pa_wifiAp_NewEventHandlerFunc_t)
 (
-    le_wifiAp_Event_t event
+    le_wifiAp_Event_t event,
+    void* contextPtr
 );
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -36,7 +38,10 @@ typedef void (*pa_wifiAp_NewEventHandlerFunc_t)
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t  pa_wifiAp_AddEventHandler
 (
-    pa_wifiAp_NewEventHandlerFunc_t handlerPtr
+    pa_wifiAp_NewEventHandlerFunc_t handlerPtr,
+        ///< [IN]
+
+    void* contextPtr
         ///< [IN]
 );
 
@@ -44,7 +49,6 @@ LE_SHARED le_result_t  pa_wifiAp_AddEventHandler
 /**
  * This function must be called to initialize the PA WIFI Access Point.
  *
- * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
@@ -57,7 +61,6 @@ LE_SHARED le_result_t pa_wifiAp_Init
 /**
  * This function must be called to release the PA WIFI Module.
  *
- * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
@@ -108,14 +111,12 @@ le_result_t pa_wifiAp_Stop
  * @return LE_OK            Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
-le_result_t le_wifiAp_SetSecurityProtocol
+le_result_t pa_wifiAp_SetSecurityProtocol
 (
     le_wifiAp_SecurityProtocol_t securityProtocol
         ///< [IN]
         ///< The security protocol to use.
 );
-
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -138,24 +139,6 @@ le_result_t pa_wifiAp_SetSsid
         ///< [IN]
 );
 
-
-//--------------------------------------------------------------------------------------------------
-/**
- * Set the Security protocol to use.
- * Default value is SECURITY_WPA2.
- * @note that the SSID does not have to be human readable ASCII values, but often has.
- *
- * @return LE_BAD_PARAMETER Some parameter is invalid.
- * @return LE_OK            Function succeeded.
- */
-//--------------------------------------------------------------------------------------------------
-le_result_t pa_wifiAp_SetSecurityProtocol
-(
-    le_wifiAp_SecurityProtocol_t securityProtocol
-        ///< [IN]
-        ///< The security protocol to use.
-);
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Set the passphrase used to generate the PSK.
@@ -171,11 +154,10 @@ le_result_t pa_wifiAp_SetSecurityProtocol
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetPassPhrase
 (
-    const char* passPhrase
+    const char* passphrase
         ///< [IN]
         ///< pass-phrase for PSK
 );
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -196,7 +178,6 @@ le_result_t pa_wifiAp_SetPreSharedKey
         ///< PSK. Note the difference between PSK and Pass Phrase.
 );
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Set if the Access Point should announce it's presence.
@@ -213,9 +194,8 @@ le_result_t pa_wifiAp_SetDiscoverable
 (
     bool discoverable
         ///< [IN]
-        ///< If TRUE the Acces Point annonce will it's SSID, else it's hidden.
+        ///< If TRUE the Acces Point will annonce it's SSID, else it's hidden.
 );
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -234,5 +214,23 @@ le_result_t pa_wifiAp_SetChannel
     int8_t channelNumber
         ///< [IN]
         ///< the channel number must be between 1 and 14.
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the maximum number of clients allowed to be connected to WiFi Access Point.
+ * Default value is 10.
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t pa_wifiAp_SetMaxNumberClients
+(
+    int maxNumberClients
+        ///< [IN]
+        ///< the maximum number of clients (1-256).
 );
 #endif // PA_WIFI_AP_H

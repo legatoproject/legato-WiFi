@@ -1,4 +1,3 @@
-//TODO: place this file in a good subdirectory.
 // -------------------------------------------------------------------------------------------------
 /**
  *  PA for Wifi Access Point
@@ -7,23 +6,131 @@
  *
  */
 // -------------------------------------------------------------------------------------------------
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include "legato.h"
 
 #include "interfaces.h"
 
 #include "pa_wifi_ap.h"
 #include "stdio.h"
-// string to find trace in logtrace
-#define WIFIDEBUG "PA WIFI AP DEBUG:"
 
+/** Command to init the hardware */
+#define COMMAND_WIFI_HW_START "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_START"
+#define COMMAND_WIFI_HW_STOP "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_STOP" /* not sure that this works */
+#define COMMAND_WIFI_WLAN_UP "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_WLAN_UP"
+#define COMMAND_WIFI_SET_EVENT "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_SET_EVENT"
+#define COMMAND_WIFIAP_HOSTAPD "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFIAP_HOSTAPD"
 
-static pa_wifiAp_NewEventHandlerFunc_t CallBackHandlerFuncPtr = NULL;
+static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol;
 
+static char SavedSsid[LE_WIFIDEFS_MAX_SSID_BYTES];
 
+static bool SavedDiscoverable = true;
+static int8_t SavedChannelNumber = 0;
+static int SavedMaxNumClients = 10;
+
+/** WPA-Personal */
+static char SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_BYTES] = "";
+static char SavedPreSharedKey[LE_WIFIDEFS_MAX_PSK_BYTES] = "";
+
+static void* WifiApPaThreadMain(void* contextPtr);
+static le_thread_Ref_t  WifiApPaThread = NULL;
+static FILE *IwThreadFp = NULL;
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * WifiAp state event ID used to report WifiAp state events to the registered event handlers.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_event_Id_t WifiApPaEvent;
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * The first-layer Wifi Client Event Handler.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+static void FirstLayerWifiApEventHandler
+(
+    void* reportPtr,
+    void* secondLayerHandlerFunc
+)
+{
+    pa_wifiAp_NewEventHandlerFunc_t ApHandlerFunc = secondLayerHandlerFunc;
+
+    le_wifiAp_Event_t  * wifiEvent = ( le_wifiAp_Event_t* ) reportPtr;
+
+    if ( NULL != wifiEvent )
+    {
+        LE_INFO( "FirstLayerWifiApEventHandler event: %d", *wifiEvent );
+        ApHandlerFunc( *wifiEvent, le_event_GetContextPtr() );
+    }
+    else
+    {
+        LE_ERROR( "FirstLayerWifiApEventHandler event is NULL" );
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Wifi Access Point PA Thread
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+static void* WifiApPaThreadMain
+(
+    void* contextPtr
+)
+{
+    char tmpString[] = COMMAND_WIFI_SET_EVENT;
+    char path[1024];
+
+    LE_INFO( "WifiApPaThreadMain: Started!" );
+
+    // Open the command "iw events" for reading.
+    IwThreadFp = popen( tmpString, "r" );
+
+    if ( NULL == IwThreadFp )
+    {
+        LE_ERROR( "WifiApPaThreadMain: Failed to run command:\"%s\" errno:%d %s",
+                        (tmpString),
+                        errno,
+                        strerror( errno ) );
+        return NULL;
+    }
+
+    // Read the output a line at a time - output it.
+    while ( NULL != fgets(path, sizeof(path)-1, IwThreadFp) )
+    {
+        LE_INFO( "PARSING:%s: len:%d", path, strnlen( path,sizeof(path)-1 ) );
+        if ( NULL != strstr( path,"new station" ) )
+        {
+            LE_INFO( "FOUND new station" );
+            // Report event: LE_WIFIAP_EVENT_CONNECTED
+            le_wifiAp_Event_t event = LE_WIFIAP_EVENT_CLIENT_CONNECTED;
+            LE_INFO(  "InternalWifiApStateEvent event: %d ", event );
+            le_event_Report( WifiApPaEvent , (void*)&event, sizeof( le_wifiAp_Event_t ) );
+        }
+        else if ( NULL != strstr( path,"del station" ) )
+        {
+            LE_INFO( "FOUND del station" );
+            // Report event: LE_WIFIAP_EVENT_DISCONNECTED
+            le_wifiAp_Event_t event = LE_WIFIAP_EVENT_CLIENT_DISCONNECTED;
+            LE_INFO( "InternalWifiApStateEvent event: %d ", event );
+            le_event_Report( WifiApPaEvent , (void*)&event, sizeof( le_wifiAp_Event_t ) );
+        }
+    }
+    // Run the event loop
+    le_event_RunLoop();
+    return NULL;
+}
+
+#ifdef SIMU
 // SIMU variable for timers
 static le_timer_Ref_t SimuClientConnectTimer = NULL;
 //static le_timer_Ref_t SimuClientDisconnectTimer = NULL;
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -40,8 +147,6 @@ static void GenerateApEvent
         CallBackHandlerFuncPtr( wifiApEvent );
     }
 }
-
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -67,31 +172,35 @@ static void StartApSimulation( void )
 {
     // once every 10 seconds...
     le_clk_Time_t interval = { 10, 0 };
-    SimuClientConnectTimer = le_timer_Create( "Wifi Simu AP Connect Timer");
+    SimuClientConnectTimer = le_timer_Create( "Wifi Simu AP Connect Timer" );
 
-    LE_INFO( WIFIDEBUG "StartApSimulation timer: %p", SimuClientConnectTimer );
+    LE_INFO( "StartApSimulation timer: %p", SimuClientConnectTimer );
 
-    if( LE_OK != le_timer_SetHandler ( SimuClientConnectTimer, SimuClientConnectTimeCallBack ))
+    if ( LE_OK != le_timer_SetHandler ( SimuClientConnectTimer, SimuClientConnectTimeCallBack ))
     {
-        LE_ERROR( WIFIDEBUG "ERROR: StartApSimulation le_timer_SetHandler failed.");
+        LE_ERROR( "ERROR: StartApSimulation le_timer_SetHandler failed." );
     }
-    if( LE_OK != le_timer_SetInterval( SimuClientConnectTimer, interval ))
+    if ( LE_OK != le_timer_SetInterval( SimuClientConnectTimer, interval ))
     {
-        LE_ERROR( WIFIDEBUG "ERROR: StartApSimulation le_timer_SetInterval failed.");
+        LE_ERROR( "ERROR: StartApSimulation le_timer_SetInterval failed." );
     }
 
-        //repeat 5 times
-    if( LE_OK != le_timer_SetRepeat( SimuClientConnectTimer, 5))
+    //repeat 5 times
+    if ( LE_OK != le_timer_SetRepeat( SimuClientConnectTimer, 5 ) )
     {
-        LE_ERROR( WIFIDEBUG "ERROR: StartApSimulation le_timer_SetInterval failed.");
+        LE_ERROR( "ERROR: StartApSimulation le_timer_SetInterval failed." );
     }
 
     if( LE_OK != le_timer_Start( SimuClientConnectTimer ))
     {
-        LE_ERROR( WIFIDEBUG "ERROR: StartApSimulation le_timer_SetInterval failed.");
+        LE_ERROR( "ERROR: StartApSimulation le_timer_SetInterval failed." );
     }
 }
+#endif
 
+//--------------------------------------------------------------------------------------------------
+// Public declarations
+//--------------------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -101,12 +210,15 @@ static void StartApSimulation( void )
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
-LE_SHARED le_result_t pa_wifiAp_Init
+le_result_t pa_wifiAp_Init
 (
     void
 )
 {
-    // TODO: code me.
+    LE_INFO( "pa_wifiAp_Init() called" );
+    // Create the event for signaling user handlers.
+    WifiApPaEvent = le_event_CreateId( "WifiApPaEvent", sizeof( le_wifiAp_Event_t ) );
+
     return LE_OK;
 }
 
@@ -118,14 +230,14 @@ LE_SHARED le_result_t pa_wifiAp_Init
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
-LE_SHARED le_result_t pa_wifiAp_Release
+le_result_t pa_wifiAp_Release
 (
     void
 )
 {
-    return LE_OK;
+     LE_INFO( "pa_wifiAp_Release() called" );
+     return LE_OK;
 }
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -144,9 +256,182 @@ le_result_t pa_wifiAp_Start
     void
 )
 {
-    // start simulation
-    StartApSimulation();// todo: real code.
-    return LE_OK;
+    le_result_t result = LE_FAULT;
+    char tmpString[256];
+    int16_t systemResult;
+
+    LE_INFO( "pa_wifiAp_Start()" );
+
+    // Create WiFi AP PA Thread
+    WifiApPaThread = le_thread_Create( "WifiApPaThread", WifiApPaThreadMain, NULL );
+    le_thread_SetJoinable( WifiApPaThread );
+    le_thread_Start( WifiApPaThread );
+
+    // Check parameters before start
+    if ( '\0' == SavedSsid[0] )
+    {
+        LE_ERROR( "pa_wifiAp_Start: No valid SSID" );
+        return LE_FAULT;
+    } else {
+        LE_INFO( "pa_wifiAp_Start: SSID=%s", SavedSsid );
+        result = LE_OK;
+    }
+
+    systemResult =  system( COMMAND_WIFI_HW_START );
+    /**
+     * Return value of -1 means that the fork() has failed (see man system).
+     * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
+     * and the wlan0 interface is seen,
+     * 127 if modules not loaded or interface not seen,
+     * 1 if the option passed if unknown (start stop and restart).
+    */
+    if ( 0 == WEXITSTATUS ( systemResult ) )
+    {
+        LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFI_HW_START );
+        result = LE_OK;
+    }
+    else
+    {
+        LE_ERROR( "Wifi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_START, systemResult );
+        result = LE_FAULT;
+    }
+    if ( LE_OK == result )
+    {
+        // COMMAND_WIFI_WLAN_UP
+        systemResult = system( COMMAND_WIFI_WLAN_UP );
+        if ( 0 == WEXITSTATUS( systemResult ) )
+        {
+            LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFI_WLAN_UP );
+            result = LE_OK;
+        }
+        else
+        {
+            LE_ERROR( "Wifi Access Point Command Failed: (%d)" COMMAND_WIFI_WLAN_UP, systemResult );
+            result = LE_FAULT;
+        }
+    }
+
+    // Create /etc/hostapd.conf
+    FILE * configFilePtr = fopen( "/tmp/hostapd.conf", "w" );
+    fwrite( "interface=wlan0\n"\
+            "driver=nl80211\n"\
+            "hw_mode=g\n"\
+            "beacon_int=100\n"\
+            "dtim_period=2\n"\
+            "rts_threshold=2347\n"\
+            "fragm_threshold=2346\n"\
+            "ctrl_interface=/var/run/hostapd\n"\
+            "ctrl_interface_group=0\n",
+            1,
+     strlen("interface=wlan0\n"\
+            "driver=nl80211\n"\
+            "hw_mode=g\n"\
+            "beacon_int=100\n"\
+            "dtim_period=2\n"\
+            "rts_threshold=2347\n"\
+            "fragm_threshold=2346\n"\
+            "ctrl_interface=/var/run/hostapd\n"\
+            "ctrl_interface_group=0\n"),
+     configFilePtr );
+    snprintf( tmpString, sizeof(tmpString), "ssid=%s\nchannel=%d\nmax_num_sta=%d\n",
+        (char *) SavedSsid,
+        SavedChannelNumber,
+        SavedMaxNumClients );
+    fwrite( tmpString, 1, strlen(tmpString), configFilePtr );
+    LE_INFO( "pa_wifiAp_Start hostapd.conf: %s", tmpString );
+    // Security Protocol
+    switch ( SavedSecurityProtocol )
+    {
+        case LE_WIFIAP_SECURITY_NONE:
+            LE_INFO( "pa_wifiAp_Start LE_WIFIAP_SECURITY_NONE" );
+            fwrite( "auth_algs=1\n"\
+                    "eap_server=0\n"\
+                    "eapol_key_index_workaround=0\n"\
+                    "wmm_enabled=1\n"\
+                    "macaddr_acl=0\n",
+                1,
+                strlen("auth_algs=1\n"\
+                    "eap_server=0\n"\
+                    "eapol_key_index_workaround=0\n"\
+                    "wmm_enabled=1\n"\
+                    "macaddr_acl=0\n"), configFilePtr );
+            result = LE_OK;
+            break;
+
+        case LE_WIFIAP_SECURITY_WPA2:
+            LE_INFO( "pa_wifiAp_Start LE_WIFIAP_SECURITY_WPA2" );
+            fwrite( "wpa=2\n"\
+                    "wpa_key_mgmt=WPA-PSK\n"\
+                    "wpa_pairwise=CCMP\n"\
+                    "rsn_pairwise=CCMP\n",
+                1,
+                strlen("wpa=2\n"\
+                    "wpa_key_mgmt=WPA-PSK\n"\
+                    "wpa_pairwise=CCMP\n"\
+                    "rsn_pairwise=CCMP\n"), configFilePtr );
+            if ( '\0' != SavedPassphrase[0] )
+            {
+                snprintf( tmpString, sizeof(tmpString), "wpa_passphrase=%s\n", SavedPassphrase );
+                fwrite( tmpString, 1, strlen(tmpString), configFilePtr );
+                LE_INFO( "pa_wifiAp_Start hostapd.conf: %s", tmpString );
+                result = LE_OK;
+            }
+            else if ('\0' != SavedPreSharedKey[0] )
+            {
+                snprintf( tmpString, sizeof(tmpString), "wpa_psk=%s\n", SavedPreSharedKey );
+                fwrite( tmpString, 1, strlen(tmpString), configFilePtr );
+                LE_INFO( "pa_wifiAp_Start hostapd.conf: %s", tmpString );
+                result = LE_OK;
+            }
+            else
+            {
+                LE_ERROR( "pa_wifiAp_Start Security Protocol is missing!" );
+                result = LE_FAULT;
+            }
+            break;
+
+        default:
+            result = LE_FAULT;
+            break;
+    }
+    if ( LE_OK == result )
+    {
+        if ( true == SavedDiscoverable )
+        {
+            // Annonce SSID
+            snprintf( tmpString, sizeof(tmpString), "ignore_broadcast_ssid=0\n" );
+            fwrite( tmpString, 1, strlen(tmpString), configFilePtr );
+            LE_INFO( "pa_wifiAp_Start hostapd.conf: %s", tmpString );
+        }
+        else
+        {
+            // Do not annonce SSID
+            snprintf( tmpString, sizeof(tmpString), "ignore_broadcast_ssid=1\n" );
+            fwrite( tmpString, 1, strlen(tmpString), configFilePtr );
+            LE_INFO( "pa_wifiAp_Start hostapd.conf: %s", tmpString );
+        }
+    }
+    // Close file
+    fclose( configFilePtr );
+    LE_INFO( "Waiting 15s for WiFi driver availability ..." );
+    sleep( 15 );   // Sleep 15s
+    // Start Access Point cmd: /bin/hostapd /etc/hostapd.conf
+    if ( LE_OK == result )
+    {
+        LE_INFO( "Start Access Point Cmd: /bin/hostapd /tmp/hostapd.conf" );
+        systemResult = system( COMMAND_WIFIAP_HOSTAPD );
+        if ( 0 != WEXITSTATUS( systemResult ) )
+        {
+            LE_ERROR( "Wifi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD, systemResult );
+            result = LE_FAULT;
+        }
+        else
+        {
+            LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFIAP_HOSTAPD );
+            result = LE_OK;
+        }
+    }
+    return result;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -164,7 +449,42 @@ le_result_t pa_wifiAp_Stop
     void
 )
 {
-    return LE_OK;
+    le_result_t result = LE_FAULT;
+    int16_t systemResult =  system( COMMAND_WIFI_HW_STOP );
+    /**
+     * Return value of -1 means that the fork() has failed (see man system).
+     * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
+     * and the wlan0 interface is seen,
+     * 127 if modules not loaded or interface not seen,
+     * 1 if the option passed if unknown (start stop and restart).
+    */
+    if ( 0 == WEXITSTATUS( systemResult ) )
+    {
+        LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFI_HW_STOP );
+        result = LE_OK;
+    }
+    else
+    {
+        LE_ERROR( "Wifi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_STOP, systemResult );
+        result = LE_FAULT;
+    }
+
+    if ( LE_OK == result )
+    {
+        // Must terminate created thread
+        le_thread_Cancel( WifiApPaThread );
+        if ( LE_OK == le_thread_Join( WifiApPaThread,NULL ) )
+        {
+            // And close FP used in created thread
+            pclose( IwThreadFp );
+            result = LE_OK;
+        }
+        else
+        {
+            result = LE_FAULT;
+        }
+    }
+    return result;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -174,13 +494,22 @@ le_result_t pa_wifiAp_Stop
  * These events provide information on Wifi Access Point
  */
 //--------------------------------------------------------------------------------------------------
-LE_SHARED le_result_t  pa_wifiAp_AddEventHandler
+le_result_t  pa_wifiAp_AddEventHandler
 (
-    pa_wifiAp_NewEventHandlerFunc_t handlerPtr
+    pa_wifiAp_NewEventHandlerFunc_t handlerPtr,
+        ///< [IN]
+
+    void* contextPtr
         ///< [IN]
 )
 {
-    CallBackHandlerFuncPtr = handlerPtr;
+    le_event_HandlerRef_t handlerRef;
+    handlerRef = le_event_AddLayeredHandler( "WifiApPaHandler",
+                    WifiApPaEvent,
+                    FirstLayerWifiApEventHandler,
+                    (le_event_HandlerFunc_t)handlerPtr );
+
+    le_event_SetContextPtr( handlerRef, contextPtr );
     return LE_OK;
 }
 
@@ -205,7 +534,21 @@ le_result_t pa_wifiAp_SetSsid
         ///< [IN]
 )
 {
-    return LE_OK;    //todo: save it
+    // Store Passphrase to be used later during startup procedure
+    le_result_t result = LE_BAD_PARAMETER;
+    LE_INFO( "pa_wifiAp_SetSsid SSID length %d SSID: \"%.*s\"",
+        ssidNumElements,
+        ssidNumElements,
+        (char*) ssidPtr );
+
+    if ( 0 != ssidNumElements )
+    {
+       strncpy( &SavedSsid[0], (const char *) &ssidPtr[0], ssidNumElements );
+       // Make sure there is a null termination
+       SavedSsid[ssidNumElements] = '\0';
+       result = LE_OK;
+    }
+    return result;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -225,7 +568,21 @@ le_result_t pa_wifiAp_SetSecurityProtocol
         ///< The security protocol to use.
 )
 {
-    return LE_OK;    //todo: save it
+    le_result_t result;
+    LE_INFO( "pa_wifiAp_SetSecurityProtocol: %d",securityProtocol );
+    switch ( securityProtocol )
+    {
+        case LE_WIFIAP_SECURITY_NONE:
+        case LE_WIFIAP_SECURITY_WPA2:
+            SavedSecurityProtocol = securityProtocol;
+            result = LE_OK;
+            break;
+
+        default:
+            result = LE_BAD_PARAMETER;
+            break;
+    }
+    return result;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -235,7 +592,6 @@ le_result_t pa_wifiAp_SetSecurityProtocol
  *
  * @note the difference between le_wifiAp_SetPreSharedKey() and this function
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -243,12 +599,22 @@ le_result_t pa_wifiAp_SetSecurityProtocol
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetPassPhrase
 (
-    const char* passPhrase
+    const char* passphrase
         ///< [IN]
         ///< pass-phrase for PSK
 )
 {
-    return LE_OK;    //todo: save it
+    // Store Passphrase to be used later during startup procedure
+    le_result_t result = LE_BAD_PARAMETER;
+    LE_INFO( "pa_wifiAp_SetPassPhrase" );
+    if( NULL != passphrase )
+    {
+       strncpy( &SavedPassphrase[0], &passphrase[0], LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH );
+       // Make sure there is a null termination
+       SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH] = '\0';
+       result = LE_OK;
+    }
+    return result;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -257,7 +623,6 @@ le_result_t pa_wifiAp_SetPassPhrase
  * There is no default value, since le_wifiAp_SetPassPhrase is used as default.
  * @note the difference between le_wifiAp_SetPassPhrase() and this function
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -269,11 +634,19 @@ le_result_t pa_wifiAp_SetPreSharedKey
         ///< [IN]
         ///< PSK. Note the difference between PSK and Pass Phrase.
 )
-
 {
-    return LE_OK;    //todo: save it
+    // Store PreSharedKey to be used later during startup procedure
+    le_result_t result = LE_BAD_PARAMETER;
+    LE_INFO( "pa_wifiAp_SetPreSharedKey" );
+    if( NULL != preSharedKey )
+    {
+       strncpy( &SavedPreSharedKey[0], &preSharedKey[0], LE_WIFIDEFS_MAX_PSK_LENGTH );
+       // Make sure there is a null termination
+       SavedPreSharedKey[LE_WIFIDEFS_MAX_PSK_LENGTH] = '\0';
+       result = LE_OK;
+    }
+    return result;
 }
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -281,8 +654,6 @@ le_result_t pa_wifiAp_SetPreSharedKey
  * Default value is TRUE.
  * If the value is set to FALSE, the Access Point will be hidden.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
  */
@@ -294,7 +665,10 @@ le_result_t pa_wifiAp_SetDiscoverable
         ///< If TRUE the Acces Point annonce will it's SSID, else it's hidden.
 )
 {
-    return LE_OK;    //todo: save it
+    // Store Discoverable to be used later during startup procedure
+    LE_INFO( "pa_wifiAp_SetDiscoverable" );
+    SavedDiscoverable = discoverable;
+    return LE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -303,7 +677,6 @@ le_result_t pa_wifiAp_SetDiscoverable
  * Default value is 1.
  * Some legal restrictions for values 12 - 14 might apply for your region.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -316,5 +689,42 @@ le_result_t pa_wifiAp_SetChannel
         ///< the channel number must be between 1 and 14.
 )
 {
-    return LE_OK;    //todo: save it
+    // Store PreSharedKey to be used later during startup procedure
+    le_result_t result = LE_BAD_PARAMETER;
+    LE_INFO(  "pa_wifiAp_SetChannel" );
+    if ((channelNumber >= 1) && (channelNumber <= 14))
+    {
+       SavedChannelNumber = channelNumber;
+       result = LE_OK;
+    }
+    return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the maximum number of clients allowed to be connected to WiFi Access Point.
+ * Default value is 10.
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t pa_wifiAp_SetMaxNumberClients
+(
+    int maxNumberClients
+        ///< [IN]
+        ///< the maximum number of clients (1-256).
+)
+{
+    // Store maxNumberClients to be used later during startup procedure
+    le_result_t result = LE_BAD_PARAMETER;
+    LE_INFO( "pa_wifiAp_SetMaxNumberClients" );
+    if ((maxNumberClients >= 1) && (maxNumberClients <= 256))
+    {
+       SavedMaxNumClients = maxNumberClients;
+       result = LE_OK;
+    }
+    return result;
 }

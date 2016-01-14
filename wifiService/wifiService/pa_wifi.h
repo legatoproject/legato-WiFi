@@ -1,14 +1,15 @@
-//TODO: place this file in a good subdirectory.
 // -------------------------------------------------------------------------------------------------
 /**
- *
+ *  Wifi Client Platform Adapter
  *
  *  Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  *
  */
 // -------------------------------------------------------------------------------------------------
-#include "legato.h"
+#ifndef PA_WIFI_H
+#define PA_WIFI_H
 
+#include "legato.h"
 #include "interfaces.h"
 
 //--------------------------------------------------------------------------------------------------
@@ -22,7 +23,6 @@ typedef struct {
     uint8_t ssidLength; ///< The number of Bytes in the ssidBytes
 }
 pa_wifiClient_AccessPoint_t;
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -41,7 +41,6 @@ typedef void (*pa_wifiClient_NewEventHandlerFunc_t)
     le_wifiClient_Event_t event,
     void* contextPtr
 );
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -63,7 +62,6 @@ LE_SHARED le_result_t  pa_wifiClient_AddEventHandler
 /**
  * This function must be called to initialize the PA WIFI Module.
  *
- * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
@@ -76,7 +74,6 @@ LE_SHARED le_result_t pa_wifiClient_Init
 /**
  * This function must be called to release the PA WIFI Module.
  *
- * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
@@ -93,6 +90,7 @@ LE_SHARED le_result_t pa_wifiClient_Release
  * When the reading is done pa_wifiClient_ScanDone MUST be called.*
  *
  * @return LE_FAULT  The function failed.
+ * @return LE_BUSY   The function is already ongoing.
  * @return LE_OK     The function succeed.*/
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t pa_wifiClient_Scan
@@ -111,6 +109,7 @@ LE_SHARED bool pa_wifiClient_IsScanRunning
 (
     void
 );
+
 //--------------------------------------------------------------------------------------------------
 /**
  * This function can be called after pa_wifi_Scan.
@@ -141,13 +140,9 @@ LE_SHARED le_result_t pa_wifiClient_ScanDone
     void
 );
 
-
-
 //--------------------------------------------------------------------------------------------------
 /**
  * This function connects a wifiClient.
- * If password is set, then it shall be used.
- * If username and password are set then they shall be used.
  *
  * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.*/
@@ -157,6 +152,7 @@ LE_SHARED le_result_t pa_wifiClient_Connect
     uint8_t ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES], ///< Contains ssidLength number of bytes
     uint8_t ssidLength ///< The number of Bytes in the ssidBytes
 );
+
 //--------------------------------------------------------------------------------------------------
 /**
  * This function disconnects a wifiClient.
@@ -168,6 +164,7 @@ LE_SHARED le_result_t pa_wifiClient_Disconnect
 (
     void
 );
+
 //--------------------------------------------------------------------------------------------------
 /**
  * Set the username and password (WPA-Entreprise).
@@ -175,13 +172,11 @@ LE_SHARED le_result_t pa_wifiClient_Disconnect
  * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.*/
 //--------------------------------------------------------------------------------------------------
-
 LE_SHARED le_result_t pa_wifiClient_SetUserCredentials
 (
     const char* username,
     const char* password
 );
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -191,7 +186,6 @@ LE_SHARED le_result_t pa_wifiClient_SetUserCredentials
  * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.*/
 //--------------------------------------------------------------------------------------------------
-
 LE_SHARED le_result_t pa_wifiClient_SetPassphrase
 (
     const char* passphrase
@@ -205,12 +199,10 @@ LE_SHARED le_result_t pa_wifiClient_SetPassphrase
  * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.*/
 //--------------------------------------------------------------------------------------------------
-
 LE_SHARED le_result_t pa_wifiClient_SetPreSharedKey
 (
     const char* preSharedKey
 );
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -219,13 +211,22 @@ LE_SHARED le_result_t pa_wifiClient_SetPreSharedKey
  * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.*/
 //--------------------------------------------------------------------------------------------------
-
 LE_SHARED le_result_t pa_wifiClient_SetWepKey
 (
     const char* wepKey
 );
 
-
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set the security protocol for connection
+ *
+ * @return LE_FAULT  The function failed.
+ * @return LE_OK     The function succeed.*/
+//--------------------------------------------------------------------------------------------------
+LE_SHARED le_result_t pa_wifiClient_SetSecurityProtocol
+(
+    const le_wifiClient_SecurityProtocol_t securityProtocol
+);
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -242,3 +243,28 @@ LE_SHARED le_result_t pa_wifiClient_ClearAllCredentials
 (
     void
 );
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Start Wifi Client PA
+ *
+ * @return LE_FAULT  The function failed.
+ * @return LE_OK     The function succeed.*/
+//--------------------------------------------------------------------------------------------------
+LE_SHARED le_result_t pa_wifiClient_Start
+(
+    void
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Stop Wifi Client PA
+ *
+ * @return LE_FAULT  The function failed.
+ * @return LE_OK     The function succeed.*/
+//--------------------------------------------------------------------------------------------------
+LE_SHARED le_result_t pa_wifiClient_Stop
+(
+    void
+);
+#endif // PA_WIFI_H

@@ -120,7 +120,6 @@ static void PaEventHandler
     le_event_Report( NewWifiEventId, (void*)&event, sizeof( le_wifiClient_Event_t ) );
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Local function to find an access point reference based on SSID among the AP:s found in scan.

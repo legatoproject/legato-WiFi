@@ -306,6 +306,8 @@ void le_wifiAp_Init
 {
     LE_DEBUG( "Wifi Access Point Service is ready" );
 
+    pa_wifiAp_Init();
+
     // Create an event Id for new Wifi Events
     NewWifiApEventId = le_event_CreateId( "WiFiApEventId", sizeof( le_wifiAp_Event_t ) );
 

@@ -7,8 +7,6 @@ provides:
     }
 }
 
-
-
 sources:
 {
     wifiService.c
@@ -16,4 +14,13 @@ sources:
     le_wifiAp.c
     pa_wifi.c
     pa_wifi_ap.c
+}
+
+bundles:
+{
+    file:
+    {
+        // Script file implementing Wifi PA
+        [x] pa_wifi.sh  /usr/local/bin/pa_wifi.sh
+    }
 }
