@@ -29,7 +29,8 @@ static le_event_Id_t NewWifiApEventId;
 
 static void PaEventApHandler
 (
-    le_wifiAp_Event_t event
+    le_wifiAp_Event_t event,
+    void * ctxPtr
 )
 {
 
@@ -312,7 +313,7 @@ void le_wifiAp_Init
     NewWifiApEventId = le_event_CreateId( "WiFiApEventId", sizeof( le_wifiAp_Event_t ) );
 
     // register for events from PA.
-    pa_wifiAp_AddEventHandler( PaEventApHandler );
+    pa_wifiAp_AddEventHandler( PaEventApHandler, NULL );
 
 }
 
