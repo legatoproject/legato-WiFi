@@ -338,7 +338,5 @@ le_result_t le_wifiAp_SetMaxNumberOfClients
     {
         return LE_BAD_PARAMETER;
     }
-
-    //TODO: Add when exists in PA interface. return pa_wifiAp_SetMaxNumberOfClients( maxNumberOfClient);
-    return LE_FAULT;
+    return pa_wifiAp_SetMaxNumberClients( maxNumberOfClient );
 }

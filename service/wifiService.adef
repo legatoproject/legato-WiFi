@@ -2,7 +2,7 @@ sandboxed: false
 
 executables:
 {
-    wifiService = ( ../wifiService/wifiService )
+    wifiService = ( ../service/daemon )
 }
 
 start: auto
@@ -35,7 +35,7 @@ provides:
 {
     api:
     {
-        wifiService.wifiService.le_wifiAp
-        wifiService.wifiService.le_wifiClient
+        wifiService.daemon.le_wifiAp
+        wifiService.daemon.le_wifiClient
     }
 }

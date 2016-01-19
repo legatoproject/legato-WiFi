@@ -12,8 +12,8 @@ sources:
     wifiService.c
     le_wifiClient.c
     le_wifiAp.c
-    pa_wifi.c
-    pa_wifi_ap.c
+    ../platformAdaptor/ti/pa_wifi_client_ti.c
+    ../platformAdaptor/ti/pa_wifi_ap_ti.c
 }
 
 bundles:
@@ -21,6 +21,6 @@ bundles:
     file:
     {
         // Script file implementing Wifi PA
-        [x] pa_wifi.sh  /usr/local/bin/pa_wifi.sh
+        [x] ../platformAdaptor/ti/pa_wifi.sh  /usr/local/bin/pa_wifi.sh
     }
 }
