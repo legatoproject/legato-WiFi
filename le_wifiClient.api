@@ -423,7 +423,8 @@ FUNCTION le_result_t SetUserCredentials
  * Set the WEP key (WEP)
  *
  * @return LE_FAULT  The function failed.
- * @return LE_OK     The function succeed.*/
+ * @return LE_OK     The function succeed.
+ */
 //--------------------------------------------------------------------------------------------------
 FUNCTION le_result_t SetWepKey
 (

@@ -17,7 +17,7 @@
 #define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID)-1)
 #define TEST_PASSPHRASE "passphrase"
 
-#define NBR_OF_SCAN_LOOPS 1
+#define NBR_OF_SCAN_LOOPS 5
 
 
 //--------------------------------------------------------------------------------------------------
@@ -164,7 +164,7 @@ static void WifiClientEventHandler
             LE_DEBUG( "LE_WIFICLIENT_EVENT_SCAN_DONE: Now read the results (ScanDoneEventCounter %d)"
             , ScanDoneEventCounter);
             TestReadScanResults();
-            if( ScanDoneEventCounter < 5 )
+            if( ScanDoneEventCounter < NBR_OF_SCAN_LOOPS )
             {
                 sleep(2);
                 LE_DEBUG( "LE_WIFICLIENT_EVENT_SCAN_DONE: Start New Scan %d)", ScanDoneEventCounter);

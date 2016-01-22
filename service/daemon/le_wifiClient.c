@@ -558,8 +558,7 @@ le_result_t le_wifiClient_Start
     // first client starts the hardware
     if( 1 == ClientStartCount )
     {
-        //TODO: put back once integration with latest PA.
-        pa_result = LE_OK; //TODO: pa_result = pa_wifiClient_Start();
+        pa_result = pa_wifiClient_Start();
     }
 
     if ( LE_OK != pa_result )
@@ -951,7 +950,8 @@ le_result_t le_wifiClient_SetUserCredentials
  * Set the WEP key (WEP)
  *
  * @return LE_FAULT  The function failed.
- * @return LE_OK     The function succeed.*/
+ * @return LE_OK     The function succeed.
+ */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetWepKey
 (
@@ -1008,9 +1008,7 @@ le_result_t le_wifiClient_SetSecurityProtocol
         return LE_BAD_PARAMETER;
     }
 
-    //TODO: put back once integration with latest PA.
-    // pa_wifiClient_SetSecurityProtocol( securityProtocol );
-    return LE_FAULT;
+    return pa_wifiClient_SetSecurityProtocol( securityProtocol );
 }
 
 //--------------------------------------------------------------------------------------------------
