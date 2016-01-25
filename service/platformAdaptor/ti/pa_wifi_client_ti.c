@@ -16,20 +16,22 @@
 #include "pa_wifi.h"
 #include "stdio.h"
 
+#define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi.sh "
+
 /** Command to init the hardware */
-#define COMMAND_WIFI_HW_START "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_START"
-#define COMMAND_WIFI_HW_STOP "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_STOP" /* not sure that this works */
-#define COMMAND_WIFI_WLAN_UP "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_WLAN_UP"
-#define COMMAND_WIFI_SET_EVENT "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_SET_EVENT"
-#define COMMAND_WIFICLIENT_START_SCAN "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_START_SCAN"
-#define COMMAND_WIFICLIENT_DISCONNECT "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_DISCONNECT"
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_CONNECT_SECURITY_NONE \"%.*s\""
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_CONNECT_SECURITY_WEP \"%.*s\" \"%s\""
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\" \"%s\""
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\" \"%s\""
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
-#define COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFICLIENT_CONNECT_WPA_PASSPHRASE \"%.*s\" %s"
+#define COMMAND_WIFI_HW_START "wlan0 WIFI_START"
+#define COMMAND_WIFI_HW_STOP "wlan0 WIFI_STOP" /* not sure that this works */
+#define COMMAND_WIFI_WLAN_UP "wlan0 WIFI_WLAN_UP"
+#define COMMAND_WIFI_SET_EVENT "wlan0 WIFI_SET_EVENT"
+#define COMMAND_WIFICLIENT_START_SCAN "wlan0 WIFICLIENT_START_SCAN"
+#define COMMAND_WIFICLIENT_DISCONNECT "wlan0 WIFICLIENT_DISCONNECT"
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE "wlan0 WIFICLIENT_CONNECT_SECURITY_NONE \"%.*s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP "wlan0 WIFICLIENT_CONNECT_SECURITY_WEP \"%.*s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE "wlan0 WIFICLIENT_CONNECT_WPA_PASSPHRASE \"%.*s\" %s"
 
 static le_wifiClient_SecurityProtocol_t SavedSecurityProtocol;
 /**  WEP */
@@ -95,7 +97,7 @@ static void* WifiClientPaThreadMain
     void* contextPtr
 )
 {
-    char tmpString[] = COMMAND_WIFI_SET_EVENT;
+    char tmpString[] = (WIFI_SCRIPT_PATH COMMAND_WIFI_SET_EVENT);
     char path[1024];
 
     LE_INFO( "WifiClientPaThreadMain: Started!" );
@@ -115,7 +117,7 @@ static void* WifiClientPaThreadMain
     // Read the output a line at a time - output it.
     while ( NULL != fgets( path, sizeof(path)-1, IwThreadFp ) )
     {
-        LE_INFO( "PARSING:%s: len:%d", path, strnlen( path,sizeof(path)-1 ) );
+        LE_INFO( "PARSING:%s: len:%d", path, (int) strnlen( path,sizeof(path)-1 ) );
         if ( NULL != strstr( path,"connected to" ) )
         {
             LE_INFO( "FOUND connected" );
@@ -198,7 +200,7 @@ le_result_t pa_wifiClient_Start
     le_thread_SetJoinable( WifiClientPaThread );
     le_thread_Start( WifiClientPaThread);
 
-    int16_t systemResult =  system( COMMAND_WIFI_HW_START );
+    int16_t systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START );
     /**
      * Return value of -1 means that the fork() has failed (see man system).
      * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
@@ -218,7 +220,7 @@ le_result_t pa_wifiClient_Start
     }
     if ( LE_OK == result )
     {
-        systemResult = system( COMMAND_WIFI_WLAN_UP );
+        systemResult = system( WIFI_SCRIPT_PATH COMMAND_WIFI_WLAN_UP );
         if ( 0 == WEXITSTATUS( systemResult ) )
         {
             LE_INFO( "Wifi Client Command OK:" COMMAND_WIFI_WLAN_UP );
@@ -246,7 +248,7 @@ le_result_t pa_wifiClient_Stop
 )
 {
     le_result_t result = LE_FAULT;
-    int16_t systemResult =  system( COMMAND_WIFI_HW_STOP );
+    int16_t systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP );
     /**
      * Return value of -1 means that the fork() has failed (see man system).
      * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
@@ -314,7 +316,7 @@ le_result_t pa_wifiClient_Scan
 
     IsScanRunning = true;
     /* Open the command for reading. */
-    IwScanFp = popen( COMMAND_WIFICLIENT_START_SCAN, "r" );
+    IwScanFp = popen( WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_START_SCAN, "r" );
 
     if ( NULL == IwScanFp )
     {
@@ -500,7 +502,7 @@ le_result_t pa_wifiClient_Connect
             LE_INFO( "pa_wifiClient_Connect Step 2: SH script" );
             snprintf( tmpString,
                 sizeof( tmpString ),
-                COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE,
+                (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE),
                 ssidLength,
                 (char*) ssidBytes );
 
@@ -532,7 +534,7 @@ le_result_t pa_wifiClient_Connect
                 LE_INFO( "pa_wifiClient_Connect Step 2: SH script" );
                 snprintf( tmpString,
                     sizeof( tmpString ),
-                    COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP,
+                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP),
                     ssidLength,
                     (char*) ssidBytes,
                     SavedWepKey );
@@ -566,7 +568,7 @@ le_result_t pa_wifiClient_Connect
                 LE_INFO( "pa_wifiClient_Connect Step 1: Generate Passphrase/PSK" );
                 snprintf(tmpString,
                     sizeof( tmpString ),
-                    COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE,
+                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE),
                     ssidLength,
                     (char*) ssidBytes,
                     SavedPassphrase);
@@ -588,7 +590,7 @@ le_result_t pa_wifiClient_Connect
                     // Read the output a line at a time - output it.
                     while ( NULL != fgets( path, sizeof( path )-1, IwConnectFp ) )
                     {
-                        LE_INFO( "PARSING:%s: len:%d", path, strnlen( path,sizeof( path )-1 ) );
+                        LE_INFO( "PARSING:%s: len:%d", path, (int) strnlen( path,sizeof( path )-1 ) );
                         if ( 0 == strncmp( "\tpsk=", path, strlen( "\tpsk=" ) ) )
                         {
                             LE_INFO( "FOUND :%s", path );
@@ -617,7 +619,7 @@ le_result_t pa_wifiClient_Connect
                 LE_INFO( "pa_wifiClient_Connect Step 2: SH script" );
                 snprintf(tmpString,
                     sizeof( tmpString ),
-                    COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL,
+                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL),
                     ssidLength,
                     (char*) ssidBytes,
                     SavedPreSharedKey);
@@ -651,7 +653,7 @@ le_result_t pa_wifiClient_Connect
                 LE_INFO( "pa_wifiClient_Connect Step 1: Generate Passphrase/PSK" );
                 snprintf( tmpString,
                     sizeof( tmpString) ,
-                    COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE,
+                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE),
                     ssidLength,
                     (char*) ssidBytes,
                     SavedPassphrase );
@@ -673,7 +675,7 @@ le_result_t pa_wifiClient_Connect
                     // Read the output a line at a time - output it.
                     while ( NULL != fgets(path, sizeof( path )-1, IwConnectFp) )
                     {
-                        LE_INFO( "PARSING:%s: len:%d", path, strnlen( path,sizeof( path )-1) );
+                        LE_INFO( "PARSING:%s: len:%d", path, (int) strnlen( path,sizeof( path )-1) );
                         if ( 0 == strncmp( "\tpsk=", path, strlen( "\tpsk=" ) ) )
                         {
                             LE_INFO( "FOUND :%s", path );
@@ -702,7 +704,7 @@ le_result_t pa_wifiClient_Connect
                 LE_INFO( "pa_wifiClient_Connect Step 2: SH script" );
                 snprintf( tmpString,
                     sizeof( tmpString ),
-                    COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL,
+                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL),
                     ssidLength,
                     (char*) ssidBytes,
                     SavedPreSharedKey );
@@ -736,7 +738,7 @@ le_result_t pa_wifiClient_Connect
                 LE_INFO( "pa_wifiClient_Connect Step 2: SH script" );
                 snprintf( tmpString,
                     sizeof( tmpString ),
-                    COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE,
+                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE),
                     ssidLength,
                     (char*) ssidBytes,
                     SavedUsername,
@@ -771,7 +773,7 @@ le_result_t pa_wifiClient_Connect
                 LE_INFO( "pa_wifiClient_Connect Step 2: SH script" );
                 snprintf( tmpString,
                     sizeof( tmpString ),
-                    COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE,
+                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE),
                     ssidLength,
                     (char*) ssidBytes,
                     SavedUsername,
@@ -815,7 +817,7 @@ le_result_t pa_wifiClient_Disconnect
     le_result_t result = LE_OK;
 
     // Terminate connection
-    systemResult = system( COMMAND_WIFICLIENT_DISCONNECT );
+    systemResult = system( WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_DISCONNECT );
     if ( 0 == WEXITSTATUS(systemResult) )
     {
         LE_INFO( "Wifi Client Command OK:" COMMAND_WIFICLIENT_DISCONNECT );

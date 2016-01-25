@@ -21,6 +21,6 @@ bundles:
     file:
     {
         // Script file implementing Wifi PA
-        [x] ../platformAdaptor/ti/pa_wifi.sh  /usr/local/bin/pa_wifi.sh
+        [x] ../platformAdaptor/ti/pa_wifi.sh  pa_wifi.sh
     }
 }

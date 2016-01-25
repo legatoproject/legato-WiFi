@@ -70,8 +70,8 @@ static void TestReadScanResults
             {
                 LE_DEBUG( "TestReadScanResults:le_wifiClient_GetSsid OK, ssidLength %d;"
                                     "SSID: \"%.*s\" ",
-                                    ssidNumElements,
-                                    ssidNumElements,
+                                    (int) ssidNumElements,
+                                    (int) ssidNumElements,
                                     (char*) &ssidBytes[0]);
         }
         else

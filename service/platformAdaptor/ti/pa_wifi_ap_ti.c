@@ -16,12 +16,14 @@
 #include "pa_wifi_ap.h"
 #include "stdio.h"
 
+#define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi.sh "
+
 /** Command to init the hardware */
-#define COMMAND_WIFI_HW_START "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_START"
-#define COMMAND_WIFI_HW_STOP "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_STOP" /* not sure that this works */
-#define COMMAND_WIFI_WLAN_UP "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_WLAN_UP"
-#define COMMAND_WIFI_SET_EVENT "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFI_SET_EVENT"
-#define COMMAND_WIFIAP_HOSTAPD "/opt/legato/apps/wifiService/usr/local/bin/pa_wifi.sh wlan0 WIFIAP_HOSTAPD"
+#define COMMAND_WIFI_HW_START "wlan0 WIFI_START"
+#define COMMAND_WIFI_HW_STOP "wlan0 WIFI_STOP" /* not sure that this works */
+#define COMMAND_WIFI_WLAN_UP "wlan0 WIFI_WLAN_UP"
+#define COMMAND_WIFI_SET_EVENT "wlan0 WIFI_SET_EVENT"
+#define COMMAND_WIFIAP_HOSTAPD "wlan0 WIFIAP_HOSTAPD"
 
 static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol;
 
@@ -84,7 +86,7 @@ static void* WifiApPaThreadMain
     void* contextPtr
 )
 {
-    char tmpString[] = COMMAND_WIFI_SET_EVENT;
+    char tmpString[] = (WIFI_SCRIPT_PATH COMMAND_WIFI_SET_EVENT);
     char path[1024];
 
     LE_INFO( "WifiApPaThreadMain: Started!" );
@@ -104,7 +106,7 @@ static void* WifiApPaThreadMain
     // Read the output a line at a time - output it.
     while ( NULL != fgets(path, sizeof(path)-1, IwThreadFp) )
     {
-        LE_INFO( "PARSING:%s: len:%d", path, strnlen( path,sizeof(path)-1 ) );
+        LE_INFO( "PARSING:%s: len:%d", path, (int) strnlen( path,sizeof(path)-1 ) );
         if ( NULL != strstr( path,"new station" ) )
         {
             LE_INFO( "FOUND new station" );
@@ -277,7 +279,7 @@ le_result_t pa_wifiAp_Start
         result = LE_OK;
     }
 
-    systemResult =  system( COMMAND_WIFI_HW_START );
+    systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START );
     /**
      * Return value of -1 means that the fork() has failed (see man system).
      * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
@@ -298,7 +300,7 @@ le_result_t pa_wifiAp_Start
     if ( LE_OK == result )
     {
         // COMMAND_WIFI_WLAN_UP
-        systemResult = system( COMMAND_WIFI_WLAN_UP );
+        systemResult = system( WIFI_SCRIPT_PATH COMMAND_WIFI_WLAN_UP );
         if ( 0 == WEXITSTATUS( systemResult ) )
         {
             LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFI_WLAN_UP );
@@ -419,7 +421,7 @@ le_result_t pa_wifiAp_Start
     if ( LE_OK == result )
     {
         LE_INFO( "Start Access Point Cmd: /bin/hostapd /tmp/hostapd.conf" );
-        systemResult = system( COMMAND_WIFIAP_HOSTAPD );
+        systemResult = system( WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD );
         if ( 0 != WEXITSTATUS( systemResult ) )
         {
             LE_ERROR( "Wifi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD, systemResult );
@@ -450,7 +452,7 @@ le_result_t pa_wifiAp_Stop
 )
 {
     le_result_t result = LE_FAULT;
-    int16_t systemResult =  system( COMMAND_WIFI_HW_STOP );
+    int16_t systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP );
     /**
      * Return value of -1 means that the fork() has failed (see man system).
      * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
@@ -537,8 +539,8 @@ le_result_t pa_wifiAp_SetSsid
     // Store Passphrase to be used later during startup procedure
     le_result_t result = LE_BAD_PARAMETER;
     LE_INFO( "pa_wifiAp_SetSsid SSID length %d SSID: \"%.*s\"",
-        ssidNumElements,
-        ssidNumElements,
+        (int) ssidNumElements,
+        (int) ssidNumElements,
         (char*) ssidPtr );
 
     if ( 0 != ssidNumElements )
