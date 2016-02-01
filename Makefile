@@ -8,6 +8,9 @@
 # --------------------------------------------------------------------------------------------------
 
 
+MANGOH_WIFI_ROOT = $(PWD)
+export MANGOH_WIFI_ROOT
+
 SERVICE_DIR = $(PWD)/service
 SERVICE_EXE = $(SERVICE_DIR)/wifiService.wp85.update
 
