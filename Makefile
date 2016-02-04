@@ -20,11 +20,16 @@ CLIENT_SAMPLE_EXE = $(CLIENT_SAMPLE_DIR)/wifiClientTest.wp85.update
 AP_SAMPLE_DIR = $(PWD)/apps/sample/wifiApTest
 AP_SAMPLE_EXE = $(AP_SAMPLE_DIR)/wifiApTest.wp85.update
 
+# Wifi Command Line Client 'wifi'
+WIFI_CMD_LINE_DIR = $(PWD)/apps/tools/wifi
+WIFI_CMD_LINE_EXE = $(WIFI_CMD_LINE_DIR)/wifi.wp85.update
+
+
 
 # By default, build for the wp85
 .PHONY: default
 #service clientsample apsample
-default: service clientsample apsample
+default: service clientsample apsample wifi
 	@echo "*****************************"
 	@echo Successfully built Wifi Service and Apps
 	@echo To load Wifi Service type:
@@ -35,6 +40,9 @@ default: service clientsample apsample
 	@echo "*****************************"
 	@echo To load Wifi AP Sample App type:
 	@echo instapp $(AP_SAMPLE_EXE) YOUR_TARGETS_IP
+	@echo "*****************************"
+	@echo To load Wifi Command Line App \"wifi\" type:
+	@echo instapp $(WIFI_CMD_LINE_EXE) YOUR_TARGETS_IP
 
 
 # By default, build for the wp85
@@ -59,9 +67,16 @@ apsample: $(AP_SAMPLE_EXE)
 $(AP_SAMPLE_EXE):
 	$(MAKE) -C $(AP_SAMPLE_DIR) wp85
 
+# Wifi Command Line Client 'wifi'
+wifi: $(WIFI_CMD_LINE_EXE)
+
+$(WIFI_CMD_LINE_EXE):
+	$(MAKE) -C $(WIFI_CMD_LINE_DIR) wp85
+
 # Cleaning rule.
 .PHONY: clean
 clean:
 	$(MAKE) -C $(SERVICE_DIR) clean
 	$(MAKE) -C $(CLIENT_SAMPLE_DIR) clean
 	$(MAKE) -C $(AP_SAMPLE_DIR) clean
+	$(MAKE) -C $(WIFI_CMD_LINE_DIR) clean

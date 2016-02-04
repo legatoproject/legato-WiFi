@@ -20,6 +20,7 @@
 
 
 
+
 //--------------------------------------------------------------------------------------------------
 /**
  * Event handler reference.
@@ -28,6 +29,21 @@
 static le_wifiAp_NewEventHandlerRef_t HdlrRef = NULL;
 
 
+//! [SetCred]
+static void Testle_setCredentials
+(
+    void
+)
+{
+    LE_ASSERT(LE_OK == le_wifiAp_SetPassPhrase ( "Secret1" ));
+
+    LE_ASSERT(LE_OK == le_wifiAp_SetSecurityProtocol ( LE_WIFIAP_SECURITY_WPA2 ));
+
+    LE_ASSERT(LE_OK == le_wifiAp_SetDiscoverable ( true ));
+}
+//! [SetCred]
+
+//! [Subscribe]
 //--------------------------------------------------------------------------------------------------
 /**
  * Handler for Wifi Client changes
@@ -67,6 +83,7 @@ static void myMsgHandler
     }
 }
 
+
 //--------------------------------------------------------------------------------------------------
 /**
  * Tests the Wifi Access Point.
@@ -87,6 +104,8 @@ void Testle_wifiAp
 
     LE_ASSERT(LE_OK == le_wifiAp_SetSsid( TEST_SSID, TEST_SSID_NBR_BYTES ));
 
+    Testle_setCredentials();
+
     if( LE_OK == le_wifiAp_Start() )
     {
         LE_INFO( "le_wifiAp_Start OK");
@@ -97,7 +116,7 @@ void Testle_wifiAp
     }
 
 }
-
+//! [Subscribe]
 
 
 //--------------------------------------------------------------------------------------------------

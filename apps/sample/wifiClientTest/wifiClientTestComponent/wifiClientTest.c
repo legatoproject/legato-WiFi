@@ -13,9 +13,9 @@
 //                                       Test Function
 //--------------------------------------------------------------------------------------------------
 
-#define TEST_SSID     "TestSSID"
+#define TEST_SSID     "GustavNet"
 #define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID)-1)
-#define TEST_PASSPHRASE "passphrase"
+#define TEST_PASSPHRASE "sten123456789"
 
 #define NBR_OF_SCAN_LOOPS 5
 

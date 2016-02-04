@@ -1,0 +1,15 @@
+requires:
+{
+    api:
+    {
+        ${MANGOH_WIFI_ROOT}/le_wifiClient.api
+        ${MANGOH_WIFI_ROOT}/le_wifiAp.api
+    }
+}
+
+sources:
+{
+    wifi.c
+    wifi_ap.c
+    wifi_client.c    
+}

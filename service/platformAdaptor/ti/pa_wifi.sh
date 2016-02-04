@@ -17,12 +17,14 @@ if [ "$1" = "-d" ]; then
     shift
     set -x
 fi
+set -x
 
 case $2 in
   WIFI_START)
     echo "WIFI_START"
     # run tiwifi script
     /etc/init.d/tiwifi start || exit 91
+    /sbin/ifconfig $1 up || exit 93
     exit 0 ;;
 
   WIFI_STOP)
@@ -48,7 +50,7 @@ case $2 in
 
   WIFICLIENT_START_SCAN)
     echo "WIFICLIENT_START_SCAN"
-    /usr/sbin/iw dev wlan0 scan |grep 'SSID\\|signal' || exit 96
+    (/usr/sbin/iw dev wlan0 scan |grep 'SSID\|signal') || exit 96
     exit 0 ;;
 
   WIFICLIENT_DISCONNECT)
@@ -289,5 +291,3 @@ case $2 in
     echo "Parameter not valid"
     #exit 99 ;;
 esac
-
-

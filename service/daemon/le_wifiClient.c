@@ -85,7 +85,7 @@ static le_msg_SessionRef_t GetFirstSessionRef = NULL;
  * The thread destructor will clear the
  */
 //--------------------------------------------------------------------------------------------------
-le_thread_Ref_t ScanThreadRef = NULL;
+static le_thread_Ref_t ScanThreadRef = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -1007,7 +1007,7 @@ le_result_t le_wifiClient_SetSecurityProtocol
         LE_ERROR( "le_wifiClient_SetSecurityProtocol: invalid accessPointRef" );
         return LE_BAD_PARAMETER;
     }
-
+    
     return pa_wifiClient_SetSecurityProtocol( securityProtocol );
 }
 

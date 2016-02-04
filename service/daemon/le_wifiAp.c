@@ -291,7 +291,7 @@ le_result_t le_wifiAp_SetChannel
         ///< the channel number must be between 1 and 14.
 )
 {
-    return LE_FAULT;
+    return pa_wifiAp_SetChannel(channelNumber);
 }
 
 

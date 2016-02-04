@@ -48,37 +48,8 @@
  * - le_wifiAp_SetChannel()
  *
  *
- * @code
+ * @snippet "apps/sample/wifiApTest/wifiApTestComponent/wifiApTest.c" SetCred
  *
- * static le_result_t MySetAccessPointCredentials
- * (
- *     void
- * )
- * {
- *     le_result_t result = le_wifiAp_SetPassPhrase ( "Secret1" );
- *
- *     if (result == LE_OK)
- *     {
- *         result = le_wifiAp_SetSecurityProtocol ( LE_WIFIAPeht_SECURITY_WPA2 );
- *     }
- *
- *     if (result == LE_OK)
- *     {
- *         result = le_wifiAp_SetDiscoverable ( true );
- *     }
- *
- *     if (result == LE_OK)
- *     {
- *          LE_INFO("Successfully Set Credentials.");
- *     }
- *     else
- *     {
- *          LE_ERROR("ERROR setting credentials.");
- *     }
- *     return result;
- * }
- *
- * @endcode
  * @section le_wifiAp_Start Starting the Wifi Access Point
  *
  * The Wifi Access Point is started with the function le_wifiAp_Start(). Unless values have been changed, default values will be used:
@@ -87,58 +58,8 @@
  * To subscribe to wifi events le_wifiAp_AddEventHandler() is to be called.
  * - le_wifiAp_AddEventHandler()
  *
- * @code
  *
- * static void EventHandler
- * (
- *     le_wifiAp_Event_t accessPointEvent,
- *     void *contextPtr
- * )
- * {
- *     switch( accessPointEvent )
- *     {
- *          case LE_WIFIAP_EVENT_CLIENT_CONNECTED:
- *          {
- *              LE_INFO("Client connected to Wifi Access Point.");
- *          }
- *          break;
- *          case LE_WIFIAP_EVENT_CLIENT_DISCONNECTED:
- *          {
- *              LE_INFO("Client disconnected from Wifi Access Point.");
- *          }
- *          break;
- *     }
- * }
- *
- * le_wifiAp_EventHandler WifiEventHandlerRef = NULL;
- *
- * static void MyInit
- * (
- *     void
- * )
- * {
- *     le_result_t result;
- *     MySetAccessPointsCredentials();
- *     result = le_wifiAp_Start();
- *
- *     if ( LE_OK == result )
- *     {
- *         LE_INFO("Wifi Access Point started.");
- *         WifiEventHandlerRef = le_wifiAp_AddEventHandler( EventHandler, NULL );
- *     }
- *     else if ( LE_BUSY == result )
- *     {
- *         LE_INFO("ERROR: Wifi Access Point already started.");
- *     }
- *     else
- *     {
- *         LE_INFO("ERROR: Wifi Access Point not started.");
- *     }
- *
- * }
- *
- * @endcode
-
+ * @snippet "apps/sample/wifiApTest/wifiApTestComponent/wifiApTest.c"  Subscribe
  *
  * <HR>
  *
