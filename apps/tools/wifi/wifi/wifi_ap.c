@@ -34,7 +34,7 @@ void PrintApHelp( void )
 
 
        "To set the SSID of the Wifi Access Point:\n"
-       "\twifi ap setssid\n"
+       "\twifi ap setssid [SSID]\n"
 
        "To set the channel of the Wifi Access Point:\n"
        "\twifi ap setchannel [ChannelNo]\n"

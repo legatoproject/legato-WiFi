@@ -18,22 +18,6 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
- * To hang the execution until LE_WIFICLIENT_EVENT_SCAN_DONE is received.
- */
-//--------------------------------------------------------------------------------------------------
-static le_sem_Ref_t semScanRef = NULL;
-
-
-//--------------------------------------------------------------------------------------------------
-/**
- * To hang the execution until LE_WIFICLIENT_EVENT_CONNECTED/DISCONNECTED is received.
- */
-//--------------------------------------------------------------------------------------------------
-static le_sem_Ref_t semConnectRef = NULL;
-
-
-//--------------------------------------------------------------------------------------------------
-/**
  * Event handler reference.
  */
 //--------------------------------------------------------------------------------------------------
@@ -66,17 +50,17 @@ static void WifiClientConnectEventHandler
     {
         case LE_WIFICLIENT_EVENT_CONNECTED:
         {
-            LE_DEBUG( "LE_WIFICLIENT_EVENT_CONNECTED");
-            printf("Received: LE_WIFICLIENT_EVENT_CONNECTED\n");
-            le_sem_Post( semConnectRef );
+            printf("CONNECTED\n");
+            le_wifiClient_RemoveNewEventHandler( ConnectHdlrRef );
+            exit(EXIT_SUCCESS);
         }
         break;
 
         case LE_WIFICLIENT_EVENT_DISCONNECTED:
         {
-            LE_DEBUG( "LE_WIFICLIENT_EVENT_DISCONNECTED");
-            printf("Received: LE_WIFICLIENT_EVENT_DISCONNECTED\n");
-            le_sem_Post( semConnectRef );
+            printf("DISCONNECTED\n");
+            le_wifiClient_RemoveNewEventHandler( ConnectHdlrRef );
+            exit(EXIT_SUCCESS);
         }
         break;
 
@@ -89,6 +73,55 @@ static void WifiClientConnectEventHandler
         default:
             LE_ERROR( "ERROR Unknown event %d", event);
         break;
+    }
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Read Scan results and print them on the command line
+ */
+//--------------------------------------------------------------------------------------------------
+static void WifiReadScanResults
+(
+    void
+)
+{
+    le_wifiClient_AccessPointRef_t accessPointRef = 0;
+    le_result_t result = LE_OK;
+
+
+    if( NULL != (accessPointRef = le_wifiClient_GetFirstAccessPoint()) )
+    {
+        do
+        {
+            uint8_t ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES];
+            //< Contains ssidNumElements number of bytes
+            size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_BYTES;
+
+            if( LE_OK == (result=le_wifiClient_GetSsid( accessPointRef,
+                                                &ssidBytes[0],
+                                                &ssidNumElements)) )
+            {
+                printf("Found:\tSSID:\t\"%.*s\"\tStrength:%d\tRef:%x\n",
+                                    ssidNumElements,
+                                    (char*) &ssidBytes[0],
+                                    le_wifiClient_GetSignalStrength(accessPointRef),
+                                    //using %p gives "0x" in beginning"
+                                    (int)accessPointRef);
+            }
+            else
+            {
+                printf( "ERROR::le_wifiClient_GetSsid failed: %d",result);
+                exit(EXIT_FAILURE);
+            }
+        }
+        while ( NULL != (accessPointRef = le_wifiClient_GetNextAccessPoint( )) );
+    }
+    else
+    {
+        LE_ERROR( "le_wifiClient_GetFirstAccessPoint ERROR");
+        printf( "DEBUG: le_wifiClient_GetFirstAccessPoint ERROR" );
     }
 }
 
@@ -113,20 +146,22 @@ static void WifiClientScanEventHandler
     {
         case LE_WIFICLIENT_EVENT_CONNECTED:
         {
-            LE_DEBUG( "FYI: Got EVENT CONNECTED, was while waiting for SCA?N.");
+            LE_DEBUG( "FYI: Got EVENT CONNECTED, was while waiting for SCAN.");
         }
         break;
 
         case LE_WIFICLIENT_EVENT_DISCONNECTED:
         {
-            LE_DEBUG( "FYI: Got EVENT DISCONNECTED, was while waiting for SCA?N.");
+            LE_DEBUG( "FYI: Got EVENT DISCONNECTED, was while waiting for SCAN.");
         }
         break;
 
         case LE_WIFICLIENT_EVENT_SCAN_DONE:
         {
             LE_DEBUG( "LE_WIFICLIENT_EVENT_SCAN_DONE: Now read the results ");
-            le_sem_Post( semScanRef );
+            WifiReadScanResults();
+            le_wifiClient_RemoveNewEventHandler( ScanHdlrRef );
+            exit(EXIT_SUCCESS);
         }
         break;
         default:
@@ -134,7 +169,6 @@ static void WifiClientScanEventHandler
         break;
     }
 }
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -235,66 +269,15 @@ void ExecuteWifiClientCommand
     else if (strcmp(commandPtr, "scan") == 0)
     {
         //"wifi client scan
+        printf("starting scan\n");
 
         // Add an handler function to handle message reception
         ScanHdlrRef=le_wifiClient_AddNewEventHandler(WifiClientScanEventHandler, NULL);
 
-        printf("starting scan (timeout is %d seconds)\n", WIFI_SCAN_TIMEOUT);
 
-        if (LE_OK == le_wifiClient_Scan())
+        if (LE_OK != (result= le_wifiClient_Scan()))
         {
-            le_clk_Time_t timer = { .sec=WIFI_SCAN_TIMEOUT, .usec=0 };
-            le_result_t semResult;
-            semScanRef = le_sem_Create("wifiCmdLineScanSemaphore", 0);
-
-            semResult = le_sem_WaitWithTimeOut(semScanRef,timer);
-
-            le_wifiClient_RemoveNewEventHandler( ScanHdlrRef );
-
-            if (semResult != LE_OK)
-            {
-                LE_WARN("Scan Timeout happen");
-                printf("ERROR: Timeout happened:%d\n",semResult);
-                exit(EXIT_FAILURE);
-            }
-            else
-            {
-                le_wifiClient_AccessPointRef_t accessPointRef = 0;
-                if( NULL != (accessPointRef = le_wifiClient_GetFirstAccessPoint()) )
-                {
-                    do
-                    {
-                        uint8_t ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES];
-                        //< Contains ssidNumElements number of bytes
-                        size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_BYTES;
-
-                        if( LE_OK == (result=le_wifiClient_GetSsid( accessPointRef,
-                                                            &ssidBytes[0],
-                                                            &ssidNumElements)) )
-                        {
-                            printf("Found:SSID:\t\"%.*s\"\t%d",
-                                                ssidNumElements,
-                                                (char*) &ssidBytes[0],
-                                                le_wifiClient_GetSignalStrength(accessPointRef));
-                        }
-                        else
-                        {
-                            printf( "ERROR::le_wifiClient_GetSsid failed: %d",result);
-                            exit(EXIT_FAILURE);
-                        }
-                    }
-                    while ( NULL != (accessPointRef = le_wifiClient_GetNextAccessPoint( )) );
-                }
-                else
-                {
-                    LE_ERROR( "le_wifiClient_GetFirstAccessPoint ERROR");
-                }
-            }
-            exit(EXIT_SUCCESS);
-        }
-        else
-        {
-            printf("le_wifiClient_Scan returns ERROR\n");
+            printf("ERROR: le_wifiClient_Scan returns %d\n", result);
             exit(EXIT_FAILURE);
         }
     }
@@ -365,31 +348,12 @@ void ExecuteWifiClientCommand
 
         if (LE_OK == (result= le_wifiClient_Connect(accessPointRef)))
         {
-            le_clk_Time_t timer = { .sec=WIFI_CONNECT_TIMEOUT, .usec=0 };
-            le_result_t semResult;
-            semConnectRef = le_sem_Create("wifiCmdLineConnectSemaphore", 0);
-            printf("Connection requested launched. Time out is  %d seconds\n", 
-                    WIFI_CONNECT_TIMEOUT);
-
-            semResult = le_sem_WaitWithTimeOut(semConnectRef,timer);
-
-            le_wifiClient_RemoveNewEventHandler( ConnectHdlrRef );
-
-            if (semResult != LE_OK)
-            {
-                LE_WARN("Connection Timeout happened: %d.\n",semResult);
-                printf("ERROR: Timeout happened: %d.\n",semResult);
-                exit(EXIT_FAILURE);
-            }
-            else
-            {
-                // results printf is done in event handler.
-                exit(EXIT_SUCCESS);
-            }
+            printf("Connecting\n");
         }
         else
         {
             printf("ERROR: le_wifiClient_Connect returns error code %d\n", result);
+            le_wifiClient_RemoveNewEventHandler( ConnectHdlrRef );
             exit(EXIT_FAILURE);
         }
     }

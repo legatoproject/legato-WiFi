@@ -14,10 +14,6 @@
 #include "legato.h"
 #include "interfaces.h"
 
-#define WIFI_SCAN_TIMEOUT 30 /*seconds*/
-
-#define WIFI_CONNECT_TIMEOUT 30 /*seconds*/
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Print help for Wifi Client

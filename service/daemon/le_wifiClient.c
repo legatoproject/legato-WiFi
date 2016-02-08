@@ -1141,7 +1141,11 @@ le_result_t le_wifiClient_Connect
 {
     le_result_t result = LE_BAD_PARAMETER;
     FoundAccessPoint_t * accessPointPtr = le_ref_Lookup( ScanApRefMap, accessPointRef );
-    LE_DEBUG( "le_wifiClient_Connect called");
+    LE_DEBUG( "le_wifiClient_Connect called. SSID length %d SSID: \"%.*s\"",
+                accessPointPtr->accessPoint.ssidLength,
+                accessPointPtr->accessPoint.ssidLength,
+                ( char* ) accessPointPtr->accessPoint.ssidBytes);
+
 
     // verify le_ref_Lookup
     if ( NULL !=  accessPointPtr )
