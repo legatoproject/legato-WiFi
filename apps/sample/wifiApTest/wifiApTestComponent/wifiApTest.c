@@ -13,9 +13,11 @@
 //                                       Test Function
 //--------------------------------------------------------------------------------------------------
 
-#define TEST_SSID     ((const uint8_t *) "ExampleSSID")
-#define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID)-1)
+#define TEST_SSID_STR "ExampleSSID"
 #define TEST_PASSWORD "pass phrase"
+
+#define TEST_SSID     ((const uint8_t *) TEST_SSID_STR)
+#define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID_STR)-1)
 
 
 
