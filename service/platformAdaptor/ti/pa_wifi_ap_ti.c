@@ -221,6 +221,10 @@ le_result_t pa_wifiAp_Init
     // Create the event for signaling user handlers.
     WifiApPaEvent = le_event_CreateId( "WifiApPaEvent", sizeof( le_wifiAp_Event_t ) );
 
+    // ********************* Temporary fix **********************
+    system("chmod 755 /legato/systems/current/apps/wifiService/read-only/pa_wifi.sh");
+    // ********************* Temporary fix **********************
+
     return LE_OK;
 }
 

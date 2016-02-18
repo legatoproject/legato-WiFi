@@ -27,8 +27,8 @@
 #define COMMAND_WIFICLIENT_DISCONNECT "wlan0 WIFICLIENT_DISCONNECT"
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE "wlan0 WIFICLIENT_CONNECT_SECURITY_NONE \"%.*s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP "wlan0 WIFICLIENT_CONNECT_SECURITY_WEP \"%.*s\" \"%s\""
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\" \"%s\""
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\" \"%s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE "wlan0 WIFICLIENT_CONNECT_WPA_PASSPHRASE \"%.*s\" %s"
@@ -159,6 +159,10 @@ le_result_t pa_wifiClient_Init
     LE_INFO( "pa_wifiClient_Init() called" );
     // Create the event for signaling user handlers.
     WifiClientPaEvent = le_event_CreateId( "WifiClientPaEvent", sizeof( le_wifiClient_Event_t ) );
+
+    // ********************* Temporary fix **********************
+    system("chmod 755 /legato/systems/current/apps/wifiService/read-only/pa_wifi.sh");
+    // ********************* Temporary fix **********************
 
     return LE_OK;
 }
@@ -622,7 +626,8 @@ le_result_t pa_wifiClient_Connect
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL),
                     ssidLength,
                     (char*) ssidBytes,
-                    SavedPreSharedKey);
+                    SavedPreSharedKey,
+                    SavedPassphrase);
 
                 systemResult = system( tmpString );
                 // Return value of -1 means that the fork() has failed (see man system).
@@ -707,7 +712,8 @@ le_result_t pa_wifiClient_Connect
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL),
                     ssidLength,
                     (char*) ssidBytes,
-                    SavedPreSharedKey );
+                    SavedPreSharedKey,
+                    SavedPassphrase );
 
                 systemResult = system( tmpString );
                 // Return value of -1 means that the fork() has failed (see man system).

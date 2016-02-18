@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+#
 # ($1:) -d Debug logs
 # $1: wlan interface (ex: wlan0)
 # $2: Command (ex:  WIFI_START
@@ -17,6 +19,8 @@ if [ "$1" = "-d" ]; then
     shift
     set -x
 fi
+
+# TEMPORARY !!! Will be removed
 set -x
 
 case $2 in
@@ -24,7 +28,6 @@ case $2 in
     echo "WIFI_START"
     # run tiwifi script
     /etc/init.d/tiwifi start || exit 91
-    /sbin/ifconfig $1 up || exit 93
     exit 0 ;;
 
   WIFI_STOP)
@@ -50,12 +53,14 @@ case $2 in
 
   WIFICLIENT_START_SCAN)
     echo "WIFICLIENT_START_SCAN"
-    (/usr/sbin/iw dev wlan0 scan |grep 'SSID\|signal') || exit 96
+    (/usr/sbin/iw dev wlan0 scan | grep 'SSID\|signal') || exit 96
     exit 0 ;;
 
   WIFICLIENT_DISCONNECT)
     echo "WIFICLIENT_DISCONNECT"
-    /sbin/ifconfig $1 down || exit 97
+	#/sbin/wpa_cli -i$1 terminate || exit 97
+	# Temporary solution
+	/sbin/ifconfig $1 down || exit 97
     exit 0 ;;
 
   WIFICLIENT_CONNECT_WPA_PASSPHRASE)
@@ -83,13 +88,13 @@ case $2 in
     /sbin/wpa_cli -i$1 status
 
     # Verify connection status
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
     do
       echo "loop=$i"
       (/usr/sbin/iw $1 link | grep "Connected to") && break
       sleep 1
     done
-    if [ "$i" = "20" ]; then
+    if [ "$i" = "30" ]; then
         exit 30
     fi
     #PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
@@ -117,13 +122,13 @@ case $2 in
     /sbin/wpa_cli -i$1 status
 
     # Verify connection status
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
     do
         echo "loop=$i"
         (/usr/sbin/iw $1 link | grep "Connected to") && break
         sleep 1
     done
-    if [ "$i" = "20" ]; then
+    if [ "$i" = "30" ]; then
         exit 30
     fi
     #PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
@@ -132,35 +137,43 @@ case $2 in
 
   WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL)
     echo "WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL mode"
-    # Run wpa_supplicant daemon
-    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i$1 -B || exit 99
+    # Alternative method (WORKING)
+    (/sbin/wpa_passphrase $3 $5 >> /tmp/wpa_supplicant.conf) || exit 1
 
-    /sbin/wpa_cli -i$1 disconnect
-    for i in `/sbin/wpa_cli -i$1 list_networks | grep ^[0-9] | cut -f1`; do
-        /sbin/wpa_cli -i$1 remove_network $i
-    done
-    (/sbin/wpa_cli -i$1 add_network | grep 0) || exit 1
-    (/sbin/wpa_cli -i$1 set_network 0 auth_alg OPEN | grep OK) || exit 2
-    (/sbin/wpa_cli -i$1 set_network 0 key_mgmt WPA-PSK | grep OK) || exit 3
-    (/sbin/wpa_cli -i$1 set_network 0 psk \"$4\" | grep OK) || exit 4
-    (/sbin/wpa_cli -i$1 set_network 0 proto WPA | grep OK) || exit 5
-    (/sbin/wpa_cli -i$1 set_network 0 pairwise TKIP | grep OK) || exit 6
-    (/sbin/wpa_cli -i$1 set_network 0 group TKIP | grep OK) || exit 7
-    (/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK) || exit 8
-    (/sbin/wpa_cli -i$1 set_network 0 ssid \"$3\" | grep OK) || exit 9
-    (/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 10
-    (/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 11
-    (/sbin/wpa_cli -i$1 reassociate | grep OK) || exit 12
-    /sbin/wpa_cli -i$1 status
+    # Run wpa_supplicant daemon
+    (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i$1 -B) || exit 99
+
+    # Initial method (NOT WORKING)
+
+    # Run wpa_supplicant daemon
+    #/sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i$1 -B || exit 99
+
+    #/sbin/wpa_cli -i$1 disconnect
+    #for i in `/sbin/wpa_cli -i$1 list_networks | grep ^[0-9] | cut -f1`; do
+    #    /sbin/wpa_cli -i$1 remove_network $i
+    #done
+    #(/sbin/wpa_cli -i$1 add_network | grep 0) || exit 1
+    #(/sbin/wpa_cli -i$1 set_network 0 auth_alg OPEN | grep OK) || exit 2
+    #(/sbin/wpa_cli -i$1 set_network 0 key_mgmt WPA-PSK | grep OK) || exit 3
+    #(/sbin/wpa_cli -i$1 set_network 0 psk \"$4\" | grep OK) || exit 4
+    #(/sbin/wpa_cli -i$1 set_network 0 proto WPA | grep OK) || exit 5
+    #(/sbin/wpa_cli -i$1 set_network 0 pairwise TKIP | grep OK) || exit 6
+    #(/sbin/wpa_cli -i$1 set_network 0 group TKIP | grep OK) || exit 7
+    #(/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK) || exit 8
+    #(/sbin/wpa_cli -i$1 set_network 0 ssid \"$3\" | grep OK) || exit 9
+    #(/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 10
+    #(/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 11
+    #(/sbin/wpa_cli -i$1 reassociate | grep OK) || exit 12
+    #/sbin/wpa_cli -i$1 status
 
     # Verify connection status
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
     do
         echo "loop=$i"
         (/usr/sbin/iw $1 link | grep "Connected to") && break
         sleep 1
     done
-    if [ "$i" = "20" ]; then
+    if [ "$i" = "30" ]; then
         exit 30
     fi
     #PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
@@ -169,35 +182,42 @@ case $2 in
 
   WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL)
     echo "WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL mode"
-    # Run wpa_supplicant daemon
-    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i$1 -B || exit 99
+    # Alternative method (WORKING)
+    (/sbin/wpa_passphrase $3 $5 >> /tmp/wpa_supplicant.conf) || exit 1
 
-    /sbin/wpa_cli -i$1 disconnect
-    for i in `/sbin/wpa_cli -i$1 list_networks | grep ^[0-9] | cut -f1`; do
-        /sbin/wpa_cli -i$1 remove_network $i
-    done
-    (/sbin/wpa_cli -i$1 add_network | grep 0) || exit 1
-    (/sbin/wpa_cli -i$1 set_network 0 auth_alg OPEN | grep OK) || exit 2
-    (/sbin/wpa_cli -i$1 set_network 0 key_mgmt WPA-PSK | grep OK) || exit 3
-    (/sbin/wpa_cli -i$1 set_network 0 psk \"$4\" | grep OK) || exit 4
-    (/sbin/wpa_cli -i$1 set_network 0 proto RSN | grep OK) || exit 5
-    (/sbin/wpa_cli -i$1 set_network 0 pairwise CCMP | grep OK) || exit 6
-    (/sbin/wpa_cli -i$1 set_network 0 group CCMP | grep OK) || exit 7
-    (/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK) || exit 8
-    (/sbin/wpa_cli -i$1 set_network 0 ssid \"$3\" | grep OK) || exit 9
-    (/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 10
-    (/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 11
-    (/sbin/wpa_cli -i$1 reassociate | grep OK) || exit 12
-    /sbin/wpa_cli -i$1 status
+    # Run wpa_supplicant daemon
+    (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i$1 -B) || exit 99
+
+    # Initial method (NOT WORKING)
+    # Run wpa_supplicant daemon
+    #/sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i$1 -B || exit 99
+
+    #/sbin/wpa_cli -i$1 disconnect
+    #for i in `/sbin/wpa_cli -i$1 list_networks | grep ^[0-9] | cut -f1`; do
+    #    /sbin/wpa_cli -i$1 remove_network $i
+    #done
+    #(/sbin/wpa_cli -i$1 add_network | grep 0) || exit 1
+    #(/sbin/wpa_cli -i$1 set_network 0 auth_alg OPEN | grep OK) || exit 2
+    #(/sbin/wpa_cli -i$1 set_network 0 key_mgmt WPA-PSK | grep OK) || exit 3
+    #(/sbin/wpa_cli -i$1 set_network 0 psk \"$4\" | grep OK) || exit 4
+    #(/sbin/wpa_cli -i$1 set_network 0 proto RSN | grep OK) || exit 5
+    #(/sbin/wpa_cli -i$1 set_network 0 pairwise CCMP | grep OK) || exit 6
+    #(/sbin/wpa_cli -i$1 set_network 0 group CCMP | grep OK) || exit 7
+    #(/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK) || exit 8
+    #(/sbin/wpa_cli -i$1 set_network 0 ssid \"$3\" | grep OK) || exit 9
+    #(/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 10
+    #(/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 11
+    #(/sbin/wpa_cli -i$1 reassociate | grep OK) || exit 12
+    #/sbin/wpa_cli -i$1 status
 
     # Verify connection status
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
     do
         echo "loop=$i"
         (/usr/sbin/iw $1 link | grep "Connected to") && break
         sleep 1
     done
-    if [ "$i" = "20" ]; then
+    if [ "$i" = "30" ]; then
         exit 30
     fi
     #PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
@@ -265,7 +285,7 @@ case $2 in
     (/sbin/wpa_cli -i$1 set_network 0 password \"$5\" | grep OK) || exit 9
     (/sbin/wpa_cli -i$1 set_network 0 phase1 \"peapver=0\" | grep OK) || exit 10
     (/sbin/wpa_cli -i$1 set_network 0 phase2 \"MSCHAPV2\" | grep OK) || exit 11
-    (/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK || exit 12
+    (/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK) || exit 12
     (/sbin/wpa_cli -i$1 set_network 0 ssid \"$3\" | grep OK) || exit 13
     (/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 14
     (/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 15
@@ -284,10 +304,9 @@ case $2 in
     fi
     #PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
     #/sbin/udhcpc -R -b -i $1 || exit 31
-    exit 0
-    # ;;
+    exit 0 ;;
 
   *)
     echo "Parameter not valid"
-    #exit 99 ;;
+    exit 99 ;;
 esac
