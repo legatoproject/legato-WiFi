@@ -58,9 +58,7 @@ case $2 in
 
   WIFICLIENT_DISCONNECT)
     echo "WIFICLIENT_DISCONNECT"
-	#/sbin/wpa_cli -i$1 terminate || exit 97
-	# Temporary solution
-	/sbin/ifconfig $1 down || exit 97
+    /sbin/wpa_cli -i$1 terminate || exit 97
     exit 0 ;;
 
   WIFICLIENT_CONNECT_WPA_PASSPHRASE)
