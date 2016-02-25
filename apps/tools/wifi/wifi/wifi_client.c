@@ -66,7 +66,7 @@ static void WifiClientConnectEventHandler
 
         case LE_WIFICLIENT_EVENT_SCAN_DONE:
         {
-            /// this could happen. Not an error. Do nothing.
+            // this could happen. Not an error. Do nothing.
             LE_DEBUG( "FYI: Got EVENT SCAN, was while waiting for CONNECT.");
         }
         break;
@@ -96,19 +96,18 @@ static void WifiReadScanResults
         do
         {
             uint8_t ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES];
-            //< Contains ssidNumElements number of bytes
+            // Contains ssidNumElements number of bytes
             size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_BYTES;
 
             if( LE_OK == (result=le_wifiClient_GetSsid( accessPointRef,
                                                 &ssidBytes[0],
                                                 &ssidNumElements)) )
             {
-                printf("Found:\tSSID:\t\"%.*s\"\tStrength:%d\tRef:%x\n",
-                                    ssidNumElements,
+                printf("Found:\tSSID:\t\"%.*s\"\tStrength:%d\tRef:%p\n",
+                                    (int)ssidNumElements,
                                     (char*) &ssidBytes[0],
                                     le_wifiClient_GetSignalStrength(accessPointRef),
-                                    //using %p gives "0x" in beginning"
-                                    (int)accessPointRef);
+                                    accessPointRef);
             }
             else
             {
@@ -232,6 +231,7 @@ void ExecuteWifiClientCommand
     size_t numArgs          ///< [IN] Number of arguments
 )
 {
+    int rc1, rc2; // sscanf() results
     le_result_t result = LE_OK;
 
     if (strcmp(commandPtr, "help") == 0)
@@ -317,9 +317,9 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
 
-        accessPointRef = (le_wifiClient_AccessPointRef_t) strtol(arg2, NULL, 16);
+        rc1 = sscanf(arg2, "%x", (unsigned int *)&accessPointRef);
 
-        if (LE_OK == le_wifiClient_Delete(accessPointRef))
+        if ((1 == rc1) && (LE_OK == le_wifiClient_Delete(accessPointRef)))
         {
             printf("Successful deletion\n");
             exit(EXIT_SUCCESS);
@@ -341,12 +341,12 @@ void ExecuteWifiClientCommand
             printf("ERROR: Missing argument\n");
             exit(EXIT_FAILURE);
         }
-        accessPointRef = (le_wifiClient_AccessPointRef_t) strtol(arg2, NULL, 16);
+        rc1 = sscanf(arg2, "%x", (unsigned int *)&accessPointRef);
 
         // Add an handler function to handle message reception
         ConnectHdlrRef = le_wifiClient_AddNewEventHandler(WifiClientConnectEventHandler, NULL);
 
-        if (LE_OK == (result= le_wifiClient_Connect(accessPointRef)))
+        if ((1 == rc1) && (LE_OK == (result= le_wifiClient_Connect(accessPointRef))))
         {
             printf("Connecting\n");
         }
@@ -372,12 +372,12 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
 
-        accessPointRef = (le_wifiClient_AccessPointRef_t) strtol(arg2, NULL, 16);
-        securityProtocol = (le_wifiClient_SecurityProtocol_t) strtol(arg3, NULL, 10);
+        rc1 = sscanf(arg2, "%x", (unsigned int *)&accessPointRef);
+        rc2 = sscanf(arg3, "%u", &securityProtocol);
         printf("wifi client le_wifiClient_SetSecurityProtocol  %p \n", accessPointRef);
 
 
-        if (LE_OK == le_wifiClient_SetSecurityProtocol(accessPointRef, securityProtocol))
+        if ((1 == rc1) && (1 == rc2) && (LE_OK == le_wifiClient_SetSecurityProtocol(accessPointRef, securityProtocol)))
         {
             printf("Successfully set security protocol\n");
             exit(EXIT_SUCCESS);
@@ -400,9 +400,9 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
 
-        accessPointRef = (le_wifiClient_AccessPointRef_t) strtol(arg2, NULL, 16);
+        rc1 = sscanf(arg2, "%x", (unsigned int *)&accessPointRef);
 
-        if (LE_OK == (result=le_wifiClient_SetPassphrase(accessPointRef, passPhrase)))
+        if ((1 == rc1) && (LE_OK == (result=le_wifiClient_SetPassphrase(accessPointRef, passPhrase))))
         {
             printf("le_wifiClient_SetPassphrase returns OK\n");
             exit(EXIT_SUCCESS);
@@ -425,9 +425,9 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
 
-        accessPointRef = (le_wifiClient_AccessPointRef_t) strtol(arg2, NULL, 16);
+        rc1 = sscanf(arg2, "%x", (unsigned int *)&accessPointRef);
 
-        if (LE_OK == le_wifiClient_SetPreSharedKey(accessPointRef, psk))
+        if ((1 == rc1) && (LE_OK == le_wifiClient_SetPreSharedKey(accessPointRef, psk)))
         {
             printf("PSK set sucessfully\n");
             exit(EXIT_SUCCESS);
@@ -451,9 +451,9 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
 
-        accessPointRef = (le_wifiClient_AccessPointRef_t) strtol(arg2, NULL, 16);
+        rc1 = sscanf(arg2, "%x", (unsigned int *)&accessPointRef);
 
-        if (LE_OK == (result=le_wifiClient_SetUserCredentials(accessPointRef, username, password)))
+        if ((1 == rc1) && (LE_OK == (result=le_wifiClient_SetUserCredentials(accessPointRef, username, password))))
         {
             printf("Successfully set user credentials\n");
             exit(EXIT_SUCCESS);
@@ -476,9 +476,9 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
 
-        accessPointRef = (le_wifiClient_AccessPointRef_t) strtol(arg2, NULL, 16);
+        rc1 = sscanf(arg2, "%x", (unsigned int *)&accessPointRef);
 
-        if (LE_OK == (result=le_wifiClient_SetPreSharedKey(accessPointRef, wepkey)))
+        if ((1 == rc1) && (LE_OK == (result=le_wifiClient_SetPreSharedKey(accessPointRef, wepkey))))
         {
             printf("wepkey set sucessfully\n");
             exit(EXIT_SUCCESS);
