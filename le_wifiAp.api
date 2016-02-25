@@ -101,17 +101,6 @@ ENUM SecurityProtocol
     SECURITY_WPA2    ///< Wifi Access Point has WPA2 activated.
 };
 
-//--------------------------------------------------------------------------------------------------
-/**
- * These events provide information on Wifi Access Point
- *
- */
-//--------------------------------------------------------------------------------------------------
-EVENT NewEvent
-(
-    handler EventHandler
-);
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -121,6 +110,17 @@ EVENT NewEvent
 HANDLER EventHandler
 (
     Event event IN       ///< Handles the wifi events
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * These events provide information on Wifi Access Point
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+EVENT NewEvent
+(
+    handler EventHandler
 );
 
 

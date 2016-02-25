@@ -222,16 +222,6 @@ ENUM SecurityProtocol
     SECURITY_WPA2_EAP_PEAP0_ENTERPRISE  ///< Using WPA2 Enterprise
 };
 
-//--------------------------------------------------------------------------------------------------
-/**
- * This event provide information on Wfifi Client event changes.
- *
- */
-//--------------------------------------------------------------------------------------------------
-EVENT NewEvent
-(
-    handler NewEventHandler
-);
 
 
 //--------------------------------------------------------------------------------------------------
@@ -242,6 +232,18 @@ EVENT NewEvent
 HANDLER NewEventHandler
 (
     Event event IN       ///< Handles the wifi events
+);
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This event provide information on Wfifi Client event changes.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+EVENT NewEvent
+(
+    handler NewEventHandler
 );
 
 
