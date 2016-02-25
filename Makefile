@@ -7,9 +7,29 @@
 # Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 # --------------------------------------------------------------------------------------------------
 
-
 MANGOH_WIFI_ROOT = $(PWD)
 export MANGOH_WIFI_ROOT
+
+$(info ********************* VERSION ********************)
+# Check wether the version is already defined.
+ifeq ($(origin MANGOH_WIFI_VERSION), undefined)
+	# If not, try to define it through Git information
+	MANGOH_WIFI_VERSION := $(shell (git describe --tags || git rev-parse HEAD) 2> /dev/null)
+$(info MangOH WiFi version is $(MANGOH_WIFI_VERSION))
+	# If the folder is not managed by Git
+ifeq ($(MANGOH_WIFI_VERSION),)
+	# Define the version as "UNDEFINED"
+	MANGOH_WIFI_VERSION := UNDEFINED
+$(info MangOH WiFi version is undefined...)
+else
+endif
+	# And finally, export it.
+	export MANGOH_WIFI_VERSION
+else
+# Otherwise, display the current version
+$(info MangOH WiFi version is already defined: $(MANGOH_WIFI_VERSION))
+endif
+$(info **************************************************)
 
 SERVICE_DIR = $(PWD)/service
 SERVICE_EXE = $(SERVICE_DIR)/wifiService.wp85.update
