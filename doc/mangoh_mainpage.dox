@@ -1,0 +1,23 @@
+/** @page mangoh_mainpage MangOH WiFi main page
+
+Main page for the MangOH WiFi Project<br>
+The WiFi Service offers both Client and Access Point functionality in two different API:s.<br>
+<HR>
+@section mangoh_mainpage_API API:s provided by wifiService
+
+@subpage c_le_wifi_client <br>
+@subpage c_le_wifi_ap <br>
+<HR>
+
+@section mangoh_mainpage_apps WiFi Applications
+@subpage mangoh_wificlient_testapp  Application to test Wifi Client <br>
+@subpage mangoh_wifiap_testapp  Application to test Wifi Access Point <br>
+<HR>
+
+@section mangoh_mainpage_cmdline WiFi Command line Application
+@subpage mangoh_toolsTarget_wifi  Control either client or access point from the command line.<br>
+
+<HR>
+Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+
+**/

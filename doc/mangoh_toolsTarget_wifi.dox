@@ -1,0 +1,20 @@
+/** @page mangoh_toolsTarget_wifi wifi command line tool
+
+Use the <b>wifi</b> command to control wifi service functions. <BR>
+It contains both  client and access point functionality. <BR>
+
+<h1>Usage</h1>
+
+<b><c> wifi </c></b>
+
+@section toolsTarget_wifi_client wifi client
+
+
+<BR>
+<BR>
+<BR>
+<HR>
+
+Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+
+**/

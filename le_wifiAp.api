@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 /**
- * @page c_le_wifiAp Wifi Access Point Service
+ * @page c_le_wifi_ap Wifi Access Point Service
  *
  * @ref le_wifiAp_interface.h "API Reference"
  *

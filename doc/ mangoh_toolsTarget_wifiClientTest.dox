@@ -1,0 +1,14 @@
+/** @page mangoh_wificlient_testapp WiFi Client Test application
+
+The applications provides an example how to use the WiFi Client API<br>
+@subpage c_le_wifi_client. <br>
+<HR>
+<h1>Usage</h1>
+When started the WiFi client tries to connect to an WiFi Access Point named <i>"ExampleSSID"</i>, <br>
+with passphrase: <i>"passphrase"</i>. <br>
+
+<HR>
+
+Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+
+**/

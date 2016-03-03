@@ -1,0 +1,14 @@
+/** @page mangoh_wifiap_testapp WiFi Access Point Test application
+
+The applications provides an example how to use the WiFi Access Point API<br>
+@subpage c_le_wifi_ap <br>
+<HR>
+<h1>Usage</h1>
+When started it starts a WiFi Access Point named <i>"ExampleSSID"</i>, <br>
+with passphrase: <i>"passphrase"</i>. <br>
+
+<HR>
+
+Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+
+**/

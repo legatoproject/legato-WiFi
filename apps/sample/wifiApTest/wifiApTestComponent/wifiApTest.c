@@ -14,7 +14,7 @@
 //--------------------------------------------------------------------------------------------------
 
 #define TEST_SSID_STR "ExampleSSID"
-#define TEST_PASSWORD "pass phrase"
+#define TEST_PASSPHRASE "passphrase"
 
 #define TEST_SSID     ((const uint8_t *) TEST_SSID_STR)
 #define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID_STR)-1)
@@ -37,7 +37,7 @@ static void Testle_setCredentials
     void
 )
 {
-    LE_ASSERT(LE_OK == le_wifiAp_SetPassPhrase ( "Secret1" ));
+    LE_ASSERT(LE_OK == le_wifiAp_SetPassPhrase ( TEST_PASSPHRASE ));
 
     LE_ASSERT(LE_OK == le_wifiAp_SetSecurityProtocol ( LE_WIFIAP_SECURITY_WPA2 ));
 
