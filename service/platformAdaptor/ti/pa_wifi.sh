@@ -48,7 +48,7 @@ case $2 in
 
   WIFIAP_HOSTAPD)
     echo "WIFIAP_HOSTAPD"
-    /bin/hostapd /tmp/hostapd.conf || exit 95
+    ( /bin/hostapd /tmp/hostapd.conf& ) || exit 95
     exit 0 ;;
 
   WIFICLIENT_START_SCAN)
