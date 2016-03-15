@@ -48,6 +48,25 @@ static FILE *IwThreadFp = NULL;
 //--------------------------------------------------------------------------------------------------
 static le_event_Id_t WifiApPaEvent;
 
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Thread destructor
+ */
+//--------------------------------------------------------------------------------------------------
+static void ThreadDestructor
+(
+    void *context
+)
+{
+    if ( IwThreadFp )
+    {
+        // And close FP used in created thread
+        pclose( IwThreadFp );
+        IwThreadFp = NULL;
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 /**
  * The first-layer Wifi Client Event Handler.
@@ -271,6 +290,7 @@ le_result_t pa_wifiAp_Start
     // Create WiFi AP PA Thread
     WifiApPaThread = le_thread_Create( "WifiApPaThread", WifiApPaThreadMain, NULL );
     le_thread_SetJoinable( WifiApPaThread );
+    le_thread_AddDestructor ( ThreadDestructor, NULL );
     le_thread_Start( WifiApPaThread );
 
     // Check parameters before start
@@ -481,8 +501,6 @@ le_result_t pa_wifiAp_Stop
         le_thread_Cancel( WifiApPaThread );
         if ( LE_OK == le_thread_Join( WifiApPaThread,NULL ) )
         {
-            // And close FP used in created thread
-            pclose( IwThreadFp );
             result = LE_OK;
         }
         else

@@ -591,7 +591,7 @@ le_result_t le_wifiClient_Stop
     // last client closes the hardware
     if ( 0 == ClientStartCount )
     {
-        pa_wifiClient_Release();
+        pa_wifiClient_Stop();
         ReleaseAllAccessPoints();
         LE_DEBUG( "le_wifiClient_Stop: Last client pa_wifiClient_Release." );
     }
@@ -1007,7 +1007,7 @@ le_result_t le_wifiClient_SetSecurityProtocol
         LE_ERROR( "le_wifiClient_SetSecurityProtocol: invalid accessPointRef" );
         return LE_BAD_PARAMETER;
     }
-    
+
     return pa_wifiClient_SetSecurityProtocol( securityProtocol );
 }
 

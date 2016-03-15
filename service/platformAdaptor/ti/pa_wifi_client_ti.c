@@ -61,6 +61,24 @@ static le_event_Id_t WifiClientPaEvent;
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Thread destructor
+ */
+//--------------------------------------------------------------------------------------------------
+static void ThreadDestructor
+(
+    void *context
+)
+{
+    if ( IwThreadFp )
+    {
+        // And close FP used in created thread
+        pclose( IwThreadFp );
+        IwThreadFp = NULL;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
  * The first-layer Wifi Client Event Handler.
  *
  */
@@ -202,6 +220,7 @@ le_result_t pa_wifiClient_Start
     // Create WiFi Client PA Thread
     WifiClientPaThread = le_thread_Create( "WifiClientPaThread", WifiClientPaThreadMain, NULL );
     le_thread_SetJoinable( WifiClientPaThread );
+    le_thread_AddDestructor ( ThreadDestructor, NULL );
     le_thread_Start( WifiClientPaThread);
 
     int16_t systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START );
@@ -253,6 +272,7 @@ le_result_t pa_wifiClient_Stop
 {
     le_result_t result = LE_FAULT;
     int16_t systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP );
+
     /**
      * Return value of -1 means that the fork() has failed (see man system).
      * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
@@ -277,8 +297,6 @@ le_result_t pa_wifiClient_Stop
         le_thread_Cancel( WifiClientPaThread );
         if ( LE_OK == le_thread_Join( WifiClientPaThread,NULL ) )
         {
-            // And close FP used in created thread
-            pclose( IwThreadFp );
             result = LE_OK;
         }
         else
