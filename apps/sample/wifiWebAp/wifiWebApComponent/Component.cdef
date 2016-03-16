@@ -1,0 +1,35 @@
+sources:
+{
+    wifiWebAp.c
+}
+
+requires:
+{
+    api:
+    {
+        ${MANGOH_WIFI_ROOT}/le_wifiAp.api
+    }
+}
+
+bundles:
+{
+    file:
+    {
+        // HTML start page
+        www/index.html  /var/www/index.html
+
+        // images
+        www/image/background.png     /var/www/image/background.png
+        www/image/sierra_324x60.png  /var/www/image/sierra_324x60.png
+        www/image/wifi.png           /var/www/image/wifi.png
+
+        // cgi bin stuff
+        [rx] www/cgi-bin/readlogfile    /var/www/cgi-bin/readlogfile
+        [x] www/cgi-bin/startwifiap     /var/www/cgi-bin/startwifiap
+        [x] www/cgi-bin/stopwifiap      /var/www/cgi-bin/stopwifiap
+
+        // debug logfile
+        [r] www/cgi-bin/logfile.log      /tmp/wifi_http.log
+
+    }
+}

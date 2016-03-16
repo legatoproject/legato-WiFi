@@ -1,0 +1,28 @@
+executables:
+{
+    wifiWebAp = ( wifiWebApComponent )
+}
+
+processes:
+{
+    envVars:
+    {
+        LE_LOG_LEVEL = DEBUG
+    }
+
+    run:
+    {
+        (wifiWebAp)
+    }
+}
+
+
+start: manual
+
+// because if not it cannot call /usr/sbin/httpd
+sandboxed: false
+
+bindings:
+{
+    wifiWebAp.wifiWebApComponent.le_wifiAp -> wifiService.le_wifiAp
+}

@@ -1,0 +1,113 @@
+#!/bin/sh
+echo -en "HTTP/1.1 200 OK\r\n"
+echo -en "Content-Type: text/html; charset=utf-8\r\n"
+echo -en "Cache-Control: no-cache\r\n"
+echo -en "Connection: close\r\n"
+echo -en "\r\n"
+echo -en "<BR> <H1>WIFI AP SETTINGS RECEIVED<H1> <BR>\r\n"
+
+
+
+# PARSING example:  SSID=TestSSID&security=1&secu=0&passphraseorpsk=passphrase&maxclients=5&apvisible=1&channel=1
+# Note that the sed search is "gready" so match is with the next member as well.
+# The order is important.
+
+if [ "$REQUEST_METHOD" = "POST" ]; then
+    if [ "$CONTENT_LENGTH" -gt 0 ]; then
+        while read -n $CONTENT_LENGTH POST_DATA <&0
+        do
+            echo -n "Parsing: $POST_DATA"
+            echo -n "Parsing: $POST_DATA\n" > /tmp/wifiWebAp_startwifiap.log
+            date > /tmp/wifiWebAp_startwifiap.log
+            echo -en "<br>\r\n"
+            WIFIAPSSID=$(echo -n "$POST_DATA"| sed -nr 's/.*SSID=(.*)\&security.*/\1/p')
+            WIFIAPSECURITY=$(echo -n "$POST_DATA"| sed -nr 's/.*security=(.*)\&keytype.*/\1/p')
+            WIFIAPKEYTYPE=$(echo -n "$POST_DATA"| sed -nr 's/.*keytype=(.*)\&key.*/\1/p')
+            WIFIAPKEY=$(echo -n "$POST_DATA"| sed -nr 's/.*key=(.*)\&maxclients.*/\1/p')
+            WIFIAPMAXCLIENTS=$(echo -n "$POST_DATA"| sed -nr 's/.*maxclients=(.*)\&apvisible.*/\1/p')
+            WIFIAPVISIBLE=$(echo -n "$POST_DATA"| sed -nr 's/.*apvisible=(.*)\&channel.*/\1/p')
+            WIFIAPCHANNEL=$(echo -n "$POST_DATA"| sed -nr 's/.*channel=(.*)/\1/p')
+         done
+    fi
+fi
+
+
+if [ -n "${WIFIAPSSID}" ]; then
+    echo -en "<br>\r\n"
+    echo -en "Setting SSID to ${WIFIAPSSID}  <br>\r\n"
+    /legato/systems/current/bin/wifi ap setssid ${WIFIAPSSID} >> /tmp/wifiWebAp_startwifiap.log
+    echo -en "<br>\r\n"
+else
+    echo -en "ERROR SSID not found<br>\r\n"
+fi
+
+
+if [ -n "${WIFIAPSECURITY}" ]; then
+    echo -en "<br>\r\n"
+    echo -en "Setting Security to ${WIFIAPSECURITY}  <br>\r\n"
+    /legato/systems/current/bin/wifi ap setsecurityproto ${WIFIAPSECURITY} >> /tmp/wifiWebAp_startwifiap.log
+    echo -en "<br>\r\n"
+else
+    echo -en "ERROR Security not found<br>\r\n"
+fi
+
+
+# secu = 1 -> WPA2
+if [ "${WIFIAPSECURITY}" ="1" ]; then
+
+    if [ "${WIFIAPKEYTYPE}" = "psk" ]; then
+        echo -en "keytype PSK found :${WIFIAPKEYTYPE}<br>\r\n"
+        if [ -n "${WIFIAPKEY}" ]; then
+            echo -en "<br>\r\n"
+            echo -en "Setting PSK to ${WIFIAPKEY}  <br>\r\n"
+            /legato/systems/current/bin/wifi ap setpsk ${WIFIAPKEY} >> /tmp/wifiWebAp_startwifiap.log
+            echo -en "<br>\r\n"
+        else
+            echo -en "ERROR PassPhrase or PSK not found<br>\r\n"
+        fi
+    else
+    # passphrase
+        echo -en "keytype assumed passphrase found :${WIFIAPKEYTYPE}<br>\r\n"
+        if [ -n "${WIFIAPKEY}" ]; then
+            echo -en "<br>\r\n"
+            echo -en "Setting PassPhrase to ${WIFIAPKEY}  <br>\r\n"
+            /legato/systems/current/bin/wifi ap setpassphrase ${WIFIAPKEY} >> /tmp/wifiWebAp_startwifiap.log
+            echo -en "<br>\r\n"
+        else
+            echo -en "ERROR PassPhrase or PSK not found<br>\r\n"
+        fi
+    fi
+fi
+
+if [ -n "${WIFIAPVISIBLE}" ]; then
+    echo -en "<br>\r\n"
+    echo -en "Setting visability to ${WIFIAPVISIBLE} <br>\r\n"
+    /legato/systems/current/bin/wifi ap setdiscoverable ${WIFIAPVISIBLE} >> /tmp/wifiWebAp_startwifiap.log
+    echo -en "<br>\r\n"
+else
+    echo -en "ERROR visability not found<br>\r\n"
+fi
+
+if [ -n "${WIFIAPCHANNEL}" ]; then
+    echo -en "<br>\r\n"
+    echo -en "Setting channel to ${WIFIAPCHANNEL} <br>\r\n"
+    /legato/systems/current/bin/wifi ap channel ${WIFIAPCHANNEL} >> /tmp/wifiWebAp_startwifiap.log
+    echo -en "<br>\r\n"
+else
+    echo -en "ERROR channel not found<br>\r\n"
+fi
+
+    echo -en "<br>\r\n"
+    echo -en "Starting Wifi Access Point (this will take a little while) <br>\r\n"
+/legato/systems/current/bin/wifi ap start >> /tmp/wifiWebAp_startwifiap.log
+
+@echo -en "Started Wifi Accesss Point<br>\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
+
+# DHCP server that the AP gives out a IP number.
+@echo -en "DHCP handling for demonstration.\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
+/sbin/ifconfig wlan0 192.168.7.1 up >> /tmp/wifiWebAp_startwifiap.log
+/etc/init.d/udhcpd start >> /tmp/wifiWebAp_startwifiap.log
+
+echo -en "<br>\r\n"
+echo -en "<FORM><INPUT Type=\"button\" VALUE=\"Back\" onClick=\"history.go(-1);return true;\"></FORM>\r\n"
+echo -en "<br>(end of output<br>\r\n"

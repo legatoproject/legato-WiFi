@@ -57,7 +57,7 @@ static void PrintHelp( void )
            "==========\n\n"
            "To run Wifi Client:\n"
            "\twifi client help\n"
-           "To run Wifi Client:\n"
+           "To run Wifi Access Point:\n"
            "\twifi ap help\n"
            "\n");
 }

@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+  <title>Legato - WiFi</title>
+  <style type="text/css" media="screen">
+  body {
+  color:black;
+  font-family:sans-serif;
+  font-weight:bold;
+  background-color:white;
+  background-image:url(image/background.png);
+  background-repeat:no-repeat;
+  background-position:50% 10px;
+  }
+  #demo
+  {
+  color:blue;
+  font-family:Consolas,monaco,monospace;
+  font-weight:bold;
+  white-space: nowrap;
+  }
+  </style>
+</head>
+<body>
+<table border="0" width="100%">
+<tr>
+<td><img src="image/wifi.png" alt="WiFi"/></td>
+<td style="text-align:right;"><img style="border:0;" src="image/sierra_324x60.png" alt="Sierra Wireless"/></td>
+</tr>
+</table>
+
+
+<p style="text-align:center;">Setup of Access point</p>
+
+<center>
+<form action="/cgi-bin/startwifiap" method="post" >
+ SSID: <input type="text" name="SSID" value="TestSSID"><br>
+
+    Security:
+    <input type="radio" name="security" value="1" checked> WPA2
+    <input type="radio" name="security" value="0" > None <br>
+
+    Set PassPhrase or PSK (Pre Shared Key):
+    <input type="radio" name="keytype" value="passphrase" checked> Passphrase
+    <input type="radio" name="keytype" value="psk" > PSK <br/>
+    <br/>
+    <br/>
+    Passphrase or PSK: <input type="text" name="key" value="passphrase"><br/>
+
+    <br/>
+    Max Number of Clients: <input type="text" name="maxclients" value="5"><br/>
+
+    Visible:
+    <input type="radio" name="apvisible" value="1" checked> Yes
+    <input type="radio" name="apvisible" value="0" > No <br/>
+    <br/>
+
+    Channel:
+    <select name="channel" id="channel" onchange="Change(this);">
+        <option selected="selected" value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+        <option value="13">13</option>
+    </select>
+    <br/>
+
+    <input type="submit" value="Start Wifi AP" /> <br/>
+</form>
+
+
+
+<form action="/cgi-bin/stopwifiap" method="post" >
+    <input type="submit" value="Stop Wifi AP" /> <br/>
+</form>
+</center>
+</p>
+
+<table border="0" width="100%" cellspacing="10" style="height:400px; width:640px; margin:auto;">
+<tr>
+<td style="vertical-align:top;">
+<div id="demo">&nbsp;</p>
+</td>
+</tr>
+</table>
+<script>
+function loadXMLDoc()
+{
+var xmlhttp;
+var d=new Date();
+var t=d.toLocaleTimeString();
+
+if (window.XMLHttpRequest)
+  {// code for IE7+, Firefox, Chrome, Opera, Safari
+  xmlhttp=new XMLHttpRequest();
+  }
+else
+  {// code for IE6, IE5
+  xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+  }
+xmlhttp.onreadystatechange=function()
+  {
+  if (xmlhttp.readyState==4 && xmlhttp.status==200)
+    {
+    var temp=xmlhttp.responseText;
+    document.getElementById("demo").innerHTML=temp;
+    }
+  }
+xmlhttp.open("GET","/cgi-bin/readlogfile?"+t,true);
+xmlhttp.send();
+}
+
+var myVar=setInterval(function(){myTimer()},1000);
+
+function myTimer()
+{
+  loadXMLDoc();
+}
+</script>
+
+
+
+</body>
+</html>
+

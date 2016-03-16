@@ -15,10 +15,8 @@
 
 #define TEST_SSID_STR "ExampleSSID"
 #define TEST_PASSPHRASE "passphrase"
-
 #define TEST_SSID     ((const uint8_t *) TEST_SSID_STR)
 #define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID_STR)-1)
-
 
 
 

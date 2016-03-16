@@ -7,8 +7,22 @@
 # Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 # --------------------------------------------------------------------------------------------------
 
+ifndef MANGOH_WIFI_ROOT
 MANGOH_WIFI_ROOT = $(PWD)
 export MANGOH_WIFI_ROOT
+endif
+
+ifndef MANGOH_WIFI_PA
+MANGOH_WIFI_PA = ti
+export MANGOH_WIFI_PA
+endif
+
+
+ifndef YOUR_TARGETS_IP
+YOUR_TARGETS_IP = "YOUR_TARGETS_IP"
+export YOUR_TARGETS_IP
+endif
+
 
 $(info ********************* VERSION ********************)
 # Check wether the version is already defined.
@@ -40,6 +54,9 @@ CLIENT_SAMPLE_EXE = $(CLIENT_SAMPLE_DIR)/wifiClientTest.wp85.update
 AP_SAMPLE_DIR = $(PWD)/apps/sample/wifiApTest
 AP_SAMPLE_EXE = $(AP_SAMPLE_DIR)/wifiApTest.wp85.update
 
+AP_WEB_SAMPLE_DIR = $(PWD)/apps/sample/wifiWebAp
+AP_WEB_SAMPLE_EXE = $(AP_WEB_SAMPLE_DIR)/wifiWebAp.wp85.update
+
 # Wifi Command Line Client 'wifi'
 WIFI_CMD_LINE_DIR = $(PWD)/apps/tools/wifi
 WIFI_CMD_LINE_EXE = $(WIFI_CMD_LINE_DIR)/wifi.wp85.update
@@ -53,16 +70,19 @@ default: service clientsample apsample wifi
 	@echo "*****************************"
 	@echo Successfully built Wifi Service and Apps
 	@echo To load Wifi Service type:
-	@echo instapp $(SERVICE_EXE) YOUR_TARGETS_IP
+	@echo instapp $(SERVICE_EXE) $(YOUR_TARGETS_IP)
 	@echo "*****************************"
 	@echo To load Wifi Client Sample App type:
-	@echo instapp $(CLIENT_SAMPLE_EXE) YOUR_TARGETS_IP
+	@echo instapp $(CLIENT_SAMPLE_EXE) $(YOUR_TARGETS_IP)
 	@echo "*****************************"
 	@echo To load Wifi AP Sample App type:
-	@echo instapp $(AP_SAMPLE_EXE) YOUR_TARGETS_IP
+	@echo instapp $(AP_SAMPLE_EXE) $(YOUR_TARGETS_IP)
+	@echo "*****************************"
+	@echo To load Wifi AP Web Sample App type:
+	@echo instapp $(AP_WEB_SAMPLE_EXE) $(YOUR_TARGETS_IP)
 	@echo "*****************************"
 	@echo To load Wifi Command Line App \"wifi\" type:
-	@echo instapp $(WIFI_CMD_LINE_EXE) YOUR_TARGETS_IP
+	@echo instapp $(WIFI_CMD_LINE_EXE) $(YOUR_TARGETS_IP)
 
 
 # By default, build for the wp85
@@ -87,6 +107,14 @@ apsample: $(AP_SAMPLE_EXE)
 $(AP_SAMPLE_EXE):
 	$(MAKE) -C $(AP_SAMPLE_DIR) wp85
 
+# Wifi Web Access Point Sample
+
+apsample: $(AP_WEB_SAMPLE_EXE)
+
+$(AP_WEB_SAMPLE_EXE):
+	$(MAKE) -C $(AP_WEB_SAMPLE_DIR) wp85
+
+
 # Wifi Command Line Client 'wifi'
 wifi: $(WIFI_CMD_LINE_EXE)
 
@@ -100,3 +128,4 @@ clean:
 	$(MAKE) -C $(CLIENT_SAMPLE_DIR) clean
 	$(MAKE) -C $(AP_SAMPLE_DIR) clean
 	$(MAKE) -C $(WIFI_CMD_LINE_DIR) clean
+	$(MAKE) -C $(AP_WEB_SAMPLE_DIR) clean

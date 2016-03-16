@@ -12,8 +12,8 @@ sources:
     wifiService.c
     le_wifiClient.c
     le_wifiAp.c
-    ../platformAdaptor/ti/pa_wifi_client_ti.c
-    ../platformAdaptor/ti/pa_wifi_ap_ti.c
+    ../platformAdaptor/${MANGOH_WIFI_PA}/pa_wifi_client_ti.c
+    ../platformAdaptor/${MANGOH_WIFI_PA}/pa_wifi_ap_ti.c
 }
 
 cflags:
