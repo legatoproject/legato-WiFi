@@ -39,6 +39,12 @@ case $2 in
   WIFI_WLAN_UP)
     echo "WIFI_WLAN_UP"
     /sbin/ifconfig $1 up || exit 93
+    /usr/sbin/iw $1 set power_save off || exit 94
+    exit 0 ;;
+
+  WIFI_WLAN_DOWN)
+    echo "WIFI_WLAN_DOWN"
+    /sbin/ifconfig $1 down || exit 93
     exit 0 ;;
 
   WIFI_SET_EVENT)
@@ -48,7 +54,7 @@ case $2 in
 
   WIFIAP_HOSTAPD)
     echo "WIFIAP_HOSTAPD"
-    ( /bin/hostapd /tmp/hostapd.conf& ) || exit 95
+    (/bin/hostapd /tmp/hostapd.conf &)|| exit 95
     exit 0 ;;
 
   WIFICLIENT_START_SCAN)
@@ -64,6 +70,7 @@ case $2 in
   WIFICLIENT_CONNECT_WPA_PASSPHRASE)
     echo "WIFICLIENT_CONNECT_WPA_PASSPHRASE"
     /sbin/wpa_passphrase "$3" $4 || exit 98
+    echo "ctrl_interface=DIR=/var/run/wpa_supplicant" | tee -a /tmp/wpa_supplicant.conf
     exit 0 ;;
 
   WIFICLIENT_CONNECT_SECURITY_NONE)
@@ -206,7 +213,7 @@ case $2 in
     #(/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 10
     #(/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 11
     #(/sbin/wpa_cli -i$1 reassociate | grep OK) || exit 12
-    #/sbin/wpa_cli -i$1 status
+    /sbin/wpa_cli -i$1 status
 
     # Verify connection status
     for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
