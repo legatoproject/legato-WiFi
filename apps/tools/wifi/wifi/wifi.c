@@ -1,35 +1,6 @@
-//--------------------------------------------------------------------------------------------------
-/**
- * @page c_le_wifiAp Wifi Access Point Service
- *
- * @ref le_wifiAp_interface.h "API Reference"
- *
- * <HR>
- *
- * This Wifi Service API provides Wifi Access Point setup.
- * Please note that if there is only one wifi hardware the Wifi Access Point
- * cannot be used at the same time as the Wifi Client service.
- *
- * @section le_wifi_binding IPC interfaces binding
- *
- *
- * Here's a code sample binding to Wifi service:
- * @verbatim
-   bindings:
-   {
-      clientExe.clientComponent.le_wifiAp -> wifiService.le_wifiAp
-   }
-   @endverbatim
- *
- *
- */
-//--------------------------------------------------------------------------------------------------
-
-
-
 //-------------------------------------------------------------------------------------------------
 /**
- * @file wifi.c
+ * @file wifi_ap.c
  *
  * Wifi Service Command line.
  *
@@ -38,12 +9,11 @@
  *
  * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  */
-//-------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
 #include "legato.h"
 #include "interfaces.h"
 #include "wifi_internal.h"
-
 
 
 //--------------------------------------------------------------------------------------------------

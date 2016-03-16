@@ -1,18 +1,97 @@
 /** @page mangoh_toolsTarget_wifi wifi command line tool
 
 Use the <b>wifi</b> command to control wifi service functions. <BR>
-It contains both  client and access point functionality. <BR>
+It offers both client and access point.<BR>
 
-<h1>Usage</h1>
+<h1>the wifi command</h1>
 
 <b><c> wifi </c></b>
+@verbatim
+# wifi help
+wifi command line usage
+==========
+
+To run Wifi Client:
+	wifi client help
+To run Wifi Access Point:
+	wifi ap help
+@endverbatim
+<BR>
 
 @section toolsTarget_wifi_client wifi client
+<h1>wifi client</h1>
+<BR>
+The wifi client command line has the following options.<BR>
+@verbatim
+# wifi client help
+wifi command line usage
+==========
+
+To start using the Wifi Client:
+	wifi client start
+To stop  using the Wifi Client:
+	wifi client stop
+To start a scan:
+	wifi client scan
+To create to a access point and get [REF]:
+	wifi client create [SSID]
+To connect to a access point set in 'create':
+	wifi client connect [REF]
+To set security protocol
+	wifi client setsecurityproto [REF] [SecuProto]
+Values for SecuProto;
+	0: No security
+	1: Using WEP
+	2: Using WPA
+	3: Using WPA2
+	4: Using WPA Enterprise
+	5 :Using WPA2 Enterprise
+To disconnect from an access point:
+	wifi client disconnect
+To delete the access point set in 'create':
+	wifi client delete
+To set WPA/WPA2 passphrase that generates PSK :
+	wifi client setpassphrase [REF] [passphrase]
+To set WPA/WPA2 PSK directly:
+	wifi client setpsk [REF] [psk]
+To set WPA/WPA2 Enterprise user credentials:
+	wifi client setusercred [REF] [userName] [password]
+To set WEP Key:
+	wifi client setwepkey [REF] [WEPKEY]
+@endverbatim
+<BR>
 
 
+<h1>wifi ap</h1>
+The wifi access point command line has the following options.<BR>
 <BR>
-<BR>
-<BR>
+@verbatim
+# wifi ap help
+wifi command line Access Point usage
+==========
+
+To start the  Wifi Access Point:
+	wifi ap start
+To stop the  Wifi Access Point:
+	wifi ap stop
+To set the SSID of the Wifi Access Point:
+	wifi ap setssid [SSID]
+To set the channel of the Wifi Access Point:
+	wifi ap setchannel [ChannelNo]
+To set the security protocol used :
+	wifi ap setsecurityproto [SecuProto]
+Values for SecuProto;
+	0: No security
+	1: Using WPA2
+To set WPA2 passphrase that generates PSK :
+	wifi ap setpassphrase  [passphrase]
+To set WPA2 PSK directly:
+	wifi ap setpsk [PSK]
+To setdiscoverablity for the Wifi Access Point:
+	wifi ap setdiscoverable
+To maximum nbr of clients for the Wifi Access Point:
+	wifi ap setmaxclients [MAXNBR]
+@endverbatim
 <HR>
 
 Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
