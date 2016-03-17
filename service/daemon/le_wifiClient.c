@@ -591,6 +591,7 @@ le_result_t le_wifiClient_Stop
     // last client closes the hardware
     if ( 0 == ClientStartCount )
     {
+        pa_wifiClient_ClearAllCredentials();
         pa_wifiClient_Stop();
         ReleaseAllAccessPoints();
         LE_DEBUG( "le_wifiClient_Stop: Last client pa_wifiClient_Release." );
@@ -1169,11 +1170,7 @@ le_result_t le_wifiClient_Disconnect
 )
 {
     LE_DEBUG( "le_wifiClient_Disconnect");
-    // Credentials needs to be set for each new connection.
-    pa_wifiClient_ClearAllCredentials();
-
     return pa_wifiClient_Disconnect();
-
 }
 
 
