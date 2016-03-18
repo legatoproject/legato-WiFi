@@ -26,25 +26,27 @@ set -x
 case $2 in
   WIFI_START)
     echo "WIFI_START"
-    # run tiwifi script
-    /etc/init.d/tiwifi start || exit 91
+    # run tiwifi script and do ifconfig up
+    /sbin/ifup $1 || exit 91
     exit 0 ;;
 
   WIFI_STOP)
     echo "WIFI_STOP"
-    # run tiwifi script
-    /etc/init.d/tiwifi stop || exit 92
+    # Do ifconfig down and run tiwifi script
+    /sbin/ifdown $1 || exit 92
     exit 0 ;;
 
   WIFI_WLAN_UP)
     echo "WIFI_WLAN_UP"
-    /sbin/ifconfig $1 up || exit 93
-    /usr/sbin/iw $1 set power_save off || exit 94
+    # TEMPORARY !!! Will be removed
+    #/sbin/ifconfig $1 up || exit 93
+    #/usr/sbin/iw $1 set power_save off || exit 94
     exit 0 ;;
 
   WIFI_WLAN_DOWN)
     echo "WIFI_WLAN_DOWN"
-    /sbin/ifconfig $1 down || exit 93
+    # TEMPORARY !!! Will be removed
+    #/sbin/ifconfig $1 down || exit 93
     exit 0 ;;
 
   WIFI_SET_EVENT)
