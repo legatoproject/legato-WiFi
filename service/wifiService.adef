@@ -24,20 +24,13 @@ processes:
     faultAction: restart
 }
 
-bindings:
-{
-}
-
 requires:
 {
     configTree: { [r] system }
 }
 
-provides:
+extern:
 {
-    api:
-    {
-        wifiService.daemon.le_wifiAp
-        wifiService.daemon.le_wifiClient
-    }
+    wifiService.daemon.le_wifiAp
+    wifiService.daemon.le_wifiClient
 }

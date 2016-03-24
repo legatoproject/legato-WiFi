@@ -6,6 +6,8 @@ It offers both client and access point.<BR>
 <h1>the wifi command</h1>
 
 <b><c> wifi </c></b>
+The wifi command line tool supports both client and access point.<BR>
+This is described in the main help.<BR>
 @verbatim
 # wifi help
 wifi command line usage
@@ -19,8 +21,8 @@ To run Wifi Access Point:
 <BR>
 
 @section toolsTarget_wifi_client wifi client
-<h1>wifi client</h1>
-<BR>
+
+<h2>Wifi client options</h2><BR>
 The wifi client command line has the following options.<BR>
 @verbatim
 # wifi client help
@@ -62,7 +64,47 @@ To set WEP Key:
 <BR>
 
 
-<h1>wifi ap</h1>
+<h2>Wifi client example of usage</h2><BR>
+This example shows how a client connects to an open access point with no security<BR>
+@verbatim
+//Start the wifi client
+>wifi client start
+
+//Scan for available access points. Note the references in the response.
+>wifi client scan
+starting scan
+Found:	SSID:	"GustavNet"	Strength:-49	Ref:0x10000003
+Found:	SSID:	"hotspot"	Strength:-54	Ref:0x10000001
+Found:	SSID:	"NEUF_B698"	Strength:-71	Ref:0x10000009
+Found:	SSID:	"SFR WiFi FON"	Strength:-71	Ref:0x10000007
+Found:	SSID:	"SFR WiFi Mobile"	Strength:-71	Ref:0x10000005
+
+
+//Set security preference for accesspoint "hotspot"
+>  wifi client setsecurityproto 10000001 0
+
+//Connect to hotspot with reference 10000001
+>  wifi client connect 10000001
+
+//note that IP handling is not handled by the wifi command line tool
+//but here is how you can do it
+> /sbin/udhcpc -R -b -i wlan0
+udhcpc (v1.22.1) started
+Sending discover...
+Sending select for 192.168.43.25...
+Lease of 192.168.43.25 obtained, lease time 3600
+/etc/udhcpc.d/50default: Adding DNS 192.168.43.1
+
+// now try your IP connection towards the internet by pinging Googles DNS
+> ping 8.8.8.8
+
+@endverbatim
+<BR>
+<HR>
+
+
+@section toolsTarget_wifi_ap Wifi Access Point
+<h2>Wifi ap usage</h2>
 The wifi access point command line has the following options.<BR>
 <BR>
 @verbatim
@@ -92,6 +134,69 @@ To setdiscoverablity for the Wifi Access Point:
 To maximum nbr of clients for the Wifi Access Point:
 	wifi ap setmaxclients [MAXNBR]
 @endverbatim
+
+<br>
+<h2>wifi ap example of usage</h2><BR>
+
+This example shows how to setup a open access point WPA2 security.<BR>
+@verbatim
+// set the security to none.
+> wifi ap 1
+
+// set the pass phrase
+> wifi ap setpassphrase  secret123
+
+// set the name of the access point
+> wifi ap setssid EXAMPLESSID
+
+// start the AP
+> wifi ap start
+
+
+// DHCP IP handling
+// the wifi service does not handle the DHCP IP handling.
+// To bridge the DHCP server and the modem the following can be done.
+> /sbin/ifconfig wlan0 192.168.7.1 up
+
+// start the DHCP service
+> /etc/init.d/udhcpd start
+
+
+// Configure the interfaces
+// interface du point of access wifi
+> export INT_WIFI="wlan0"
+// interface wlan or eth0 with internet (or "eth0"
+> export INT_NET="rmnet0"
+
+//IP & mask for subnet
+> export SUBNET="192.168.0.0/24"
+> export IP="192.168.2.1"
+> export IP_RANGE_START="192.168.2.10"
+> export IP_RANGE_END="192.168.2.20"
+> export MASK="255.255.255.0"
+
+// Start rmnet0 with pin 3699
+> /mnt/legato/system/bin/cm sim enterpin 3699
+> /mnt/legato/system/bin/cm data connect &
+
+// bring up the interface
+>/sbin/ifconfig wlan0 $IP up
+
+// DNSMASQ Startup
+> /usr/bin/dnsmasq --interface=$INT_WIFI --dhcp-range=$IP_RANGE_START,$IP_RANGE_END,12h -d --bogus-priv&
+
+// Turn on IP forwarding
+> echo 1 > /proc/sys/net/ipv4/ip_forward
+// load masquerade module
+> /proc/sys/kernel/modprobe ipt_MASQUERADE
+> /usr/sbin/iptables -A POSTROUTING -t nat -o $INT_NET -j MASQUERADE
+> /usr/sbin/iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+> /usr/sbin/iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
+> /usr/sbin/iptables -A INPUT -s $SUBNET --jump ACCEPT
+
+
+@endverbatim
+
 <HR>
 
 Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.

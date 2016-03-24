@@ -77,7 +77,7 @@ static void myMsgHandler
             {
                 ///< A client connect to AP
                 snprintf(str, TMP_STR_SIZE, "LE_WIFIAP_EVENT_CLIENT_CONNECTED: Total Clients Connected: %d:\n", NumberClients);
-                LE_INFO( str );
+                LE_INFO( "%s", str );
                 fwrite(str , 1 , strlen(str) , LogFileFp );
             }
         }
@@ -90,7 +90,7 @@ static void myMsgHandler
             if( LogFileFp != NULL )
             {
                 snprintf(str, TMP_STR_SIZE, "LE_WIFICLIENT_EVENT_DISCONNECTED: Total Clients Connected: %d:\n", NumberClients);
-                LE_INFO( str );
+                LE_INFO(  "%s", str );
                 fwrite(str , 1 , strlen(str) , LogFileFp );
             }
         }
@@ -181,7 +181,7 @@ static void StartWebServer
     if( LogFileFp != NULL )
     {
         snprintf(str, TMP_STR_SIZE, "STARTING WIFI HTTP INTERFACE\n");
-        LE_INFO( str );
+        LE_INFO(  "%s", str );
         fwrite(str , 1 , strlen(str) , LogFileFp );
         fclose(LogFileFp);
     }
