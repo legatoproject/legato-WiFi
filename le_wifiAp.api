@@ -173,7 +173,6 @@ FUNCTION le_result_t SetSsid
  * Default value is SECURITY_WPA2.
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
- * @return LE_FAULT         The function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
  */

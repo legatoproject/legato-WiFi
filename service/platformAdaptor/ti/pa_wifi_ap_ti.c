@@ -25,6 +25,7 @@
 #define COMMAND_WIFI_SET_EVENT "wlan0 WIFI_SET_EVENT"
 #define COMMAND_WIFIAP_HOSTAPD "wlan0 WIFIAP_HOSTAPD"
 
+/** Maximum numbers of WiFi connections for the TI chip */
 #define TI_WIFI_MAX_USERS 10
 
 static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol;
