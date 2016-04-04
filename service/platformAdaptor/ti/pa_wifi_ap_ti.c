@@ -25,13 +25,15 @@
 #define COMMAND_WIFI_SET_EVENT "wlan0 WIFI_SET_EVENT"
 #define COMMAND_WIFIAP_HOSTAPD "wlan0 WIFIAP_HOSTAPD"
 
+#define TI_WIFI_MAX_USERS 10
+
 static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol;
 
 static char SavedSsid[LE_WIFIDEFS_MAX_SSID_BYTES];
 
 static bool SavedDiscoverable = true;
 static int8_t SavedChannelNumber = 0;
-static int SavedMaxNumClients = 10;
+static int SavedMaxNumClients = TI_WIFI_MAX_USERS;
 
 /** WPA-Personal */
 static char SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_BYTES] = "";
@@ -227,7 +229,6 @@ static void StartApSimulation( void )
 /**
  * This function must be called to initialize the PA WIFI Module.
  *
- * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
@@ -251,7 +252,6 @@ le_result_t pa_wifiAp_Init
 /**
  * This function must be called to release the PA WIFI Module.
  *
- * @return LE_FAULT  The function failed.
  * @return LE_OK     The function succeed.
  */
 //--------------------------------------------------------------------------------------------------
@@ -271,7 +271,6 @@ le_result_t pa_wifiAp_Release
  * starting the Access Point.
  *
  * @return LE_FAULT         The function failed.
- * @return LE_BUSY          If the WIFI device is already started.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -465,7 +464,6 @@ le_result_t pa_wifiAp_Start
  * This function stops the WIFI Access Point.
  *
  * @return LE_FAULT         The function failed.
- * @return LE_DUPLICATE     If the WIFI device is already stopped.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -516,6 +514,8 @@ le_result_t pa_wifiAp_Stop
  * Add handler function for events connect/disconnect
  *
  * These events provide information on Wifi Access Point
+ *
+ * @return LE_OK Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t  pa_wifiAp_AddEventHandler
@@ -543,7 +543,6 @@ le_result_t  pa_wifiAp_AddEventHandler
  * Default value is "LEGATO Access Point"
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
  */
@@ -701,8 +700,8 @@ le_result_t pa_wifiAp_SetDiscoverable
  * Default value is 1.
  * Some legal restrictions for values 12 - 14 might apply for your region.
  *
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
+ * @return LE_OUT_OF_RANGE Requested channel number is out of range.
+ * @return LE_OK           Function succeeded.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -714,7 +713,7 @@ le_result_t pa_wifiAp_SetChannel
 )
 {
     // Store PreSharedKey to be used later during startup procedure
-    le_result_t result = LE_BAD_PARAMETER;
+    le_result_t result = LE_OUT_OF_RANGE;
     LE_INFO(  "pa_wifiAp_SetChannel" );
     if ((channelNumber >= 1) && (channelNumber <= 14))
     {
@@ -729,8 +728,7 @@ le_result_t pa_wifiAp_SetChannel
  * Set the maximum number of clients allowed to be connected to WiFi Access Point.
  * Default value is 10.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OUT_OF_RANGE  Requested number of users exceeds the capabilities of the Access Point.
  * @return LE_OK            Function succeeded.
  *
  */
@@ -739,13 +737,13 @@ le_result_t pa_wifiAp_SetMaxNumberClients
 (
     int maxNumberClients
         ///< [IN]
-        ///< the maximum number of clients (1-256).
+        ///< the maximum number of clients regarding the WiFi driver capabilities.
 )
 {
     // Store maxNumberClients to be used later during startup procedure
-    le_result_t result = LE_BAD_PARAMETER;
+    le_result_t result = LE_OUT_OF_RANGE;
     LE_INFO( "pa_wifiAp_SetMaxNumberClients" );
-    if ((maxNumberClients >= 1) && (maxNumberClients <= 256))
+    if ((maxNumberClients >= 1) && (maxNumberClients <= TI_WIFI_MAX_USERS))
     {
        SavedMaxNumClients = maxNumberClients;
        result = LE_OK;

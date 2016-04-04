@@ -76,7 +76,6 @@ LE_SHARED le_result_t pa_wifiAp_Release
  * starting the Access Point.
  *
  * @return LE_FAULT         The function failed.
- * @return LE_BUSY          If the WIFI device is already started.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -91,7 +90,6 @@ le_result_t pa_wifiAp_Start
  * This function stops the WIFI Access Point.
  *
  * @return LE_FAULT         The function failed.
- * @return LE_DUPLICATE     If the WIFI device is already stopped.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -124,7 +122,6 @@ le_result_t pa_wifiAp_SetSecurityProtocol
  * Default value is "LEGATO Access Point"
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
  */
@@ -146,7 +143,6 @@ le_result_t pa_wifiAp_SetSsid
  *
  * @note the difference between le_wifiAp_SetPreSharedKey() and this function
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -165,7 +161,6 @@ le_result_t pa_wifiAp_SetPassPhrase
  * There is no default value, since le_wifiAp_SetPassPhrase is used as default.
  * @note the difference between le_wifiAp_SetPassPhrase() and this function
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -184,8 +179,6 @@ le_result_t pa_wifiAp_SetPreSharedKey
  * Default value is TRUE.
  * If the value is set to FALSE, the Access Point will be hidden.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
  */
@@ -203,9 +196,8 @@ le_result_t pa_wifiAp_SetDiscoverable
  * Default value is 1.
  * Some legal restrictions for values 12 - 14 might apply for your region.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
+ * @return LE_OUT_OF_RANGE Requested channel number is out of range.
+ * @return LE_OK           Function succeeded.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -221,8 +213,7 @@ le_result_t pa_wifiAp_SetChannel
  * Set the maximum number of clients allowed to be connected to WiFi Access Point.
  * Default value is 10.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OUT_OF_RANGE  Requested number of users exceeds the capabilities of the Access Point.
  * @return LE_OK            Function succeeded.
  *
  */
@@ -231,6 +222,6 @@ le_result_t pa_wifiAp_SetMaxNumberClients
 (
     int maxNumberClients
         ///< [IN]
-        ///< the maximum number of clients (1-256).
+        ///< the maximum number of clients (1-255).
 );
 #endif // PA_WIFI_AP_H
