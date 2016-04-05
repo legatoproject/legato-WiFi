@@ -12,14 +12,12 @@
 //--------------------------------------------------------------------------------------------------
 //                                       Test Function
 //--------------------------------------------------------------------------------------------------
-
 #define TEST_SSID     "ExampleSSID"
 #define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID)-1)
 #define TEST_PASSPHRASE "passphrase"
 
-#define NBR_OF_SCAN_LOOPS 5
-
-
+#define NBR_OF_SCAN_LOOPS 2
+#define NBR_OF_PINGS   "5"
 //--------------------------------------------------------------------------------------------------
 /**
  * Event handler reference.
@@ -32,11 +30,73 @@ static int ScanDoneEventCounter = 0;
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * IP Handling must be done by the application once the Wifi link is established
+ */
+//--------------------------------------------------------------------------------------------------
+static void AskForIpAddress
+(
+    void
+)
+{
+    int16_t systemResult;
+    char tmpString[512];
+
+    // DHCP Client
+    snprintf( tmpString,
+            sizeof( tmpString ),
+            "PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin;"
+            "/sbin/udhcpc -R -b -i wlan0"
+    );
+
+    systemResult = system( tmpString );
+    // Return value of -1 means that the fork() has failed (see man system).
+    if ( 0 == WEXITSTATUS( systemResult ) )
+    {
+        LE_INFO("le_wifiClient_Connect DHCP client: %s", tmpString);
+    }
+    else
+    {
+        LE_ERROR( "le_wifiClient_Connect DHCP client %s Failed: (%d)", tmpString, systemResult );
+    }
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * To test the established IP link we will try to pings Googles DNS server 8.8.8.8
+ */
+//--------------------------------------------------------------------------------------------------
+static void TestToPingGooglesDNS
+(
+    void
+)
+{
+    int16_t systemResult;
+    char tmpString[512];
+
+
+    // PING
+    snprintf( tmpString,
+            sizeof( tmpString ),
+            "ping -c " NBR_OF_PINGS " 8.8.8.8"
+    );
+
+
+    LE_INFO("pinging 8.8.8.8 5x times: %s", tmpString);
+    systemResult = system( tmpString );
+    // Return value of -1 means that the fork() has failed (see man system).
+    if ( 0 == WEXITSTATUS( systemResult ) )
+    {
+        LE_INFO("le_wifiClient_Connect Ping: %s", tmpString);
+    }
+    else
+    {
+        LE_ERROR( "le_wifiClient_Connect Ping %s Failed: (%d)", tmpString, systemResult );
+    }
+}
+//--------------------------------------------------------------------------------------------------
+/**
  * Reads the Scan output
- *
- * @param event
- *        Handles the wifi events
- * @param contextPtr
  */
 //--------------------------------------------------------------------------------------------------
 static void TestReadScanResults
@@ -148,6 +208,11 @@ static void WifiClientEventHandler
         {
             ///< Wifi Client Connected
             LE_DEBUG( "LE_WIFICLIENT_EVENT_CONNECTED");
+
+            AskForIpAddress();
+
+            TestToPingGooglesDNS();
+
         }
         break;
 

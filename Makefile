@@ -69,6 +69,10 @@ WIFI_CMD_LINE_EXE = $(WIFI_CMD_LINE_DIR)/wifi.wp85.update
 default: service clientsample apsample wifi
 	@echo "*****************************"
 	@echo Successfully built Wifi Service and Apps
+	@echo "*****************************"
+	@echo Tip: You can set YOUR_TARGETS_IP with
+	@echo export YOUR_TARGETS_IP=NNN.NNN.NNN.NNN
+	@echo "*****************************"
 	@echo To load Wifi Service type:
 	@echo instapp $(SERVICE_EXE) $(YOUR_TARGETS_IP)
 	@echo "*****************************"
