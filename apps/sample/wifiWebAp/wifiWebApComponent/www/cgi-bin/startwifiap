@@ -4,9 +4,10 @@ echo -en "Content-Type: text/html; charset=utf-8\r\n"
 echo -en "Cache-Control: no-cache\r\n"
 echo -en "Connection: close\r\n"
 echo -en "\r\n"
-echo -en "<BR> <H1>WIFI AP SETTINGS RECEIVED<H1> <BR>\r\n"
+echo -en "<BR> <H1>WIFI AP SETTINGS RECEIVED:</H1> <BR>\r\n"
 
 
+rm /tmp/wifiWebAp_startwifiap.log
 
 # PARSING example:  SSID=TestSSID&security=1&secu=0&passphraseorpsk=passphrase&maxclients=5&apvisible=1&channel=1
 # Note that the sed search is "gready" so match is with the next member as well.
@@ -17,11 +18,11 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         while read -n $CONTENT_LENGTH POST_DATA <&0
         do
             echo -n "Parsing: $POST_DATA"
-            echo -n "Parsing: $POST_DATA\n" > /tmp/wifiWebAp_startwifiap.log
-            date > /tmp/wifiWebAp_startwifiap.log
+            echo -n "Parsing: $POST_DATA\n" >> /tmp/wifiWebAp_startwifiap.log
+            date >> /tmp/wifiWebAp_startwifiap.log
             echo -en "<br>\r\n"
-            WIFIAPSSID=$(echo -n "$POST_DATA"| sed -nr 's/.*SSID=(.*)\&security.*/\1/p')
-            WIFIAPSECURITY=$(echo -n "$POST_DATA"| sed -nr 's/.*security=(.*)\&keytype.*/\1/p')
+            WIFIAPSSID=$(echo -n "$POST_DATA"| sed -nr 's/.*SSID=(.*?)\&security.*/\1/p')
+            WIFIAPSECURITY=$(echo -n "$POST_DATA"| sed -nr 's/.*security=(.*?)\&keytype.*/\1/p')
             WIFIAPKEYTYPE=$(echo -n "$POST_DATA"| sed -nr 's/.*keytype=(.*)\&key.*/\1/p')
             WIFIAPKEY=$(echo -n "$POST_DATA"| sed -nr 's/.*key=(.*)\&maxclients.*/\1/p')
             WIFIAPMAXCLIENTS=$(echo -n "$POST_DATA"| sed -nr 's/.*maxclients=(.*)\&apvisible.*/\1/p')
@@ -91,22 +92,44 @@ fi
 if [ -n "${WIFIAPCHANNEL}" ]; then
     echo -en "<br>\r\n"
     echo -en "Setting channel to ${WIFIAPCHANNEL} <br>\r\n"
-    /legato/systems/current/bin/wifi ap channel ${WIFIAPCHANNEL} >> /tmp/wifiWebAp_startwifiap.log
+    /legato/systems/current/bin/wifi ap setchannel ${WIFIAPCHANNEL} >> /tmp/wifiWebAp_startwifiap.log
     echo -en "<br>\r\n"
 else
     echo -en "ERROR channel not found<br>\r\n"
 fi
 
-    echo -en "<br>\r\n"
-    echo -en "Starting Wifi Access Point (this will take a little while) <br>\r\n"
+echo -en "<br>\r\n"
+echo -en "Starting Wifi Access Point (this will take a little while) <br>\r\n"
 /legato/systems/current/bin/wifi ap start >> /tmp/wifiWebAp_startwifiap.log
 
-@echo -en "Started Wifi Accesss Point<br>\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
+@echo -en "Started Wifi Accesss Point.<br>\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
+
+SUBNET="192.168.10.0/24"
+HOST_IP="192.168.10.1"
+INT_WIFI=wlan0
+INT_NET=eth0
 
 # DHCP server that the AP gives out a IP number.
+echo -en "<br>\r\n"
+echo -en "DHCP handling for demonstration.\r\n"
+echo -en "<br>\r\n"
 @echo -en "DHCP handling for demonstration.\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
-/sbin/ifconfig wlan0 192.168.7.1 up >> /tmp/wifiWebAp_startwifiap.log
-/etc/init.d/udhcpd start >> /tmp/wifiWebAp_startwifiap.log
+/sbin/ifconfig ${INT_WIFI} ${HOST_IP} up >> /tmp/wifiWebAp_startwifiap.log
+echo -en "<br>\r\n"
+echo /sbin/ifconfig ${INT_WIFI} ${HOST_IP} up
+echo -en "<br>\r\n"
+@echo /sbin/ifconfig ${INT_WIFI} ${HOST_IP} up >> /tmp/wifiWebAp_startwifiap.log
+# /etc/init.d/udhcpd start >> /tmp/wifiWebAp_startwifiap.log
+
+# Activate the IP forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
+# Load the iptables masquareding module
+/sbin/modprobe ipt_MASQUERADE
+# Enable the masquerading
+
+/usr/sbin/iptables -A POSTROUTING -t nat -o ${INT_NET} -j MASQUERADE
+/usr/sbin/iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+/usr/sbin/iptables -A FORWARD -i ${INT_WIFI} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
 
 echo -en "<br>\r\n"
 echo -en "<FORM><INPUT Type=\"button\" VALUE=\"Back\" onClick=\"history.go(-1);return true;\"></FORM>\r\n"

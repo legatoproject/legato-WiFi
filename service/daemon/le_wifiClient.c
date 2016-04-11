@@ -387,7 +387,10 @@ static void* ScanThread
  * Thread Destructor for scan
  */
 //--------------------------------------------------------------------------------------------------
-static void ScanThreadDestructor(void *context)
+static void ScanThreadDestructor
+(
+    void *context
+)
 {
     LE_DEBUG( "ScanThreadDestructor: Scan thread exited.");
     ScanThreadRef = NULL;
