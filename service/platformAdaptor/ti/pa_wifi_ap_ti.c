@@ -8,7 +8,9 @@
 // -------------------------------------------------------------------------------------------------
 #include <sys/types.h>
 #include <sys/wait.h>
-
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "legato.h"
 
 #include "interfaces.h"
@@ -17,6 +19,8 @@
 #include "stdio.h"
 
 #define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi.sh "
+
+#define DNSMASQ_CFG_FILE "/etc/dnsmasq.d/wifiAP.conf"
 
 /** Command to init the hardware */
 #define COMMAND_WIFI_HW_START "wlan0 WIFI_START"
@@ -50,7 +54,6 @@ static FILE *IwThreadFp = NULL;
  */
 //--------------------------------------------------------------------------------------------------
 static le_event_Id_t WifiApPaEvent;
-
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -750,4 +753,126 @@ le_result_t pa_wifiAp_SetMaxNumberClients
        result = LE_OK;
     }
     return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Defines the IP adresses range for the host AP.
+ *
+ * @return LE_BAD_PARAMETER At least, one of the given IP addresses is invalid.
+ * @return LE_FAULT         A system call has failed.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t pa_wifiAp_SetIpRange
+(
+    const char *ipAp,
+        ///< [IN]
+        ///< the IP address of the Access Point.
+    const char *ipStart,
+        ///< [IN]
+        ///< the start IP address of the Access Point.
+    const char *ipStop
+        ///< [IN]
+        ///< the stop IP address of the Access Point.
+)
+{
+    struct sockaddr_in saAp;
+    struct sockaddr_in saStart;
+    struct sockaddr_in saStop;
+    const char *parameter = 0;
+
+    // Check the parameters
+    if ((ipAp == NULL) || (ipStart == NULL) || (ipStop == NULL))
+        return LE_BAD_PARAMETER;
+
+    if ((!strlen(ipAp)) || (!strlen(ipStart)) || (!strlen(ipStop)))
+        return LE_BAD_PARAMETER;
+
+    if (inet_pton(AF_INET, ipAp, &(saAp.sin_addr)) <= 0)
+    {
+        parameter = "AP";
+    }
+    else if (inet_pton(AF_INET, ipStart, &(saStart.sin_addr)) <= 0)
+    {
+        parameter = "start";
+    }
+    else if (inet_pton(AF_INET, ipStop, &(saStop.sin_addr)) <= 0)
+    {
+        parameter = "stop";
+    }
+
+    {
+        unsigned int ap = ntohl( saAp.sin_addr.s_addr );
+        unsigned int start = ntohl( saStart.sin_addr.s_addr );
+        unsigned int stop = ntohl( saStop.sin_addr.s_addr );
+
+        LE_INFO(">>>>>>>>>>>>>>  pa_wifiAp_SetIpRange: @AP=%x, @APstart=%x, @APstop=%x",
+                ap, start, stop);
+    }
+
+    if (parameter != 0)
+    {
+        LE_ERROR("pa_wifiAp_SetIpRange: Invalid %s IP address", parameter);
+        return LE_BAD_PARAMETER;
+    }
+    else
+    {
+        unsigned int ap = ntohl( saAp.sin_addr.s_addr );
+        unsigned int start = ntohl( saStart.sin_addr.s_addr );
+        unsigned int stop = ntohl( saStop.sin_addr.s_addr );
+
+        LE_INFO("pa_wifiAp_SetIpRange: @AP=%x, @APstart=%x, @APstop=%x",
+                ap, start, stop);
+
+        if (start > stop)
+        {
+            LE_INFO("pa_wifiAp_SetIpRange: Need to swap start & stop IP addresses.");
+            start = start ^ stop;
+            stop = stop ^ start;
+            start = start ^ stop;
+        }
+
+        if ((ap >= start) && (ap <= stop))
+        {
+            LE_ERROR("pa_wifiAp_SetIpRange: AP IP address is within the range.");
+            return LE_BAD_PARAMETER;
+        }
+    }
+
+    putenv("PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
+
+    {
+        char cmd[256];
+
+        snprintf((char *)&cmd, sizeof(cmd), "%s %s %s %s", "/sbin/ifconfig", "wlan0", ipAp, "up");
+
+        if (system(cmd) < 0)
+        {
+            LE_ERROR("pa_wifiAp_SetIpRange: Unable to mount the network interface.");
+            return LE_FAULT;
+        }
+        else
+        {
+            FILE * fp;
+
+            LE_INFO("pa_wifiAp_SetIpRange: Creation of dnsmasq configuration file (%s)", DNSMASQ_CFG_FILE);
+
+            fp = fopen (DNSMASQ_CFG_FILE, "w");
+            fprintf(fp, "dhcp-range=%s,%s,%s,%dh\n", "wlan0", ipStart, ipStop, 24);
+            fclose(fp);
+
+            LE_INFO("pa_wifiAp_SetIpRange: @AP=%s, @APstart=%s, @APstop=%s",
+                    ipAp, ipStart, ipStop);
+
+            if (system("/etc/init.d/dnsmasqi restart") < 0)
+            {
+                LE_ERROR("pa_wifiAp_SetIpRange: Unable to restart the DHCP server.");
+                return LE_FAULT;
+            }
+        }
+    }
+
+    return LE_OK;
 }

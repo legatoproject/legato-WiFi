@@ -263,3 +263,20 @@ FUNCTION le_result_t SetMaxNumberOfClients
 (
     int8 maxNumberOfClient IN ///< the maximum number of clients
 );
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Defines the IP adresses range for the host AP.
+ *
+ * @return LE_BAD_PARAMETER At least, one of the given IP addresses is invalid.
+ * @return LE_FAULT         A system call has failed.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION le_result_t SetIpRange
+(
+    string ipAp[64] IN, ///< the IP address of the Access Point.
+    string ipStart[64] IN, ///< the start IP address of the Access Point.
+    string ipStop[64] IN ///< the stop IP address of the Access Point.
+);

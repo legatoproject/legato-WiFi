@@ -115,6 +115,9 @@ void Testle_wifiAp
         LE_ERROR( "le_wifiAp_Start ERROR");
     }
 
+    LE_ASSERT(LE_OK == le_wifiAp_SetIpRange("192.168.10.1",
+                                            "192.168.10.10",
+                                            "192.168.10.100"));
 }
 //! [Subscribe]
 

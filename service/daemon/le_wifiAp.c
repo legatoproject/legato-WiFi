@@ -330,3 +330,30 @@ le_result_t le_wifiAp_SetMaxNumberOfClients
     }
     return pa_wifiAp_SetMaxNumberClients( maxNumberOfClient );
 }
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Defines the IP adresses range for the host AP.
+ *
+ * @return LE_BAD_PARAMETER At least, one of the given IP addresses is invalid.
+ * @return LE_FAULT         A system call has failed.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiAp_SetIpRange
+(
+    const char *ip_ap,
+        ///< [IN]
+        ///< the IP address of the Access Point.
+    const char *ip_start,
+        ///< [IN]
+        ///< the start IP address of the Access Point.
+    const char *ip_stop
+        ///< [IN]
+        ///< the stop IP address of the Access Point.
+)
+{
+    return pa_wifiAp_SetIpRange(ip_ap, ip_start, ip_stop);
+}
+
