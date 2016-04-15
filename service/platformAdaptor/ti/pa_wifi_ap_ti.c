@@ -860,8 +860,16 @@ le_result_t pa_wifiAp_SetIpRange
             LE_INFO("pa_wifiAp_SetIpRange: Creation of dnsmasq configuration file (%s)", DNSMASQ_CFG_FILE);
 
             fp = fopen (DNSMASQ_CFG_FILE, "w");
-            fprintf(fp, "dhcp-range=%s,%s,%s,%dh\n", "wlan0", ipStart, ipStop, 24);
-            fclose(fp);
+            if (fp != NULL)
+            {
+                fprintf(fp, "dhcp-range=%s,%s,%s,%dh\n", "wlan0", ipStart, ipStop, 24);
+                fclose(fp);
+            }
+            else
+            {
+                LE_ERROR("pa_wifiAp_SetIpRange: Unable to create the dnsmasq configuration file.");
+                return LE_FAULT;
+            }
 
             LE_INFO("pa_wifiAp_SetIpRange: @AP=%s, @APstart=%s, @APstop=%s",
                     ipAp, ipStart, ipStop);
