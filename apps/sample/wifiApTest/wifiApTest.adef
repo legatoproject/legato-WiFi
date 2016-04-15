@@ -1,7 +1,5 @@
 version: $MANGOH_WIFI_VERSION
 
-sandboxed: false
-
 executables:
 {
     wifiApTest = ( wifiApTestComponent )

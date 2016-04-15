@@ -8,15 +8,7 @@ When started the WiFi client tries to connect to an WiFi Access Point named <i>"
 with passphrase: <i>"passphrase"</i>. <br>
 
 <HR>
-<h1>Demo steps</h1>
-1. Connect to the board over UART (to show that the internet is not coming from ethernet). <br>
-2. Set up a hotspot named "ExampleSSID" with WPA2 security and passphrase "passhrase".<br>
-   If you are using your mobile telephone, please make sure data is activated.<br>
-3. On target <br>
-4. <br>
 
-
-<HR>
 Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 
 **/
