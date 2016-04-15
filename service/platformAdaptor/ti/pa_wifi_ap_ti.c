@@ -856,6 +856,7 @@ le_result_t pa_wifiAp_SetIpRange
         else
         {
             FILE * fp;
+            int16_t systemResult;
 
             LE_INFO("pa_wifiAp_SetIpRange: Creation of dnsmasq configuration file (%s)", DNSMASQ_CFG_FILE);
 
@@ -874,7 +875,8 @@ le_result_t pa_wifiAp_SetIpRange
             LE_INFO("pa_wifiAp_SetIpRange: @AP=%s, @APstart=%s, @APstop=%s",
                     ipAp, ipStart, ipStop);
 
-            if (system("/etc/init.d/dnsmasqi restart") < 0)
+            systemResult = system("/etc/init.d/dnsmasq restart");
+            if ( 0 != WEXITSTATUS ( systemResult ) )
             {
                 LE_ERROR("pa_wifiAp_SetIpRange: Unable to restart the DHCP server.");
                 return LE_FAULT;
