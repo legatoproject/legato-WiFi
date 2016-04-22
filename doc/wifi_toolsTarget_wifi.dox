@@ -1,12 +1,17 @@
-/** @page mangoh_toolsTarget_wifi wifi command line tool
+/** @page wifi_toolsTarget_wifi wifi command line tool
+<HR>
+
+\tableofcontents
+
+@section wifi_toolsTarget_wifi_Desc Description
 
 Use the <b>wifi</b> command to control wifi service functions. <BR>
 It offers both client and access point.<BR>
 
-<h1>the wifi command</h1>
 
-<b><c> wifi </c></b>
-The wifi command line tool supports both client and access point.<BR>
+@section wifi_toolsTarget_wifi_Cmd The wifi command
+
+The <b><c> wifi </c></b> command line tool supports both client and access point.<BR>
 This is described in the main help.<BR>
 @verbatim
 # wifi help
@@ -20,9 +25,8 @@ To run Wifi Access Point:
 @endverbatim
 <BR>
 
-@section toolsTarget_wifi_client wifi client
+@subsection toolsTarget_wifi_client WiFi client options
 
-<h2>Wifi client options</h2><BR>
 The wifi client command line has the following options.<BR>
 @verbatim
 # wifi client help
@@ -62,49 +66,11 @@ To set WEP Key:
 	wifi client setwepkey [REF] [WEPKEY]
 @endverbatim
 <BR>
-
-
-<h2>Wifi client example of usage</h2><BR>
-This example shows how a client connects to an open access point with no security<BR>
-@verbatim
-//Start the wifi client
->wifi client start
-
-//Scan for available access points. Note the references in the response.
->wifi client scan
-starting scan
-Found:	SSID:	"GustavNet"	Strength:-49	Ref:0x10000003
-Found:	SSID:	"hotspot"	Strength:-54	Ref:0x10000001
-Found:	SSID:	"NEUF_B698"	Strength:-71	Ref:0x10000009
-Found:	SSID:	"SFR WiFi FON"	Strength:-71	Ref:0x10000007
-Found:	SSID:	"SFR WiFi Mobile"	Strength:-71	Ref:0x10000005
-
-
-//Set security preference for accesspoint "hotspot"
->  wifi client setsecurityproto 10000001 0
-
-//Connect to hotspot with reference 10000001
->  wifi client connect 10000001
-
-//note that IP handling is not handled by the wifi command line tool
-//but here is how you can do it
-> /sbin/udhcpc -R -b -i wlan0
-udhcpc (v1.22.1) started
-Sending discover...
-Sending select for 192.168.43.25...
-Lease of 192.168.43.25 obtained, lease time 3600
-/etc/udhcpc.d/50default: Adding DNS 192.168.43.1
-
-// now try your IP connection towards the internet by pinging Googles DNS
-> ping 8.8.8.8
-
-@endverbatim
-<BR>
 <HR>
 
 
-@section toolsTarget_wifi_ap Wifi Access Point
-<h2>Wifi ap usage</h2>
+@subsection toolsTarget_wifi_ap WiFi Access Point options
+
 The wifi access point command line has the following options.<BR>
 <BR>
 @verbatim
@@ -136,30 +102,85 @@ To maximum nbr of clients for the Wifi Access Point:
 @endverbatim
 
 <br>
-<h2>wifi ap example of usage</h2><BR>
+
+@section wifi_toolsTarget_wifi_Usage Usage Examples
+This section provides two step by step examples for setting up the wifi client and access point.
+
+@subsection wifi_toolsTarget_wifi_Usage_client Usage Example with Client
+
+This example shows how a client connects to an open access point with no security<BR>
+
+//Start the wifi client
+@verbatim
+>wifi client start
+@endverbatim
+
+//Scan for available access points. Note the references in the response.
+@verbatim
+>wifi client scan
+starting scan
+Found:	SSID:	"GustavNet"	Strength:-49	Ref:0x10000003
+Found:	SSID:	"hotspot"	Strength:-54	Ref:0x10000001
+Found:	SSID:	"NEUF_B698"	Strength:-71	Ref:0x10000009
+Found:	SSID:	"SFR WiFi FON"	Strength:-71	Ref:0x10000007
+Found:	SSID:	"SFR WiFi Mobile"	Strength:-71	Ref:0x10000005
+@endverbatim
+
+//Set security preference for accesspoint "hotspot"
+@verbatim
+>  wifi client setsecurityproto 10000001 0
+@endverbatim
+
+//Connect to hotspot with reference 10000001
+@verbatim
+>  wifi client connect 10000001
+@endverbatim
+
+//note that IP handling is not handled by the wifi command line tool
+//but here is how it can be done
+@verbatim
+> /sbin/udhcpc -R -b -i wlan0
+udhcpc (v1.22.1) started
+Sending discover...
+Sending select for 192.168.43.25...
+Lease of 192.168.43.25 obtained, lease time 3600
+/etc/udhcpc.d/50default: Adding DNS 192.168.43.1
+@endverbatim
+
+// now try your IP connection towards the internet by pinging Googles DNS
+@verbatim
+> ping 8.8.8.8
+@endverbatim
+
+@subsection wifi_toolsTarget_wifi_Usage_ap Usage Example with Access Point
 
 This example shows how to setup a open access point WPA2 security.<BR>
-@verbatim
+
 // set the security to none.
-> wifi ap 1
+@verbatim
+> wifi ap setsecurityproto 1
+@endverbatim
 
 // set the pass phrase
+@verbatim
 > wifi ap setpassphrase  secret123
+@endverbatim
 
 // set the name of the access point
+@verbatim
 > wifi ap setssid EXAMPLESSID
+@endverbatim
 
 // start the AP
+@verbatim
 > wifi ap start
-
+@endverbatim
 
 // DHCP IP handling
 // the wifi service does not handle the DHCP IP handling.
 // To bridge the DHCP server and the modem the following can be done.
+@verbatim
 > /sbin/ifconfig wlan0 192.168.7.1 up
-
-// start the DHCP service
-> /etc/init.d/udhcpd start
 
 
 // Configure the interfaces
@@ -193,9 +214,10 @@ This example shows how to setup a open access point WPA2 security.<BR>
 > /usr/sbin/iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
 > /usr/sbin/iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
 > /usr/sbin/iptables -A INPUT -s $SUBNET --jump ACCEPT
-
-
 @endverbatim
+
+
+
 
 <HR>
 

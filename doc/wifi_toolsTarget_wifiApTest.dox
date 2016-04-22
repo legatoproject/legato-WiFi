@@ -1,0 +1,33 @@
+/** @page wifi_wifiap_testapp WiFi Access Point Test application
+
+The applications provides an example how to use the WiFi Access Point API<br>
+@subpage c_le_wifi_ap <br>
+<HR>
+@section wifi_wifiap_testapp_usage Usage
+When started it starts a WiFi Access Point named <i>"ExampleSSID"</i>, <br>
+with WPA2 passphrase: <i>"passphrase"</i>. <br>
+
+Please note that it will also provide IP addresses,
+although this is not a part of the WiFi Service.
+IP handling is provided in the samples.
+
+<HR>
+
+@section wifi_wifiap_testapp_StepByStep Step By Step instruction
+
+This section provides one way how use the WiFi Access Point
+
+1. Connect your ethernet to your target.
+The sample will bridge the ethernet and the WiFi AP:s IP.
+2. Start the application wifiApTest
+3. With your WiFi client (smartphone/PC) do a scan.
+4. You should now see a SSID with the name "ExampleSSID".
+5. Connect to with the passphrase "passphrase".
+6. You should now have gotten an IP.
+
+
+Please refer to the sample code for how to bridge the modem and the IP
+
+Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+
+**/
