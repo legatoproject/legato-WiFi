@@ -58,6 +58,10 @@ void PrintApHelp( void )
        "To maximum nbr of clients for the Wifi Access Point:\n"
        "\twifi ap setmaxclients [MAXNBR]\n"
 
+       "To define the address of the AP and the IP addresses range as well:\n"
+       "WARNING: Only IPv4 addresses are supported.\n"
+       "\twifi ap setiprange [IP AP] [IP START] [IP STOP]\n"
+
        "\n");
 }
 
@@ -262,11 +266,35 @@ void ExecuteWifiApCommand
             exit(EXIT_FAILURE);
         }
     }
+    else if (strcmp(commandPtr, "setiprange") == 0)
+    {
+        // Only IPv4 addresses are supported.
+        // wifi ap setiprange [IP AP] [IP START] [IP STOP]
+        const char * ipAp = le_arg_GetArg(2);
+        const char * ipStart = le_arg_GetArg(3);
+        const char * ipStop = le_arg_GetArg(4);
+        if ( ( NULL == ipAp ) || ( NULL == ipStart ) || ( NULL == ipStop ) ||
+             ( '\0' == ipAp ) || ( '\0' == ipStart ) || ( '\0' == ipStop ) )
+        {
+            printf("ERROR: Missing or bad argument(s)\n");
+            exit(EXIT_FAILURE);
+        }
+
+        if ( LE_OK == ( result=le_wifiAp_SetIpRange( ipAp, ipStart, ipStop )))
+        {
+            printf("IP AP@=%s, Start@=%s, Stop@=%s\n", ipAp, ipStart, ipStop);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("ERROR: le_wifiAp_SetIpRange returns %d\n",result);
+            exit(EXIT_FAILURE);
+        }
+    }
     else
     {
         printf("Invalid command for wifi service.\n");
         exit(EXIT_FAILURE);
     }
 }
-
 

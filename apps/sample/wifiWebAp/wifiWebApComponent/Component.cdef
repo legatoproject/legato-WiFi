@@ -18,15 +18,24 @@ bundles:
         // HTML start page
         www/index.html  /var/www/index.html
 
+        // Javascript
+        www/scripts/hmi.js    /var/www/scripts/hmi.js
+        www/scripts/ip.js     /var/www/scripts/ip.js
+        www/scripts/log.js    /var/www/scripts/log.js
+
+        // CSS
+        www/css/mangOH.css    /var/www/css/mangOH.css
+
         // images
         www/image/background.png     /var/www/image/background.png
         www/image/sierra_324x60.png  /var/www/image/sierra_324x60.png
-        www/image/wifi.png           /var/www/image/wifi.png
+        www/image/mangoh_logo.png    /var/www/image/mangoh_logo.png
 
         // cgi bin stuff
         [rx] www/cgi-bin/readlogfile    /var/www/cgi-bin/readlogfile
         [x] www/cgi-bin/startwifiap     /var/www/cgi-bin/startwifiap
         [x] www/cgi-bin/stopwifiap      /var/www/cgi-bin/stopwifiap
+        [x] www/cgi-bin/wifiexport      /var/www/cgi-bin/wifiexport
 
         // debug logfile
         [r] www/cgi-bin/logfile.log      /tmp/wifi_http.log

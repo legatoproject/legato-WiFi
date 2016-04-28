@@ -54,9 +54,14 @@ case $2 in
     /usr/sbin/iw event || exit 94
     exit 0 ;;
 
-  WIFIAP_HOSTAPD)
-    echo "WIFIAP_HOSTAPD"
+  WIFIAP_HOSTAPD_START)
+    echo "WIFIAP_HOSTAPD_START"
     (/bin/hostapd /tmp/hostapd.conf &)|| exit 95
+    exit 0 ;;
+
+  WIFIAP_HOSTAPD_STOP)
+    echo "WIFIAP_HOSTAPD_STOP"
+    (killall hostapd)|| exit 100
     exit 0 ;;
 
   WIFICLIENT_START_SCAN)

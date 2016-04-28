@@ -1,6 +1,6 @@
 //-------------------------------------------------------------------------------------------------
 /**
- * @file wifi.h
+ * @file wifi_internal.h
  *
  * Wifi Service Command line internal headerfile
  *

@@ -16,8 +16,8 @@
 #define   HTTP_PORT_NUMBER  "56789"
 #define   HTTP_SYS_CMD  "/usr/sbin/httpd -v -p " HTTP_PORT_NUMBER " -h /legato/systems/current/apps/wifiWebAp/read-only/var/www/ 2>&1"
 
-//#define LOGFILE "/tmp/wifi_http.log"
-#define LOGFILE "/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log"
+#define LOGFILE "/tmp/wifi_http.log"
+//#define LOGFILE "/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log"
 
 
 #define TMP_STR_SIZE 256
@@ -76,7 +76,7 @@ static void myMsgHandler
             if( LogFileFp != NULL )
             {
                 ///< A client connect to AP
-                snprintf(str, TMP_STR_SIZE, "LE_WIFIAP_EVENT_CLIENT_CONNECTED: Total Clients Connected: %d:\n", NumberClients);
+                snprintf(str, TMP_STR_SIZE, "LE_WIFIAP_EVENT_CLIENT_CONNECTED: Total Clients Connected: %d</br>\r\n", NumberClients);
                 LE_INFO( "%s", str );
                 fwrite(str , 1 , strlen(str) , LogFileFp );
             }
@@ -89,7 +89,7 @@ static void myMsgHandler
             NumberClients--;
             if( LogFileFp != NULL )
             {
-                snprintf(str, TMP_STR_SIZE, "LE_WIFICLIENT_EVENT_DISCONNECTED: Total Clients Connected: %d:\n", NumberClients);
+                snprintf(str, TMP_STR_SIZE, "LE_WIFICLIENT_EVENT_DISCONNECTED: Total Clients Connected: %d</br>\r\n", NumberClients);
                 LE_INFO(  "%s", str );
                 fwrite(str , 1 , strlen(str) , LogFileFp );
             }

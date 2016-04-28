@@ -27,7 +27,8 @@
 #define COMMAND_WIFI_HW_STOP "wlan0 WIFI_STOP" /* not sure that this works */
 #define COMMAND_WIFI_WLAN_UP "wlan0 WIFI_WLAN_UP"
 #define COMMAND_WIFI_SET_EVENT "wlan0 WIFI_SET_EVENT"
-#define COMMAND_WIFIAP_HOSTAPD "wlan0 WIFIAP_HOSTAPD"
+#define COMMAND_WIFIAP_HOSTAPD_START "wlan0 WIFIAP_HOSTAPD_START"
+#define COMMAND_WIFIAP_HOSTAPD_STOP "wlan0 WIFIAP_HOSTAPD_STOP"
 
 /** Maximum numbers of WiFi connections for the TI chip */
 #define TI_WIFI_MAX_USERS 10
@@ -448,15 +449,15 @@ le_result_t pa_wifiAp_Start
     if ( LE_OK == result )
     {
         LE_INFO( "Start Access Point Cmd: /bin/hostapd /tmp/hostapd.conf" );
-        systemResult = system( WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD );
+        systemResult = system( WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_START );
         if ( 0 != WEXITSTATUS( systemResult ) )
         {
-            LE_ERROR( "Wifi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD, systemResult );
+            LE_ERROR( "Wifi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_START, systemResult );
             result = LE_FAULT;
         }
         else
         {
-            LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFIAP_HOSTAPD );
+            LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFIAP_HOSTAPD_START );
             result = LE_OK;
         }
     }
@@ -478,7 +479,22 @@ le_result_t pa_wifiAp_Stop
 )
 {
     le_result_t result = LE_FAULT;
-    int16_t systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP );
+    int16_t systemResult;
+
+    LE_INFO( "Stop Access Point Cmd: kill hostap" );
+    systemResult = system( WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_STOP );
+    if ( 0 != WEXITSTATUS( systemResult ) )
+    {
+        LE_ERROR( "Wifi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_STOP, systemResult );
+        result = LE_FAULT;
+    }
+    else
+    {
+        LE_INFO( "Wifi Access Point Command OK:" COMMAND_WIFIAP_HOSTAPD_STOP );
+        result = LE_OK;
+    }
+
+    systemResult =  system( WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP );
     /**
      * Return value of -1 means that the fork() has failed (see man system).
      * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly

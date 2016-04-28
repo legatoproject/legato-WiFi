@@ -1,8 +1,8 @@
 //-------------------------------------------------------------------------------------------------
 /**
- * @file wifi.c
+ * @file wifi_client.c
  *
- * Wifi Service Command line.
+ * Wifi client command line.
  *
  * Note that since the command is run in new context each time,
  * nothing can be saved between runs.

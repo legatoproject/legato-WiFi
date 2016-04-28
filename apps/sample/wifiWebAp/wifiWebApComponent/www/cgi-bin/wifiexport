@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Interfaces configuration 
+export INT_WIFI="wlan0" # WiFi? access point interface
+export INT_NET="rmnet0" # 3G/4G interface or eth0 interface
+#INT_NET="eth0" # 3G/4G interface or eth0 interface
+
+# Logging file
+export LOG_MSG_FILE=/tmp/wifi_http.log
+export LOG_CMD_FILE=/tmp/wifiWebAp.log
+
+# WiFi tool
+export WIFITOOL=/legato/systems/current/apps/wifi/read-only/bin/wifi
+
+

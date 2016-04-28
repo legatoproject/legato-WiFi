@@ -1,0 +1,41 @@
+body {
+    color:black;
+    font-family:sans-serif;
+    font-weight:bold;
+    background-color:white;
+    background-image:url(../image/background.png);
+    background-repeat:no-repeat;
+    background-position:50% 10px;
+}
+
+label {
+    text-align:left;
+}
+
+tr {
+    height:30px;
+}
+
+td {
+    text-align:right;
+}
+
+input:focus, textarea:focus{
+    background-color: lightyellow;
+}
+
+legend { 
+    display: block;
+    padding-left: 5px;
+    padding-right: 5px;
+    border: none;
+}
+
+#demo
+{
+    color:blue;
+    font-family:Consolas,monaco,monospace;
+    font-weight:bold;
+    white-space: nowrap;
+}
+

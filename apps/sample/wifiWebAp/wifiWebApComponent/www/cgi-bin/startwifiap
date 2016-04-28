@@ -1,113 +1,200 @@
 #!/bin/sh
-echo -en "HTTP/1.1 200 OK\r\n"
-echo -en "Content-Type: text/html; charset=utf-8\r\n"
-echo -en "Cache-Control: no-cache\r\n"
-echo -en "Connection: close\r\n"
-echo -en "\r\n"
-echo -en "<BR> <H1>WIFI AP SETTINGS RECEIVED<H1> <BR>\r\n"
 
+source wifiexport
 
+#echo -en "HTTP/1.1 200 OK\r\n" >> ${LOG_MSG_FILE}
+#echo -en "Content-Type: text/html; charset=utf-8\r\n" >> ${LOG_MSG_FILE}
+##echo -en "Content-Type: text/plain;\r\n" >> ${LOG_MSG_FILE}
+#echo -en "Cache-Control: no-cache\r\n" >> ${LOG_MSG_FILE}
+#echo -en "Connection: close\r\n" >> ${LOG_MSG_FILE}
+#echo -en "\r\n" >> ${LOG_MSG_FILE}
+echo -en "<BR> <H1>WIFI AP SETTINGS RECEIVED<H1> <BR>\r\n" > ${LOG_MSG_FILE}
+
+get_var()
+{
+    s='s/^.*'${1}'=\([^&]*\).*$/\1/p'
+    echo ${2} | sed -n $s | sed "s/%20/ /g"
+}
 
 # PARSING example:  SSID=TestSSID&security=1&secu=0&passphraseorpsk=passphrase&maxclients=5&apvisible=1&channel=1
 # Note that the sed search is "gready" so match is with the next member as well.
 # The order is important.
+
+### Erase the file and create it again to avoid error issued from the readlogfile script
+###rm ${LOG_MSG_FILE} && touch ${LOG_MSG_FILE}
 
 if [ "$REQUEST_METHOD" = "POST" ]; then
     if [ "$CONTENT_LENGTH" -gt 0 ]; then
         while read -n $CONTENT_LENGTH POST_DATA <&0
         do
             echo -n "Parsing: $POST_DATA"
-            echo -n "Parsing: $POST_DATA\n" > /tmp/wifiWebAp_startwifiap.log
-            date > /tmp/wifiWebAp_startwifiap.log
+            echo -n "Parsing: $POST_DATA\n" > ${LOG_CMD_FILE}
+            date > ${LOG_CMD_FILE}
             echo -en "<br>\r\n"
-            WIFIAPSSID=$(echo -n "$POST_DATA"| sed -nr 's/.*SSID=(.*)\&security.*/\1/p')
-            WIFIAPSECURITY=$(echo -n "$POST_DATA"| sed -nr 's/.*security=(.*)\&keytype.*/\1/p')
-            WIFIAPKEYTYPE=$(echo -n "$POST_DATA"| sed -nr 's/.*keytype=(.*)\&key.*/\1/p')
-            WIFIAPKEY=$(echo -n "$POST_DATA"| sed -nr 's/.*key=(.*)\&maxclients.*/\1/p')
-            WIFIAPMAXCLIENTS=$(echo -n "$POST_DATA"| sed -nr 's/.*maxclients=(.*)\&apvisible.*/\1/p')
-            WIFIAPVISIBLE=$(echo -n "$POST_DATA"| sed -nr 's/.*apvisible=(.*)\&channel.*/\1/p')
-            WIFIAPCHANNEL=$(echo -n "$POST_DATA"| sed -nr 's/.*channel=(.*)/\1/p')
+            WIFIAPSSID=$(get_var "SSID" ${POST_DATA})
+            WIFIAPSECURITY=$(get_var "secu" ${POST_DATA})
+            WIFIAPKEYTYPE=$(get_var "keyType" ${POST_DATA})
+            WIFIAPKEY=$(get_var "keyValue" ${POST_DATA})
+            WIFIAPMAXCLIENTS=$(get_var "maxclients" ${POST_DATA})
+            WIFIAPVISIBLE=$(get_var "apvisible" ${POST_DATA})
+            WIFIAPCHANNEL=$(get_var "channel" ${POST_DATA})
+            WIFIAPIP=$(get_var "ipAP" ${POST_DATA})
+            WIFIAPMASK=$(get_var "ipMask" ${POST_DATA})
+            WIFIAPSTART=$(get_var "ipStart" ${POST_DATA})
+            WIFIAPSTOP=$(get_var "ipStop" ${POST_DATA})
          done
     fi
 fi
 
 
 if [ -n "${WIFIAPSSID}" ]; then
-    echo -en "<br>\r\n"
-    echo -en "Setting SSID to ${WIFIAPSSID}  <br>\r\n"
-    /legato/systems/current/bin/wifi ap setssid ${WIFIAPSSID} >> /tmp/wifiWebAp_startwifiap.log
-    echo -en "<br>\r\n"
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "Setting SSID to ${WIFIAPSSID}  <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setssid ${WIFIAPSSID} >> ${LOG_CMD_FILE}
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
-    echo -en "ERROR SSID not found<br>\r\n"
+    echo -en "ERROR SSID not found<br>\r\n" >> ${LOG_MSG_FILE}
+fi
+
+
+if [ -n "${WIFIAPMAXCLIENTS}" ]; then
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "Setting MaxClients to ${WIFIAPMAXCLIENTS}  <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setmaxclients ${WIFIAPMAXCLIENTS} >> ${LOG_CMD_FILE}
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+else
+    echo -en "ERROR MaxClients not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
 
 if [ -n "${WIFIAPSECURITY}" ]; then
-    echo -en "<br>\r\n"
-    echo -en "Setting Security to ${WIFIAPSECURITY}  <br>\r\n"
-    /legato/systems/current/bin/wifi ap setsecurityproto ${WIFIAPSECURITY} >> /tmp/wifiWebAp_startwifiap.log
-    echo -en "<br>\r\n"
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "Setting Security to ${WIFIAPSECURITY}  <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setsecurityproto ${WIFIAPSECURITY} >> ${LOG_CMD_FILE}
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
-    echo -en "ERROR Security not found<br>\r\n"
+    echo -en "ERROR Security not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
 
 # secu = 1 -> WPA2
-if [ "${WIFIAPSECURITY}" ="1" ]; then
+if [ "${WIFIAPSECURITY}" = "1" ]; then
 
     if [ "${WIFIAPKEYTYPE}" = "psk" ]; then
-        echo -en "keytype PSK found :${WIFIAPKEYTYPE}<br>\r\n"
+        echo -en "keytype PSK found :${WIFIAPKEYTYPE}<br>\r\n" >> ${LOG_MSG_FILE}
         if [ -n "${WIFIAPKEY}" ]; then
-            echo -en "<br>\r\n"
-            echo -en "Setting PSK to ${WIFIAPKEY}  <br>\r\n"
-            /legato/systems/current/bin/wifi ap setpsk ${WIFIAPKEY} >> /tmp/wifiWebAp_startwifiap.log
-            echo -en "<br>\r\n"
+            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+            echo -en "Setting PSK to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
+            ${WIFITOOL} ap setpsk ${WIFIAPKEY} >> ${LOG_CMD_FILE}
+            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
         else
-            echo -en "ERROR PassPhrase or PSK not found<br>\r\n"
+            echo -en "ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
         fi
     else
     # passphrase
-        echo -en "keytype assumed passphrase found :${WIFIAPKEYTYPE}<br>\r\n"
+        echo -en "keytype assumed passphrase found :${WIFIAPKEYTYPE}<br>\r\n" >> ${LOG_MSG_FILE}
         if [ -n "${WIFIAPKEY}" ]; then
-            echo -en "<br>\r\n"
-            echo -en "Setting PassPhrase to ${WIFIAPKEY}  <br>\r\n"
-            /legato/systems/current/bin/wifi ap setpassphrase ${WIFIAPKEY} >> /tmp/wifiWebAp_startwifiap.log
-            echo -en "<br>\r\n"
+            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+            echo -en "Setting PassPhrase to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
+            ${WIFITOOL} ap setpassphrase ${WIFIAPKEY} >> ${LOG_CMD_FILE}
+            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
         else
-            echo -en "ERROR PassPhrase or PSK not found<br>\r\n"
+            echo -en "ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
         fi
     fi
 fi
 
 if [ -n "${WIFIAPVISIBLE}" ]; then
-    echo -en "<br>\r\n"
-    echo -en "Setting visability to ${WIFIAPVISIBLE} <br>\r\n"
-    /legato/systems/current/bin/wifi ap setdiscoverable ${WIFIAPVISIBLE} >> /tmp/wifiWebAp_startwifiap.log
-    echo -en "<br>\r\n"
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "Setting visibility to ${WIFIAPVISIBLE} <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setdiscoverable ${WIFIAPVISIBLE} >> ${LOG_CMD_FILE}
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
-    echo -en "ERROR visability not found<br>\r\n"
+    echo -en "ERROR visibility not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
 if [ -n "${WIFIAPCHANNEL}" ]; then
-    echo -en "<br>\r\n"
-    echo -en "Setting channel to ${WIFIAPCHANNEL} <br>\r\n"
-    /legato/systems/current/bin/wifi ap channel ${WIFIAPCHANNEL} >> /tmp/wifiWebAp_startwifiap.log
-    echo -en "<br>\r\n"
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "Setting channel to ${WIFIAPCHANNEL} <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setchannel ${WIFIAPCHANNEL} >> ${LOG_CMD_FILE}
+    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
-    echo -en "ERROR channel not found<br>\r\n"
+    echo -en "ERROR channel not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
-    echo -en "<br>\r\n"
-    echo -en "Starting Wifi Access Point (this will take a little while) <br>\r\n"
-/legato/systems/current/bin/wifi ap start >> /tmp/wifiWebAp_startwifiap.log
+echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+echo -en "Starting Wifi Access Point (this will take a little while) <br>\r\n" >> ${LOG_MSG_FILE}
+${WIFITOOL} ap start >> ${LOG_CMD_FILE}
 
-@echo -en "Started Wifi Accesss Point<br>\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
+# @echo -en "Started Wifi Accesss Point<br>\r\n" >> /legato/systems/current/apps/wifiWebAp/read-only ${LOG_MSG_FILE}
 
-# DHCP server that the AP gives out a IP number.
-@echo -en "DHCP handling for demonstration.\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
-/sbin/ifconfig wlan0 192.168.7.1 up >> /tmp/wifiWebAp_startwifiap.log
-/etc/init.d/udhcpd start >> /tmp/wifiWebAp_startwifiap.log
+##############################
+### Configure the WLAN interface
+echo -ne "Mounting of ${INT_WIFI}... <br>\r\n" >> ${LOG_MSG_FILE}
+/sbin/ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up >> ${LOG_CMD_FILE}
 
-echo -en "<br>\r\n"
-echo -en "<FORM><INPUT Type=\"button\" VALUE=\"Back\" onClick=\"history.go(-1);return true;\"></FORM>\r\n"
-echo -en "<br>(end of output<br>\r\n"
+### Start the relay interface: rmnet0 | eth0
+### WARNING: For rmnet interface, PINless code SIM must be used
+echo -ne "Mounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+case "${INT_NET}" in
+    eth*)
+        ifconfig ${INT_NET} up
+        ;;
+    rmnet*)
+        /mnt/legato/system/bin/cm radio on
+        /mnt/legato/system/bin/cm data connect &
+        echo -ne "Waiting for data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        ;;
+esac
+
+RETRY=0
+while [ ${RETRY} -lt 30 ] ; do
+    # INT_NET_ADDR=$(ifconfig ${INT_NET} | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
+    INT_NET_ADDR=$(ifconfig rmnet0 | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
+    # echo -ne "${INT_NET} address is [${INT_NET_ADDR}]...${RETRY}<br>\r\n" >> ${LOG_MSG_FILE}
+    if [ "${INT_NET_ADDR}" == "" ]; then
+        sleep 1
+        RETRY=$((${RETRY} + 1))
+    else
+        break
+    fi
+done
+# echo -ne "${INT_NET} address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
+if [ "${INT_NET_ADDR}" == "" ]; then
+    echo -ne "Mounting of relay interface ${INT_NET} failed...<br>\r\n" >> ${LOG_MSG_FILE}
+else
+    echo -ne "Relay interface ${INT_NET} IP address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
+fi
+
+### Turn on IP forwarding 
+echo -ne "Enabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
+echo 1 > /proc/sys/net/ipv4/ip_forward
+### Configure the NAT
+echo -ne "Configuring the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
+modprobe ipt_MASQUERADE
+/usr/sbin/iptables -A POSTROUTING -t nat -o $INT_NET -j MASQUERADE
+/usr/sbin/iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+/usr/sbin/iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
+/usr/sbin/iptables -A INPUT -s $SUBNET --jump ACCEPT
+
+### Configure the IP addresses range for DHCP (dnsmasq)
+echo -ne "Generating the configuration file for the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "dhcp-range=wlan0,${WIFIAPSTART},${WIFIAPSTOP},24h" > /etc/dnsmasq.d/apwifi.conf
+
+### Start the DHCP server
+echo -ne "Starting the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+/etc/init.d/dnsmasq restart
+
+### AP should be now up & running
+echo -ne "Access Point is now up and running.<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "Waiting for connections...<br>\r\n" >> ${LOG_MSG_FILE}
+##############################
+
+### DHCP server that the AP gives out a IP number.
+### @echo -en "DHCP handling for demonstration.\r\n" >> /legato/systems/current/apps/wifiWebAp/read-only${LOG_MSG_FILE}
+### /sbin/ifconfig wlan0 192.168.7.1 up >> ${LOG_CMD_FILE}
+### /etc/init.d/udhcpd start >> ${LOG_CMD_FILE}
+
+###echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+###echo -en "<FORM><INPUT Type=\"button\" VALUE=\"Back\" onClick=\"history.go(-1);return true;\"></FORM>\r\n" >> ${LOG_MSG_FILE}
+###echo -en "<br>(end of output<br>\r\n" >> ${LOG_MSG_FILE}

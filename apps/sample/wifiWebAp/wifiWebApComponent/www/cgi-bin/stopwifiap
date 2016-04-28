@@ -1,4 +1,9 @@
 #!/bin/sh
+
+source wifiexport
+
+#LOG_FILE=/tmp/wifi_http.log
+
 echo -en "HTTP/1.1 200 OK\r\n"
 echo -en "Content-Type: text/html; charset=utf-8\r\n"
 echo -en "Cache-Control: no-cache\r\n"
@@ -6,9 +11,44 @@ echo -en "Connection: close\r\n"
 echo -en "\r\n"
 echo -en "<BR> <H1>Stopping Wifi Access Point<H1> <BR>\r\n"
 
-/legato/systems/current/bin/wifi ap stop >> /tmp/wifiWebAp_startwifiap.log
-@echo -en "Stopped Wifi Accesss Point<br>\r\n" >>/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log
+##############################
+${WIFITOOL} ap stop >> ${LOG_CMD_FILE}
+echo -en "Wifi Access Point is stopped.<br>\r\n" >> ${LOG_MSG_FILE}
+echo -en "Wifi Access Point is stopped.<br>\r\n"
 
-echo -en "<br>\r\n"
-echo -en "<FORM><INPUT Type=\"button\" VALUE=\"Back\" onClick=\"history.go(-1);return true;\"></FORM>\r\n"
-echo -en "<br>(end of output<br>\r\n"
+### Stop the DHCP server
+echo -ne "Stopping the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+/etc/init.d/dnsmasq stop
+
+### Turn off IP forwarding 
+echo -ne "Disabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
+echo 0 > /proc/sys/net/ipv4/ip_forward
+### Delete the NAT
+echo -ne "Deleting the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
+rmmod ipt_MASQUERADE
+iptables -t nat -F
+iptables -t mangle -F
+iptables -F
+iptables -X
+
+### Shutdown the WLAN interface
+echo -ne "Unmounting ${INT_WIFI} <br>\r\n" >> ${LOG_MSG_FILE}
+/sbin/ifconfig ${INT_WIFI} down >> ${LOG_CMD_FILE}
+
+### Shutdown the relay interface: rmnet0 | eth0
+echo -ne "Unmounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+case "${INT_NET}" in
+    eth*) ifconfig ${INT_NET} down ;;
+    rmnet*) /mnt/legato/system/bin/cm radio off ;;
+esac
+
+### AP should be now up & running
+echo -ne "Access Point is off.<br>\r\n" >> ${LOG_MSG_FILE}
+##############################
+
+### For test purpose on PC only
+# chmod 666 /tmp/wifi_http.log
+
+###echo -en "<br>\r\n"
+###echo -en "<FORM><INPUT Type=\"button\" VALUE=\"Back\" onClick=\"history.go(-1);return true;\"></FORM>\r\n"
+###echo -en "<br>(end of output<br>\r\n"
