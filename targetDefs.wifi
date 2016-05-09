@@ -1,6 +1,7 @@
 # Root directory for MangOH code
 export MANGOH_ROOT = $(LEGATO_ROOT)/../mangOH
 export MANGOH_WIFI_ROOT = $(MANGOH_ROOT)/apps/WiFi
+export LEGATO_WIFI_ROOT = $(LEGATO_ROOT)/interfaces/wifi
 
 # this variable goes from environment -> cmake -> Doxygen.
 # It can be used in Legato Doxygen code to conditionally add MangOH links etc.

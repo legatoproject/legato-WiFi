@@ -7,7 +7,7 @@ requires:
 {
     api:
     {
-        ${MANGOH_WIFI_ROOT}/le_wifiAp.api
+        ${LEGATO_WIFI_ROOT}/le_wifiAp.api
     }
 }
 

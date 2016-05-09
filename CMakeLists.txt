@@ -7,6 +7,6 @@
 
 message(STATUS "MSG:MangOH  Entered  $ENV{MANGOH_WIFI_ROOT}/CMakeLists.txt")
 message(STATUS "MSG:MangOH:Wifi: CMakeLists.txt called")
-generate_header_extern("$ENV{MANGOH_WIFI_ROOT}/le_wifiClient.api")
-generate_header_extern("$ENV{MANGOH_WIFI_ROOT}/le_wifiAp.api")
+generate_header_extern("$ENV{LEGATO_WIFI_ROOT}/le_wifiClient.api")
+generate_header_extern("$ENV{LEGATO_WIFI_ROOT}/le_wifiAp.api")
 message(STATUS "MSG:MangOH  Exit  $ENV{MANGOH_WIFI_ROOT}/CMakeLists.txt")

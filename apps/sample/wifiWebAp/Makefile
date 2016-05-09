@@ -3,6 +3,11 @@ MANGOH_WIFI_ROOT = $(PWD)/../../..
 export MANGOH_WIFI_ROOT
 endif
 
+ifndef LEGATO_WIFI_ROOT
+LEGATO_WIFI_ROOT = $(LEGATO_ROOT)/interfaces/wifi
+export LEGATO_WIFI_ROOT
+endif
+
 localhost: app.localhost
 
 ar7: app.ar7
