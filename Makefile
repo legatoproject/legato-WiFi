@@ -12,6 +12,11 @@ MANGOH_WIFI_ROOT = $(PWD)
 export MANGOH_WIFI_ROOT
 endif
 
+ifndef LEGATO_WIFI_ROOT
+LEGATO_WIFI_ROOT = $(LEGATO_ROOT)/interfaces/wifi
+export LEGATO_WIFI_ROOT
+endif
+
 ifndef MANGOH_WIFI_PA
 MANGOH_WIFI_PA = ti
 export MANGOH_WIFI_PA
