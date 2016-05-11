@@ -1,6 +1,8 @@
-var ipClassBounds = [[ getIPValue("10.0.0.0"), getIPValue("10.255.255.255") ],
+var ipClassInBounds = [[ getIPValue("10.0.0.0"), getIPValue("10.255.255.255") ],
                      [ getIPValue("172.16.0.0"), getIPValue("172.31.255.255") ],
                      [ getIPValue("192.168.0.0"), getIPValue("192.168.255.255") ]];
+
+var ipClassOutBounds = [ getIPValue("192.168.2.0"), getIPValue("192.168.2.255") ];
 
 function getIPValue(ipAddr) {
     var ipParts = ipAddr.split(".");
@@ -25,18 +27,34 @@ function getIPValue(ipAddr) {
 function checkIPValue(ipFieldId) {
     var ipObj = document.getElementById(ipFieldId);
     var ipValue = getIPValue(ipObj.value);
+    var inBound = false;
 
     if (ipValue > 0) {
         for (ipClass = 0; ipClass < 3; ipClass++) {
-            if ((ipClassBound[ipClass][0] < ipValue) && (ipValue < ipClassBound[ipClass][1])) {
-                return true;
+            if ((ipClassInBounds[ipClass][0] < ipValue) && (ipValue < ipClassInBounds[ipClass][1])) {
+                inBound = true;
+                break;
             }
         }
+        if (inBound == false) {
+            alert("Invalid IP LAN address !");
+            ipObj.value = "";
+            ipObj.focus();
+            return false;
+        }
+
+        if ((ipClassOutBounds[0] <= ipValue) && (ipValue <= ipClassOutBounds[1])) {
+            alert("IP LAN address reserved !");
+            ipObj.value = "";
+            ipObj.focus();
+            return false;
+        }
+
+        return true;
     }
     alert("Invalid IP LAN address !");
     ipObj.value = "";
     ipObj.focus();
-    ipObj.select();
     return false;
 }
 
@@ -56,7 +74,6 @@ function checkIPMask(ipFieldId) {
     alert("Invalid IP mask !");
     ipObj.value = "";
     ipObj.focus();
-    ipObj.select();
     return false;
 }
 

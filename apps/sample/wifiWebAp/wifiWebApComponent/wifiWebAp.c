@@ -10,11 +10,12 @@
   *   The second part is the content of the logfile provided by this app.
   */
 
+#include <signal.h>
 #include "legato.h"
 #include "interfaces.h"
 
-#define   HTTP_PORT_NUMBER  "56789"
-#define   HTTP_SYS_CMD  "/usr/sbin/httpd -v -p " HTTP_PORT_NUMBER " -h /legato/systems/current/apps/wifiWebAp/read-only/var/www/ 2>&1"
+#define   HTTP_PORT_NUMBER  "8080"
+#define   HTTP_SYS_CMD  "/usr/sbin/httpd -v -p " HTTP_PORT_NUMBER " -u root -h /legato/systems/current/apps/wifiWebAp/read-only/var/www/ 2>&1"
 
 #define LOGFILE "/tmp/wifi_http.log"
 //#define LOGFILE "/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log"
@@ -85,8 +86,12 @@ static void myMsgHandler
 
         case LE_WIFIAP_EVENT_CLIENT_DISCONNECTED:
         {
-            ///< A client connect to AP
-            NumberClients--;
+            ///< A client disconnect from AP
+            // Check the number of clients because sometimes a spurious disconnection event may occur.
+            if (NumberClients > 0)
+            {
+                NumberClients--;
+            }
             if( LogFileFp != NULL )
             {
                 snprintf(str, TMP_STR_SIZE, "LE_WIFICLIENT_EVENT_DISCONNECTED: Total Clients Connected: %d</br>\r\n", NumberClients);
@@ -195,6 +200,69 @@ static void StartWebServer
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * runs the command
+ */
+//--------------------------------------------------------------------------------------------------
+static void RunSystemCommand
+(
+    char * commandString
+)
+{
+    int16_t systemResult;
+
+    if( NULL == commandString )
+    {
+        LE_ERROR( "RunSystemCommand ERROR Parameter is NULL" );
+        return;
+    }
+
+    systemResult = system( commandString );
+    // Return value of -1 means that the fork() has failed (see man system).
+    if ( 0 == WEXITSTATUS( systemResult ) )
+    {
+        LE_INFO("RunSystemCommand Success: %s", commandString);
+    }
+    else
+    {
+        LE_ERROR( "RunSystemCommand Error %s Failed: (%d)", commandString, systemResult );
+    }
+
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Stops the HTTP server.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+static void StopWebServer
+(
+    int signalId
+)
+{
+    LE_INFO( "StopWebServer : Received signal %d", signalId );
+    LE_INFO( "StopWebServer : Killing of instance of httpd server" );
+    RunSystemCommand( "killall httpd" );
+
+    // Stop the AP
+    le_wifiAp_Stop();
+
+    // Turn off IP forwarding
+    LE_INFO( "StopWebServer - Disabling IP forwarding" );
+    RunSystemCommand("echo 0 > /proc/sys/net/ipv4/ip_forward");
+    // Removing masquerade modules
+    LE_INFO( "StopWebServer - Removing the masquerading module..." );
+    RunSystemCommand("modprobe ipt_MASQUERADE");
+
+    // Turn off the iptables
+    RunSystemCommand( "iptables -t nat -f" );
+    RunSystemCommand( "iptables -t mangle -F" );
+    RunSystemCommand( "iptables -F" );
+    RunSystemCommand( "iptables -X" );
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
  * App init.
  *
  */
@@ -203,8 +271,14 @@ COMPONENT_INIT
 {
     LE_INFO( "======== Wifi Web Ap ======== on port " HTTP_PORT_NUMBER);
 
+    // Set the environment
+    putenv("PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
+
     // subscribes to Access Points events and logs them.
     SubscribeApEvents();
+
+    signal(SIGINT, StopWebServer);
+    signal(SIGTERM, StopWebServer);
 
     // Config interface is handled in CGI webscript.
     StartWebServer();

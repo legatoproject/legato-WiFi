@@ -131,7 +131,7 @@ ${WIFITOOL} ap start >> ${LOG_CMD_FILE}
 ##############################
 ### Configure the WLAN interface
 echo -ne "Mounting of ${INT_WIFI}... <br>\r\n" >> ${LOG_MSG_FILE}
-/sbin/ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up >> ${LOG_CMD_FILE}
+ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up >> ${LOG_CMD_FILE}
 
 ### Start the relay interface: rmnet0 | eth0
 ### WARNING: For rmnet interface, PINless code SIM must be used
@@ -141,8 +141,12 @@ case "${INT_NET}" in
         ifconfig ${INT_NET} up
         ;;
     rmnet*)
-        /mnt/legato/system/bin/cm radio on
-        /mnt/legato/system/bin/cm data connect &
+        echo -ne "Enabling the radio on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        cm radio on
+        sleep 1
+        echo -ne "Enabling the data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        cm data connect &
+        sleep 1
         echo -ne "Waiting for data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
         ;;
 esac
@@ -150,7 +154,7 @@ esac
 RETRY=0
 while [ ${RETRY} -lt 30 ] ; do
     # INT_NET_ADDR=$(ifconfig ${INT_NET} | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
-    INT_NET_ADDR=$(ifconfig rmnet0 | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
+    INT_NET_ADDR=$(ifconfig ${INT_NET} | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
     # echo -ne "${INT_NET} address is [${INT_NET_ADDR}]...${RETRY}<br>\r\n" >> ${LOG_MSG_FILE}
     if [ "${INT_NET_ADDR}" == "" ]; then
         sleep 1
@@ -166,24 +170,29 @@ else
     echo -ne "Relay interface ${INT_NET} IP address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
-### Turn on IP forwarding 
+### Turn on IP forwarding
 echo -ne "Enabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
 echo 1 > /proc/sys/net/ipv4/ip_forward
 ### Configure the NAT
 echo -ne "Configuring the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
 modprobe ipt_MASQUERADE
-/usr/sbin/iptables -A POSTROUTING -t nat -o $INT_NET -j MASQUERADE
-/usr/sbin/iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
-/usr/sbin/iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
-/usr/sbin/iptables -A INPUT -s $SUBNET --jump ACCEPT
+iptables -A POSTROUTING -t nat -o $INT_NET -j MASQUERADE
+iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
+iptables -A INPUT -s $SUBNET --jump ACCEPT
 
+### Stop the DHCP server
+echo -ne "Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+/etc/init.d/dnsmasq stop || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO STOP THE DHCP server\n" >> ${LOG_CMD_FILE}
 ### Configure the IP addresses range for DHCP (dnsmasq)
-echo -ne "Generating the configuration file for the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-echo -ne "dhcp-range=wlan0,${WIFIAPSTART},${WIFIAPSTOP},24h" > /etc/dnsmasq.d/apwifi.conf
+test -L /etc/dnsmasq.d/${DHCP_CFG_FILE} || ln -s /tmp/${DHCP_CFG_FILE} /etc/dnsmasq.d/${DHCP_CFG_FILE}
 
+echo -ne "Generating the configuration file for the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "dhcp-range=wlan0,${WIFIAPSTART},${WIFIAPSTOP},24h\n" >> /tmp/${DHCP_CFG_FILE}
 ### Start the DHCP server
-echo -ne "Starting the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-/etc/init.d/dnsmasq restart
+echo -ne "Restarting the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+/etc/init.d/dnsmasq start || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO START THE DHCP server\n" >> ${LOG_CMD_FILE}
+# /etc/init.d/dnsmasq restart
 
 ### AP should be now up & running
 echo -ne "Access Point is now up and running.<br>\r\n" >> ${LOG_MSG_FILE}

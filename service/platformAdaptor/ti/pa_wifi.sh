@@ -23,6 +23,9 @@ fi
 # TEMPORARY !!! Will be removed
 set -x
 
+# PATH
+export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
+
 case $2 in
   WIFI_START)
     echo "WIFI_START"
@@ -61,7 +64,9 @@ case $2 in
 
   WIFIAP_HOSTAPD_STOP)
     echo "WIFIAP_HOSTAPD_STOP"
-    (killall hostapd)|| exit 100
+    rm -f /tmp/dnsmasq.wlan.conf; touch /tmp/dnsmasq.wlan.conf
+    (/etc/init.d/dnsmasq stop; /etc/init.d/dnsmasq start) || exit 100
+    (killall hostapd) || exit 100
     exit 0 ;;
 
   WIFICLIENT_START_SCAN)

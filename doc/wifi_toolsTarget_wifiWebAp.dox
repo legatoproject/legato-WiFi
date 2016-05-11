@@ -7,23 +7,26 @@ The WiFi access point web application provides a webpage to configure the WiFi A
 @section wifi_wifiwebAp_sample_Desc Description
 
 This sample app is not started by default, but needs to be started manually.
-Starting the application will start the webserver on port 56789.
-Go to the IP of your module NNN.NNN.NNN.NNN:56789
+Starting the application will start the webserver on port 8080.
+Go to the IP of your module NNN.NNN.NNN.NNN:8080.
+The default address of your module should be 192.168.2.2:8080.
 The port number of the webserver is set in the application.
+
+Beware: Use only SIM card without PIN code.
 
 @section wifi_wifiwebAp_sample_StepByStep Step By Step instruction
 
 This section provides one way how to enable web interface
 
-1. Connect your target via ethernet.
-2. Check your targets IP on the ethernet interface with <i>ifconfig</i>.
+1. Connect your target via USB.
+2. Check your targets IP on the USB interface with <i>ifconfig</i>.
 3. Start the application wifiWebAp
-4. Open a webbrowser with the IP of your module http://NNN.NNN.NNN.NNN:56789
-5. Set the desired parameters on the webpage and click the "Start WiFi AP button.
+4. Open a webbrowser with the IP of your module http://NNN.NNN.NNN.NNN:8080
+5. Set the desired parameters on the webpage and click the "Start WiFi AP" button.
 6. Wait while result page is generated (this will take 15-20 seconds).
-7. Once you see the 'Back' button, that means that the WiFi AP should be running.
-8. Try to connect to your WiFi AP
-9. At the bottom of the start page under WiFi AP Events the Connect/Disconnect events are visible.
+7. You can monitor the progression of the connection by looking at the logs.
+8. Once the message "Waiting for connections..." is displayed, you can try to connect to your WiFi AP.
+9. Connections/Disconnections are visible in the logs as well.
 
 
 <HR>

@@ -17,10 +17,15 @@ echo -en "Wifi Access Point is stopped.<br>\r\n" >> ${LOG_MSG_FILE}
 echo -en "Wifi Access Point is stopped.<br>\r\n"
 
 ### Stop the DHCP server
-echo -ne "Stopping the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+# Instead of erasing the config file, it is replaced by the default one
+# in order to keep the USB interface up & running.
 /etc/init.d/dnsmasq stop
+rm -f /tmp/dnsmasq.wlan.conf
+touch /tmp/dnsmasq.wlan.conf
+/etc/init.d/dnsmasq start
 
-### Turn off IP forwarding 
+### Turn off IP forwarding
 echo -ne "Disabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
 echo 0 > /proc/sys/net/ipv4/ip_forward
 ### Delete the NAT
@@ -39,7 +44,7 @@ echo -ne "Unmounting ${INT_WIFI} <br>\r\n" >> ${LOG_MSG_FILE}
 echo -ne "Unmounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
 case "${INT_NET}" in
     eth*) ifconfig ${INT_NET} down ;;
-    rmnet*) /mnt/legato/system/bin/cm radio off ;;
+    rmnet*) cm radio off ;;
 esac
 
 ### AP should be now up & running

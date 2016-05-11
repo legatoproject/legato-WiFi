@@ -20,7 +20,8 @@
 
 #define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi.sh "
 
-#define DNSMASQ_CFG_FILE "/etc/dnsmasq.d/wifiAP.conf"
+#define DNSMASQ_CFG_LINK "/etc/dnsmasq.d/dnsmasq.wlan.conf"
+#define DNSMASQ_CFG_FILE "/tmp/dnsmasq.wlan.conf"
 
 /** Command to init the hardware */
 #define COMMAND_WIFI_HW_START "wlan0 WIFI_START"
@@ -861,10 +862,12 @@ le_result_t pa_wifiAp_SetIpRange
 
     {
         char cmd[256];
+        int16_t systemResult;
 
         snprintf((char *)&cmd, sizeof(cmd), "%s %s %s %s", "/sbin/ifconfig", "wlan0", ipAp, "up");
 
-        if (system(cmd) < 0)
+        systemResult = system(cmd);
+        if ( 0 != WEXITSTATUS ( systemResult ) )
         {
             LE_ERROR("pa_wifiAp_SetIpRange: Unable to mount the network interface.");
             return LE_FAULT;
@@ -872,10 +875,14 @@ le_result_t pa_wifiAp_SetIpRange
         else
         {
             FILE * fp;
-            int16_t systemResult;
 
             LE_INFO("pa_wifiAp_SetIpRange: Creation of dnsmasq configuration file (%s)", DNSMASQ_CFG_FILE);
 
+            if( symlink( DNSMASQ_CFG_FILE, DNSMASQ_CFG_LINK ) && (EEXIST != errno) )
+            {
+                LE_ERROR("pa_wifiAp_SetIpRange: Unable to create link to dnsmasq configuration file: %m.");
+                return LE_FAULT;
+            }
             fp = fopen (DNSMASQ_CFG_FILE, "w");
             if (fp != NULL)
             {
@@ -884,14 +891,14 @@ le_result_t pa_wifiAp_SetIpRange
             }
             else
             {
-                LE_ERROR("pa_wifiAp_SetIpRange: Unable to create the dnsmasq configuration file.");
+                LE_ERROR("pa_wifiAp_SetIpRange: Unable to open the dnsmasq configuration file: %m.");
                 return LE_FAULT;
             }
 
             LE_INFO("pa_wifiAp_SetIpRange: @AP=%s, @APstart=%s, @APstop=%s",
                     ipAp, ipStart, ipStop);
 
-            systemResult = system("/etc/init.d/dnsmasq restart");
+            systemResult = system("/etc/init.d/dnsmasq stop; /etc/init.d/dnsmasq start");
             if ( 0 != WEXITSTATUS ( systemResult ) )
             {
                 LE_ERROR("pa_wifiAp_SetIpRange: Unable to restart the DHCP server.");

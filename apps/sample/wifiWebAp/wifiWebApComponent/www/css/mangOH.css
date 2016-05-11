@@ -24,11 +24,15 @@ input:focus, textarea:focus{
     background-color: lightyellow;
 }
 
-legend { 
+legend {
     display: block;
     padding-left: 5px;
     padding-right: 5px;
     border: none;
+}
+
+.notice {
+    color: red;
 }
 
 #demo

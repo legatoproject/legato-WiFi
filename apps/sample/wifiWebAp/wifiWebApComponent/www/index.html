@@ -41,8 +41,9 @@
 
     <fieldset>
         <legend>General configuration</legend>
+
         <p>
-        SSID: <input type="text" name="SSID" value="TestSSID" required>
+        SSID: <input type="text" name="SSID" value="wifiWebApSSID" required>
         </p>
 
         <p>
@@ -85,7 +86,6 @@
             <input type="radio" name="apvisible" value="1" checked> Yes
             <input type="radio" name="apvisible" value="0" > No </br>
         </p>
-
     </fieldset>
 
     </br>
@@ -94,7 +94,7 @@
         <legend>Security</legend>
         <p>
         Encryption:
-            <input type="radio" class="security" name="secu" value="1" onclick="toggleSecurity(this, 'key')" checked> WPA2 
+            <input type="radio" class="security" name="secu" value="1" onclick="toggleSecurity(this, 'key')" checked> WPA2
             <input type="radio" class="security" name="secu" value="0" onclick="toggleSecurity(this, 'key')" > None
             </br>
         </p>
@@ -114,12 +114,16 @@
     <fieldset>
         <legend>AP IPv4 range</legend>
 
-        <input type="checkbox" class="ipSetup" name="autoSetup" value="0" onclick="toggleAutoIPSetup(this, 'ipSetupCtrl'); toggleAutoIPSetup(this, 'ipSetupField');">Automatic setup
+        <input type="checkbox" class="ipSetup" name="autoSetup" value="0" onclick="toggleAutoIPSetup(this, 'ipSetupCtrl'); toggleAutoIPSetup(this, 'ipSetupField');">Automatic setup</br>
 
         <table>
             <tr>
+                </br>
+                <label ><span class="notice">NOTICE: The 192.168.2.0/24 subnetwork is reserved and must not be used.</span></label>
+            </tr>
+            <tr>
                 <td><label>AP IP-address</label></td>
-                <td><input class="ipSetupField" name="ipAP" id="ipAP" size="15" maxlength="15" value="192.168.10.1" type="text" onchange="checkIPValue(this.id)" required></td>
+                <td><input class="ipSetupField" name="ipAP" id="ipAP" size="15" maxlength="15" value="192.168.20.1" type="text" onchange="checkIPValue(this.id)" required></td>
                 <td><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipAP')" type="button"></td>
             </tr>
 
@@ -131,13 +135,13 @@
 
             <tr>
                 <td><label>Start IP-address</label></td>
-                <td><input class="ipSetupField" name="ipStart" id="ipStart" size="15" maxlength="15" value="192.168.10.10" type="text" onchange="checkIPValue(this.id)" required></td>
+                <td><input class="ipSetupField" name="ipStart" id="ipStart" size="15" maxlength="15" value="192.168.20.10" type="text" onchange="checkIPValue(this.id)" required></td>
                 <td><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipStart')" type="button"></td>
             </tr>
 
             <tr>
                 <td><label>Stop IP-address</label></td>
-                <td><input class="ipSetupField" name="ipStop" id="ipStop" size="15" maxlength="15" value="192.168.10.100" type="text" onchange="checkIPValue(this.id)" required></td>
+                <td><input class="ipSetupField" name="ipStop" id="ipStop" size="15" maxlength="15" value="192.168.20.100" type="text" onchange="checkIPValue(this.id)" required></td>
                 <td><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipStop')" type="button"></td>
             </tr>
         </table>
@@ -145,7 +149,7 @@
 
     </br>
 
-    <input type="submit" value="Start Wifi AP" /> </br>
+    <input type="submit" id="startButton" value="Start Wifi AP" /> </br>
 </form>
 
 </br>
@@ -154,7 +158,7 @@
 <!--
 <form action="/cgi-bin/stopwifiap" method="post" onsubmit="return ( stopAP() );">
 -->
-    <input type="submit" value="Stop Wifi AP" /> </br>
+    <input type="submit" id="stopButton" value="Stop Wifi AP" disabled="true"/> </br>
 </form>
 </center>
 

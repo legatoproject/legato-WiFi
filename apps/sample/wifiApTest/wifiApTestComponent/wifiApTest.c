@@ -5,13 +5,14 @@
   *
   */
 
+#include <signal.h>
 #include "legato.h"
 #include "interfaces.h"
 
 //--------------------------------------------------------------------------------------------------
 //                                       Test Function Variable defines
 //--------------------------------------------------------------------------------------------------
-#define TEST_SSID_STR "ExampleSSID"
+#define TEST_SSID_STR "wifiApSSID"
 
 #define TEST_SECU_PROTO  LE_WIFIAP_SECURITY_WPA2
 #define TEST_PASSPHRASE "passphrase"
@@ -194,7 +195,7 @@ static void myMsgHandler
  *
  */
 //--------------------------------------------------------------------------------------------------
-void Testle_wifiAp
+void Testle_wifiApStart
 (
     void
 )
@@ -230,6 +231,38 @@ void Testle_wifiAp
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Stop the WiFi AP
+ */
+//--------------------------------------------------------------------------------------------------
+static void Testle_wifiApStop
+(
+    int signalId
+)
+{
+    LE_INFO( "WIFI AP STOP : Received signal %d", signalId );
+
+    // Stop the AP
+    le_wifiAp_Stop();
+
+    // Turn off IP forwarding
+    LE_INFO( "WIFI AP STOP - Disabling IP forwarding" );
+    RunSystemCommand("echo 0 > /proc/sys/net/ipv4/ip_forward");
+    // Removing masquerade modules
+    LE_INFO( "WIFI AP STOP - Removing the masquerading module..." );
+    RunSystemCommand("modprobe ipt_MASQUERADE");
+
+    // Turn off the iptables
+    RunSystemCommand( "iptables -t nat -f" );
+    RunSystemCommand( "iptables -t mangle -F" );
+    RunSystemCommand( "iptables -F" );
+    RunSystemCommand( "iptables -X" );
+
+    // Flush the IP address of the wlan0 interface
+    RunSystemCommand( "ip addr flush dev " INT_WIFI );
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
  * App init.
  *
  */
@@ -238,5 +271,11 @@ COMPONENT_INIT
 {
     // Wifi Init
     LE_INFO( "======== Wifi Ap Test  ========");
-    Testle_wifiAp();
+
+    putenv("PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
+
+    signal(SIGINT, Testle_wifiApStop);
+    signal(SIGTERM, Testle_wifiApStop);
+
+    Testle_wifiApStart();
 }

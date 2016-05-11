@@ -48,6 +48,9 @@ function checkForm() {
     if ( checkIPRange() == false )
         return false;
 
+    document.getElementById("startButton").disabled = true;
+    document.getElementById("stopButton").disabled = false;
+
     refreshInterval = setInterval(refreshLogs, 1000);
 }
 
@@ -58,6 +61,9 @@ function waitForTheEnd() {
 }
 
 function stopAP() {
+    document.getElementById("startButton").disabled = false;
+    document.getElementById("stopButton").disabled = true;;
+
     endOfStopAction = setTimeout(waitForTheEnd, 5000);
 }
 
