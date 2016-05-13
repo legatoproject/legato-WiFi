@@ -2,8 +2,8 @@ provides:
 {
     api:
     {
-        ${LEGATO_WIFI_ROOT}/le_wifiClient.api
-        ${LEGATO_WIFI_ROOT}/le_wifiAp.api
+        ${LEGATO_ROOT}/interfaces/wifi/le_wifiClient.api
+        ${LEGATO_ROOT}/interfaces/wifi/le_wifiAp.api
     }
 }
 
