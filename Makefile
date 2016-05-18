@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------------------------------------
-# Makefile used to build the mangOH Wifi service .
+# Makefile used to build the Wifi service.
 #
 # Currenly only builds for wp85
 #
@@ -7,46 +7,28 @@
 # Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 # --------------------------------------------------------------------------------------------------
 
-ifndef MANGOH_WIFI_ROOT
-MANGOH_WIFI_ROOT = $(PWD)
-export MANGOH_WIFI_ROOT
-endif
-
-ifndef LEGATO_WIFI_ROOT
-LEGATO_WIFI_ROOT = $(LEGATO_ROOT)/interfaces/wifi
-export LEGATO_WIFI_ROOT
-endif
-
-ifndef MANGOH_WIFI_PA
-MANGOH_WIFI_PA = ti
-export MANGOH_WIFI_PA
-endif
-
-
 ifndef YOUR_TARGETS_IP
-YOUR_TARGETS_IP = "YOUR_TARGETS_IP"
-export YOUR_TARGETS_IP
+  YOUR_TARGETS_IP = "YOUR_TARGETS_IP"
+  export YOUR_TARGETS_IP
 endif
-
 
 $(info ********************* VERSION ********************)
 # Check wether the version is already defined.
-ifeq ($(origin MANGOH_WIFI_VERSION), undefined)
-	# If not, try to define it through Git information
-	MANGOH_WIFI_VERSION := $(shell (git describe --tags || git rev-parse HEAD) 2> /dev/null)
-$(info MangOH WiFi version is $(MANGOH_WIFI_VERSION))
-	# If the folder is not managed by Git
-ifeq ($(MANGOH_WIFI_VERSION),)
-	# Define the version as "UNDEFINED"
-	MANGOH_WIFI_VERSION := UNDEFINED
-$(info MangOH WiFi version is undefined...)
-else
+ifeq ($(origin LEGATO_WIFI_VERSION), undefined)
+  # If not, try to define it through Git information
+  LEGATO_WIFI_VERSION := $(shell (git describe --tags || git rev-parse HEAD) 2> /dev/null)
+  $(info Legato WiFi version is $(LEGATO_WIFI_VERSION))
+  # If the folder is not managed by Git
+ifeq ($(LEGATO_WIFI_VERSION),)
+  # Define the version as "UNDEFINED"
+  LEGATO_WIFI_VERSION := UNDEFINED
+  $(warning Legato WiFi version is undefined...)
 endif
-	# And finally, export it.
-	export MANGOH_WIFI_VERSION
+  # And finally, export it.
+  export LEGATO_WIFI_VERSION
 else
-# Otherwise, display the current version
-$(info MangOH WiFi version is already defined: $(MANGOH_WIFI_VERSION))
+  # Otherwise, display the current version
+  $(info Legato WiFi version is already defined: $(LEGATO_WIFI_VERSION))
 endif
 $(info **************************************************)
 

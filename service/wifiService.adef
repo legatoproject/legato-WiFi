@@ -1,4 +1,4 @@
-version: $MANGOH_WIFI_VERSION
+version: $LEGATO_WIFI_VERSION
 
 sandboxed: false
 

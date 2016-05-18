@@ -1,10 +1,8 @@
 //--------------------------------------------------------------------------------------------------
-/**
- * MangOH WiFi sub-system definition that includes essential modem and positioning services
- * plus only the MangOH WiFi apps
- *
- * Copyright (C) Sierra Wireless Inc.  Use of this work is subject to license.
- */
+// Sample system definition that includes essential services and WiFi-related services and sample
+// applications.
+//
+// Copyright (C) Sierra Wireless Inc.  Use of this work is subject to license.
 //--------------------------------------------------------------------------------------------------
 
 apps:
@@ -23,11 +21,11 @@ apps:
     $LEGATO_ROOT/apps/platformServices/voiceCallService
     $LEGATO_ROOT/apps/platformServices/gpioService
 
-    $MANGOH_WIFI_ROOT/service/wifiService.adef
-    $MANGOH_WIFI_ROOT/apps/sample/wifiClientTest/wifiClientTest.adef
-    $MANGOH_WIFI_ROOT/apps/sample/wifiApTest/wifiApTest.adef
-    $MANGOH_WIFI_ROOT/apps/sample/wifiWebAp/wifiWebAp.adef
-    $MANGOH_WIFI_ROOT/apps/tools/wifi/wifi.adef
+    $LEGATO_WIFI_ROOT/service/wifiService.adef
+    $LEGATO_WIFI_ROOT/apps/sample/wifiClientTest/wifiClientTest.adef
+    $LEGATO_WIFI_ROOT/apps/sample/wifiApTest/wifiApTest.adef
+    $LEGATO_WIFI_ROOT/apps/sample/wifiWebAp/wifiWebAp.adef
+    $LEGATO_WIFI_ROOT/apps/tools/wifi/wifi.adef
 
     // Command-line tools.
     $LEGATO_ROOT/apps/tools/tools
@@ -38,5 +36,17 @@ commands:
     cm = tools:/bin/cm
     fwupdate = tools:/bin/fwupdate
     secstore = tools:/bin/secstore
+    pmtool = tools:/bin/pmtool
     wifi = wifi:/bin/wifi
+}
+
+bindings:
+{
+    <root>.le_fwupdate -> fwupdateService.le_fwupdate
+}
+
+interfaceSearch:
+{
+    interfaces/modemServices
+    interfaces/positioning
 }

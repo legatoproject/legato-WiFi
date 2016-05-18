@@ -1,10 +1,5 @@
-ifndef MANGOH_WIFI_ROOT
-MANGOH_WIFI_ROOT = $(PWD)/../../..
-export MANGOH_WIFI_ROOT
-endif
-
 ifndef LEGATO_WIFI_ROOT
-LEGATO_WIFI_ROOT = $(LEGATO_ROOT)/interfaces/wifi
+LEGATO_WIFI_ROOT = $(PWD)/../../..
 export LEGATO_WIFI_ROOT
 endif
 
@@ -19,7 +14,7 @@ ar86: app.ar86
 wp85: app.wp85
 
 app.%:
-	mkapp wifi.adef -t $* -v -i $(MANGOH_WIFI_ROOT)
+	mkapp wifi.adef -t $* -v -i $(LEGATO_WIFI_ROOT)
 
 clean:
 	rm -rf _build_* *.localhost *.ar7 *.wp7 *.ar8 *.wp85 *.update
