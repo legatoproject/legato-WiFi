@@ -887,6 +887,8 @@ le_result_t pa_wifiAp_SetIpRange
             if (fp != NULL)
             {
                 fprintf(fp, "dhcp-range=%s,%s,%s,%dh\n", "wlan0", ipStart, ipStop, 24);
+                fprintf(fp, "dhcp-option=%s,%d,%s\n","wlan0", 3, ipAp);
+                fprintf(fp, "dhcp-option=%s,%d,%s\n","wlan0", 6, ipAp);
                 fclose(fp);
             }
             else

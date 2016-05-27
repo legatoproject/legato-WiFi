@@ -50,7 +50,7 @@ fi
 if [ -n "${WIFIAPSSID}" ]; then
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
     echo -en "Setting SSID to ${WIFIAPSSID}  <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setssid ${WIFIAPSSID} >> ${LOG_CMD_FILE}
+    ${WIFITOOL} ap setssid ${WIFIAPSSID}
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
     echo -en "ERROR SSID not found<br>\r\n" >> ${LOG_MSG_FILE}
@@ -60,7 +60,7 @@ fi
 if [ -n "${WIFIAPMAXCLIENTS}" ]; then
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
     echo -en "Setting MaxClients to ${WIFIAPMAXCLIENTS}  <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setmaxclients ${WIFIAPMAXCLIENTS} >> ${LOG_CMD_FILE}
+    ${WIFITOOL} ap setmaxclients ${WIFIAPMAXCLIENTS}
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
     echo -en "ERROR MaxClients not found<br>\r\n" >> ${LOG_MSG_FILE}
@@ -70,7 +70,7 @@ fi
 if [ -n "${WIFIAPSECURITY}" ]; then
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
     echo -en "Setting Security to ${WIFIAPSECURITY}  <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setsecurityproto ${WIFIAPSECURITY} >> ${LOG_CMD_FILE}
+    ${WIFITOOL} ap setsecurityproto ${WIFIAPSECURITY}
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
     echo -en "ERROR Security not found<br>\r\n" >> ${LOG_MSG_FILE}
@@ -85,7 +85,7 @@ if [ "${WIFIAPSECURITY}" = "1" ]; then
         if [ -n "${WIFIAPKEY}" ]; then
             #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
             echo -en "Setting PSK to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
-            ${WIFITOOL} ap setpsk ${WIFIAPKEY} >> ${LOG_CMD_FILE}
+            ${WIFITOOL} ap setpsk ${WIFIAPKEY}
             #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
         else
             echo -en "ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
@@ -96,7 +96,7 @@ if [ "${WIFIAPSECURITY}" = "1" ]; then
         if [ -n "${WIFIAPKEY}" ]; then
             #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
             echo -en "Setting PassPhrase to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
-            ${WIFITOOL} ap setpassphrase ${WIFIAPKEY} >> ${LOG_CMD_FILE}
+            ${WIFITOOL} ap setpassphrase ${WIFIAPKEY}
             #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
         else
             echo -en "ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
@@ -107,7 +107,7 @@ fi
 if [ -n "${WIFIAPVISIBLE}" ]; then
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
     echo -en "Setting visibility to ${WIFIAPVISIBLE} <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setdiscoverable ${WIFIAPVISIBLE} >> ${LOG_CMD_FILE}
+    ${WIFITOOL} ap setdiscoverable ${WIFIAPVISIBLE}
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
     echo -en "ERROR visibility not found<br>\r\n" >> ${LOG_MSG_FILE}
@@ -116,7 +116,7 @@ fi
 if [ -n "${WIFIAPCHANNEL}" ]; then
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
     echo -en "Setting channel to ${WIFIAPCHANNEL} <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setchannel ${WIFIAPCHANNEL} >> ${LOG_CMD_FILE}
+    ${WIFITOOL} ap setchannel ${WIFIAPCHANNEL}
     #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 else
     echo -en "ERROR channel not found<br>\r\n" >> ${LOG_MSG_FILE}
@@ -124,14 +124,14 @@ fi
 
 echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
 echo -en "Starting Wifi Access Point (this will take a little while) <br>\r\n" >> ${LOG_MSG_FILE}
-${WIFITOOL} ap start >> ${LOG_CMD_FILE}
+${WIFITOOL} ap start
 
 # @echo -en "Started Wifi Accesss Point<br>\r\n" >> /legato/systems/current/apps/wifiWebAp/read-only ${LOG_MSG_FILE}
 
 ##############################
 ### Configure the WLAN interface
 echo -ne "Mounting of ${INT_WIFI}... <br>\r\n" >> ${LOG_MSG_FILE}
-ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up >> ${LOG_CMD_FILE}
+ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up
 
 ### Start the relay interface: rmnet0 | eth0
 ### WARNING: For rmnet interface, PINless code SIM must be used
@@ -183,15 +183,18 @@ iptables -A INPUT -s $SUBNET --jump ACCEPT
 
 ### Stop the DHCP server
 echo -ne "Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-/etc/init.d/dnsmasq stop || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO STOP THE DHCP server\n" >> ${LOG_CMD_FILE}
+/etc/init.d/dnsmasq stop || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO STOP THE DHCP server\n"
 ### Configure the IP addresses range for DHCP (dnsmasq)
 test -L /etc/dnsmasq.d/${DHCP_CFG_FILE} || ln -s /tmp/${DHCP_CFG_FILE} /etc/dnsmasq.d/${DHCP_CFG_FILE}
 
 echo -ne "Generating the configuration file for the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-echo -ne "dhcp-range=wlan0,${WIFIAPSTART},${WIFIAPSTOP},24h\n" >> /tmp/${DHCP_CFG_FILE}
+echo -e "dhcp-range=${INT_WIFI},${WIFIAPSTART},${WIFIAPSTOP},24h" > /tmp/${DHCP_CFG_FILE}
+echo -e "dhcp-option=${INT_WIFI},3,${WIFIAPIP}" >> /tmp/${DHCP_CFG_FILE}
+echo -ne "dhcp-option=${INT_WIFI},6,${WIFIAPIP}" >> /tmp/${DHCP_CFG_FILE}
+
 ### Start the DHCP server
 echo -ne "Restarting the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-/etc/init.d/dnsmasq start || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO START THE DHCP server\n" >> ${LOG_CMD_FILE}
+/etc/init.d/dnsmasq start || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO START THE DHCP server\n"
 # /etc/init.d/dnsmasq restart
 
 ### AP should be now up & running
