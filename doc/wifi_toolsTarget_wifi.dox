@@ -1,18 +1,11 @@
-/** @page wifi_toolsTarget_wifi wifi command line tool
-<HR>
+/** @page wifi_toolsTarget_wifi WiFi Command Line Tool
 
-\tableofcontents
+This topic provides details on using the @c wifi command line tool to control the Wifi Service.
 
-@section wifi_toolsTarget_wifi_Desc Description
+The <b><c> wifi </c></b> command line tool supports both client and access point options.
 
-Use the <b>wifi</b> command to control wifi service functions. <BR>
-It offers both client and access point.<BR>
+Also see the wifi command line help:
 
-
-@section wifi_toolsTarget_wifi_Cmd The wifi command
-
-The <b><c> wifi </c></b> command line tool supports both client and access point.<BR>
-This is described in the main help.<BR>
 @verbatim
 # wifi help
 wifi command line usage
@@ -23,11 +16,13 @@ To run Wifi Client:
 To run Wifi Access Point:
 	wifi ap help
 @endverbatim
-<BR>
 
-@subsection toolsTarget_wifi_client WiFi client options
 
-The wifi client command line has the following options.<BR>
+@section wifi_toolsTarget_cl_client WiFi Client
+
+The wifi client command line has these options:
+
+The wifi client command line has the following options:
 @verbatim
 # wifi client help
 wifi command line usage
@@ -65,48 +60,8 @@ To set WPA/WPA2 Enterprise user credentials:
 To set WEP Key:
 	wifi client setwepkey [REF] [WEPKEY]
 @endverbatim
-<BR>
-<HR>
 
-
-@subsection toolsTarget_wifi_ap WiFi Access Point options
-
-The wifi access point command line has the following options.<BR>
-<BR>
-@verbatim
-# wifi ap help
-wifi command line Access Point usage
-==========
-
-To start the  Wifi Access Point:
-	wifi ap start
-To stop the  Wifi Access Point:
-	wifi ap stop
-To set the SSID of the Wifi Access Point:
-	wifi ap setssid [SSID]
-To set the channel of the Wifi Access Point:
-	wifi ap setchannel [ChannelNo]
-To set the security protocol used :
-	wifi ap setsecurityproto [SecuProto]
-Values for SecuProto;
-	0: No security
-	1: Using WPA2
-To set WPA2 passphrase that generates PSK :
-	wifi ap setpassphrase  [passphrase]
-To set WPA2 PSK directly:
-	wifi ap setpsk [PSK]
-To setdiscoverablity for the Wifi Access Point:
-	wifi ap setdiscoverable
-To maximum nbr of clients for the Wifi Access Point:
-	wifi ap setmaxclients [MAXNBR]
-@endverbatim
-
-<br>
-
-@section wifi_toolsTarget_wifi_Usage Usage Examples
-This section provides two step by step examples for setting up the wifi client and access point.
-
-@subsection wifi_toolsTarget_wifi_Usage_client Usage Example with Client
+@subsection toolsTarget_wifi_clientExample Client Example
 
 This example shows how a client connects to an open access point with no security<BR>
 
@@ -152,7 +107,40 @@ Lease of 192.168.43.25 obtained, lease time 3600
 > ping 8.8.8.8
 @endverbatim
 
-@subsection wifi_toolsTarget_wifi_Usage_ap Usage Example with Access Point
+
+@section toolsTarget_wifi_ap WiFi Access Point
+
+The wifi access point command line has the following options:
+
+@verbatim
+# wifi ap help
+wifi command line Access Point usage
+==========
+
+To start the  Wifi Access Point:
+	wifi ap start
+To stop the  Wifi Access Point:
+	wifi ap stop
+To set the SSID of the Wifi Access Point:
+	wifi ap setssid [SSID]
+To set the channel of the Wifi Access Point:
+	wifi ap setchannel [ChannelNo]
+To set the security protocol used :
+	wifi ap setsecurityproto [SecuProto]
+Values for SecuProto;
+	0: No security
+	1: Using WPA2
+To set WPA2 passphrase that generates PSK :
+	wifi ap setpassphrase  [passphrase]
+To set WPA2 PSK directly:
+	wifi ap setpsk [PSK]
+To setdiscoverablity for the Wifi Access Point:
+	wifi ap setdiscoverable
+To maximum nbr of clients for the Wifi Access Point:
+	wifi ap setmaxclients [MAXNBR]
+@endverbatim
+
+@subsection wifi_toolsTarget_wifi_ap_example Access Point Example
 
 This example shows how to setup a open access point WPA2 security.<BR>
 
@@ -214,11 +202,6 @@ This example shows how to setup a open access point WPA2 security.<BR>
 > /usr/sbin/iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
 > /usr/sbin/iptables -A INPUT -s $SUBNET --jump ACCEPT
 @endverbatim
-
-
-
-
-<HR>
 
 Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 

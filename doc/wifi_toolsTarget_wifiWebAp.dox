@@ -1,22 +1,19 @@
-/** @page wifi_wifiwebAp_sample WiFi Access Point Web Sample application
+/** @page wifi_wifiwebAp_sample WiFi Access Point Web Sample App
 
-The WiFi access point web application provides a webpage to configure the WiFi Access Point.
+This sample provides a webpage to configure the WiFi Access Point.
 
-<HR>
+This sample app isn't started by default; it needs to be started manually.
 
-@section wifi_wifiwebAp_sample_Desc Description
+Starting the application will start the webserver on port 8080. <br>
+Go to the IP of your module NNN.NNN.NNN.NNN:8080. <br>
+The default address of your module should be 192.168.2.2:8080. <br>
+The port number of the webserver is set in the application. <br>
 
-This sample app is not started by default, but needs to be started manually.
-Starting the application will start the webserver on port 8080.
-Go to the IP of your module NNN.NNN.NNN.NNN:8080.
-The default address of your module should be 192.168.2.2:8080.
-The port number of the webserver is set in the application.
+@warning  Only use a SIM card without PIN code.
 
-Beware: Use only SIM card without PIN code.
+@section wifi_wifiwebAp_sample_StepByStep Use Web App
 
-@section wifi_wifiwebAp_sample_StepByStep Step By Step instruction
-
-This section provides one way how to enable web interface
+This is one way to enable the sample web interface:
 
 1. Connect your target via USB.
 2. Check your targets IP on the USB interface with <i>ifconfig</i>.
@@ -28,8 +25,6 @@ This section provides one way how to enable web interface
 8. Once the message "Waiting for connections..." is displayed, you can try to connect to your WiFi AP.
 9. Connections/Disconnections are visible in the logs as well.
 
-
-<HR>
 
 Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 
