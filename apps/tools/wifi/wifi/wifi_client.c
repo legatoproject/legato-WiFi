@@ -202,7 +202,7 @@ void PrintClientHelp( void )
            "To disconnect from an access point:\n"
            "\twifi client disconnect\n"
            "To delete the access point set in 'create':\n"
-           "\twifi client delete\n"
+           "\twifi client delete [REF]\n"
 
            "To set WPA/WPA2 passphrase that generates PSK :\n"
            "\twifi client setpassphrase [REF] [passphrase]\n"
