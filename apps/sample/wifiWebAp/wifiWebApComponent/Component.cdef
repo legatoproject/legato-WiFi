@@ -24,18 +24,19 @@ bundles:
         www/scripts/log.js    /var/www/scripts/log.js
 
         // CSS
-        www/css/mangOH.css    /var/www/css/mangOH.css
+        www/css/style.css    /var/www/css/style.css
 
-        // images
-        www/image/background.png     /var/www/image/background.png
-        www/image/sierra_324x60.png  /var/www/image/sierra_324x60.png
-        www/image/mangoh_logo.png    /var/www/image/mangoh_logo.png
+        // Images
+        www/image/legato_logo.png     /var/www/image/legato_logo.png
+        www/image/raspbian.png        /var/www/image/raspbian.png
+        www/image/mangoh.png          /var/www/image/mangoh.png
 
         // cgi bin stuff
         [rx] www/cgi-bin/readlogfile    /var/www/cgi-bin/readlogfile
         [x] www/cgi-bin/startwifiap     /var/www/cgi-bin/startwifiap
         [x] www/cgi-bin/stopwifiap      /var/www/cgi-bin/stopwifiap
         [x] www/cgi-bin/wifiexport      /var/www/cgi-bin/wifiexport
+        [x] www/cgi-bin/hardinfo        /var/www/cgi-bin/hardinfo
 
         // debug logfile
         [r] www/cgi-bin/logfile.log      /tmp/wifi_http.log

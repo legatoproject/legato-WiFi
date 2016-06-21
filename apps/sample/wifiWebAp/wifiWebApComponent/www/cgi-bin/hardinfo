@@ -1,0 +1,23 @@
+#!/bin/sh
+
+source wifiexport
+
+# Retrieves modem and platform information
+
+echo -en "HTTP/1.1 200 OK\r\n"
+echo -en "Content-Type: text/html; charset=utf-8\r\n"
+echo -en "Cache-Control: no-cache\r\n"
+echo -en "Connection: close\r\n"
+echo -en "\r\n"
+echo -en "<p style=\"color:#526066;font-family:sans-serif;font-size:small;font-weight:bold\">"
+echo -en "Modem: $(cm info device)<br /><br />\r\n"
+echo -en "$(cm sim info | grep Home)<br /><br />\r\n"
+echo -en "$(cm radio | grep RAT | cut -d '(' -f 1)<br /><br />\r\n"
+echo -en "$(cm radio | grep Signal | cut -d '(' -f 1)<br /><br />\r\n"
+echo -en "Distribution: $(cat /etc/issue | cut -d '\' -f 1)<br /><br />\r\n"
+echo -en "Host system: $(uname -a | cut -d '#' -f 1)</p>\r\n"
+if [ "$(cat /etc/issue | cut -c 1-8)" = 'Raspbian' ]; then
+    echo -en "<img src=\"../image/raspbian.png\" style=\"position:absolute;top:40px;right:30px;width:120px;height:120px\" />"
+else
+    echo -en "<img src=\"../image/mangoh.png\" style=\"position:absolute;top:40px;right:30px;width:120px;height:120px\" />"
+fi

@@ -10,19 +10,16 @@
   *   The second part is the content of the logfile provided by this app.
   */
 
+#include <time.h>
 #include <signal.h>
 #include "legato.h"
 #include "interfaces.h"
 
-#define   HTTP_PORT_NUMBER  "8080"
-#define   HTTP_SYS_CMD  "/usr/sbin/httpd -v -p " HTTP_PORT_NUMBER " -u root -h /legato/systems/current/apps/wifiWebAp/read-only/var/www/ 2>&1"
-
-#define LOGFILE "/tmp/wifi_http.log"
-//#define LOGFILE "/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log"
-
-
-#define TMP_STR_SIZE 256
-
+#define LOGFILE          "/tmp/wifi_http.log"
+#define BUF_SIZE          256
+#define STR_SIZE          1024
+#define HTTP_PORT_NUMBER "8080"
+#define HTTP_SYS_CMD     "/usr/sbin/httpd -v -p " HTTP_PORT_NUMBER " -u root -h /legato/systems/current/apps/wifiWebAp/read-only/var/www/ 2>&1"
 
 static FILE *HttpdCmdFp = NULL;
 static FILE *LogFileFp = NULL;
@@ -44,20 +41,20 @@ static uint16_t NumberClients = 0;
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Handler for Wifi Client changes
+ * Handler for Wifi events
  *
  * @param event
  *        Handles the wifi events
  * @param contextPtr
  */
 //--------------------------------------------------------------------------------------------------
-static void myMsgHandler
+static void WiFiEventHandler
 (
     le_wifiAp_Event_t event,
     void* contextPtr
 )
 {
-    char str[TMP_STR_SIZE];
+    char str[BUF_SIZE];
     LE_INFO( "Wifi Ap event received");
 
     LogFileFp = fopen( LOGFILE, "a");
@@ -69,6 +66,10 @@ static void myMsgHandler
                         strerror( errno ));
     }
 
+    char buffer[BUF_SIZE];
+    time_t timestamp = time(NULL);
+    strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&timestamp));
+
     switch( event )
     {
         case LE_WIFIAP_EVENT_CLIENT_CONNECTED:
@@ -77,7 +78,7 @@ static void myMsgHandler
             if( LogFileFp != NULL )
             {
                 ///< A client connect to AP
-                snprintf(str, TMP_STR_SIZE, "LE_WIFIAP_EVENT_CLIENT_CONNECTED: Total Clients Connected: %d</br>\r\n", NumberClients);
+                snprintf(str, BUF_SIZE, "<font color=\"black\" >%s:</font> Total Clients Connected: %d</br>\r\n", buffer, NumberClients);
                 LE_INFO( "%s", str );
                 fwrite(str , 1 , strlen(str) , LogFileFp );
             }
@@ -94,7 +95,7 @@ static void myMsgHandler
             }
             if( LogFileFp != NULL )
             {
-                snprintf(str, TMP_STR_SIZE, "LE_WIFICLIENT_EVENT_DISCONNECTED: Total Clients Connected: %d</br>\r\n", NumberClients);
+                snprintf(str, BUF_SIZE, "<font color=\"black\" >%s:</font> Total Clients Connected: %d</br>\r\n", buffer, NumberClients);
                 LE_INFO(  "%s", str );
                 fwrite(str , 1 , strlen(str) , LogFileFp );
             }
@@ -131,7 +132,7 @@ static void SubscribeApEvents
     // todo: Clear log file at startup?
 
     // Add an handler function to handle message reception
-    HdlrRef=le_wifiAp_AddNewEventHandler( myMsgHandler, NULL );
+    HdlrRef=le_wifiAp_AddNewEventHandler( WiFiEventHandler, NULL );
     LE_ASSERT(HdlrRef != NULL);
 
 
@@ -150,18 +151,18 @@ static void StartWebServer
 )
 {
     char tmpString[] = HTTP_SYS_CMD;
-    char str[1024];
+    char str[STR_SIZE];
 
     LE_INFO( "StartWebServer : popen : " HTTP_SYS_CMD );
     HttpdCmdFp = popen( tmpString, "r" );
     LE_INFO( "StartWebServer : AFTER (command did not hang) %p", HttpdCmdFp);
     if ( NULL == HttpdCmdFp )
     {
-        LE_ERROR( "StartWebServer: Failed to run command:\"%s\" errno:%d %s",
+        LE_ERROR("StartWebServer: Failed to run command:\"%s\" errno:%d %s",
                         (tmpString),
                         errno,
                         strerror( errno ));
-        LE_ERROR( "StartWebServer:  errno:%d %s",
+        LE_ERROR("StartWebServer:  errno:%d %s",
                         errno,
                         strerror( errno ));
 
@@ -181,20 +182,23 @@ static void StartWebServer
     }
 
     // This clears and starts the log file.
-    LogFileFp = fopen( LOGFILE, "w");
+    LogFileFp = fopen(LOGFILE, "w");
 
     if( LogFileFp != NULL )
     {
-        snprintf(str, TMP_STR_SIZE, "STARTING WIFI HTTP INTERFACE\n");
-        LE_INFO(  "%s", str );
+        LE_INFO("STARTING WIFI HTTP INTERFACE");
+        char buffer[BUF_SIZE];
+        time_t timestamp = time(NULL);
+        strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&timestamp));
+        snprintf(str, BUF_SIZE, "<font color=\"black\" >%s:</font> Starting WiFi HTTP interface...</br>\r\n", buffer);
         fwrite(str , 1 , strlen(str) , LogFileFp );
         fclose(LogFileFp);
     }
     else
     {
-        LE_ERROR( "ERROR: fopen failed for " LOGFILE ":  errno:%d %s",
-                        errno,
-                        strerror( errno ));
+        LE_ERROR("ERROR: fopen failed for " LOGFILE ":  errno:%d %s",
+                 errno,
+                 strerror( errno ));
     }
 }
 

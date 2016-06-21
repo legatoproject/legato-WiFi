@@ -8,20 +8,18 @@ echo -en "Content-Type: text/html; charset=utf-8\r\n"
 echo -en "Cache-Control: no-cache\r\n"
 echo -en "Connection: close\r\n"
 echo -en "\r\n"
-echo -en "</BR> <H3>You are coming from ${REMOTE_ADDR} </H3> </BR>\r\n"
+echo -en "You are coming from ${REMOTE_ADDR}<br /><br />\r\n"
 
-echo -en "</BR> <H1>WIFI AP Events</H1> </BR>\r\n"
-echo -en "</BR> <H3>Wifi Access Point Log file: </H3> </BR>\r\n"
+
+
 
 #todo: use the a generated logfile (in the same directory?)
 #InputFile="/tmp/wifi_http.log"
 #InputFile="/legato/systems/current/apps/wifiWebAp/read-only/tmp/wifi_http.log"
 
 while IFS= read -r line <&3; do
-#  echo -en "<font size=\"2\" color=\"green\" > ${line} </font></br>\r\n"
-  echo -en "<font size=\"2\" color=\"green\" > ${line} </font>\r\n"
+  echo -en "<font size=\"2\" color=\"green\" > ${line}</font>\r\n"
 done 3< "${LOG_MSG_FILE}";
 
-echo -en "<font size=\"2\" color=\"blue\" > ... </font></br>\r\n"
-#echo -en "end of log <BR>\r\n"
+echo -en "<font size=\"2\"> ... </font></br>\r\n"
 

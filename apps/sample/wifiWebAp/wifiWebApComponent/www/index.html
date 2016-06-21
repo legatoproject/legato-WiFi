@@ -14,167 +14,164 @@
         <style>html{display:none;}</style>
     </noscript>
 
-    <link rel="stylesheet" type="text/css" href="css/mangOH.css" media="screen" />
-
-    <script src="scripts/hmi.js"></script>
-    <script src="scripts/ip.js"></script>
-    <script src="scripts/log.js"></script>
-
+   <link rel="stylesheet" type="text/css" href="css/style.css" media="screen" />
 </head>
-
-
 <body>
 
-<table border="0" width="100%">
-    <tr>
-        <td style="text-align:left;"><a href="http://mangoh.io"><img src="image/mangoh_logo.png" height="100px" width="100px" alt="mangOH"/></a></td>
-        <td style="text-align:right;"><a href="https://www.sierrawireless.com"> <img style="border:0;" src="image/sierra_324x60.png" alt="Sierra Wireless"/></a></td>
-    </tr>
+<table cellspacing="0" style="position:fixed;">
+    <th style="background-color:#f2f2f2" >
+        <a href="http://legato.io/" target="_blank">
+            <img src="image/legato_logo.png" width="175px" />
+        </a>
+    </th>
+    <th style="background-color:#7395A0;width:100%;color:white">
+        <h1>Setup of WiFi Access Point</h1>
+    </th>
 </table>
 
 <iframe name="hole" width=0 height=0 style="visibility:hidden"></iframe>
 
-<p style="text-align:center;">Setup of Access point</p>
+<form action="/cgi-bin/startwifiap" method="post" id="wifiap" name="wifiap" onsubmit="return(checkForm());" target="hole">
 
-<center>
-    <form action="/cgi-bin/startwifiap" method="post" id="wifiap" name="wifiap" onsubmit="return ( checkForm() );" target="hole">
+    <table id="config">
+        <tr>
+            <td witdh="50%">
+                <h2>General configuration</h2>
 
-    <fieldset>
-        <legend>General configuration</legend>
+                <p>
+                SSID: <input type="text" name="SSID" value="wifiWebApSSID" required>
+                </p>
 
-        <p>
-        SSID: <input type="text" name="SSID" value="wifiWebApSSID" required>
-        </p>
+                <p>
+                Max Number of Clients:
+                    <select name="maxclients" id="maxclients">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option selected="selected" value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    </select>
+                </p>
 
-        <p>
-        Max Number of Clients:
-            <select name="maxclients" id="maxclients">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option selected="selected" value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-            </select>
-        </p>
+                <p>
+                Channel:
+                    <select name="channel" id="channel">
+                    <option selected="selected" value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                    <option value="13">13</option>
+                    </select>
+                </p>
 
-        <p>
-        Channel:
-            <select name="channel" id="channel">
-            <option selected="selected" value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-            <option value="11">11</option>
-            <option value="12">12</option>
-            <option value="13">13</option>
-            </select>
-        </p>
+                <p>
+                Visible:
+                    <input type="radio" name="apvisible" value="1" checked> Yes
+                    <input type="radio" name="apvisible" value="0" > No </br>
+                </p>
+            </td>
+            <td witdh="50%">
+                <h2>Security</h2>
+                <p>
+                Encryption:
+                    <input type="radio" class="security" name="secu" value="1" onclick="toggleSecurity(this, 'key')" checked> WPA2
+                    <input type="radio" class="security" name="secu" value="0" onclick="toggleSecurity(this, 'key')" > None
+                    </br>
+                </p>
 
-        <p>
-        Visible:
-            <input type="radio" name="apvisible" value="1" checked> Yes
-            <input type="radio" name="apvisible" value="0" > No </br>
-        </p>
-    </fieldset>
+                <p>
+                Set PassPhrase or PSK (Pre Shared Key):
+                    <input type="radio" class="key" name="keyType" value="passphrase" checked> Passphrase
+                    <input type="radio" class="key" name="keyType" value="psk" > PSK </br>
+                    </br>
+                    Passphrase or PSK: <input type="text" class="key" name="keyValue" id="keyValue" value="passphrase" required>
+                    </br>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td witdh="50%">
+                <h2>AP IPv4 range</h2>
 
-    </br>
+                <input type="checkbox" class="ipSetup" name="autoSetup" value="0" onclick="toggleAutoIPSetup(this, 'ipSetupCtrl'); toggleAutoIPSetup(this, 'ipSetupField');">Automatic setup</br>
 
-    <fieldset>
-        <legend>Security</legend>
-        <p>
-        Encryption:
-            <input type="radio" class="security" name="secu" value="1" onclick="toggleSecurity(this, 'key')" checked> WPA2
-            <input type="radio" class="security" name="secu" value="0" onclick="toggleSecurity(this, 'key')" > None
-            </br>
-        </p>
+                <table style="margin:auto">
+                    <tr class="ip">
+                        </br>
+                        <label><span class="notice">NOTICE: The 192.168.2.0/24 subnetwork is reserved and must not be used.</span></label>
+                    </tr>
+                    <tr class="ip">
+                        <td class="ip"><label>AP IP-address</label></td>
+                        <td class="ip"><input class="ipSetupField" name="ipAP" id="ipAP" size="15" maxlength="15" value="192.168.20.1" type="text" onchange="checkIPValue(this.id)" required></td>
+                        <td class="ip"><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipAP')" type="button"></td>
+                    </tr>
 
-        <p>
-        Set PassPhrase or PSK (Pre Shared Key):
-            <input type="radio" class="key" name="keyType" value="passphrase" checked> Passphrase
-            <input type="radio" class="key" name="keyType" value="psk" > PSK </br>
-            </br>
-            Passphrase or PSK: <input type="text" class="key" name="keyValue" id="keyValue" value="passphrase" required>
-            </br>
-        </p>
-    </fieldset>
+                    <tr class="ip">
+                        <td class="ip"><label>AP IP-netmask</label></td>
+                        <td class="ip"><input class="ipSetupField" name="ipMask" id="ipMask" size="15" maxlength="15" value="255.255.255.0" type="text" onchange="checkIPMask(this.id)" required></td>
+                        <td class="ip"><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipMask')" type="button"></td>
+                    </tr>
 
-    </br>
+                    <tr class="ip">
+                        <td class="ip"><label>Start IP-address</label></td>
+                        <td class="ip"><input class="ipSetupField" name="ipStart" id="ipStart" size="15" maxlength="15" value="192.168.20.10" type="text" onchange="checkIPValue(this.id)" required></td>
+                        <td class="ip"><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipStart')" type="button"></td>
+                    </tr>
 
-    <fieldset>
-        <legend>AP IPv4 range</legend>
+                    <tr class="ip">
+                        <td class="ip"><label>Stop IP-address</label></td>
+                        <td class="ip"><input class="ipSetupField" name="ipStop" id="ipStop" size="15" maxlength="15" value="192.168.20.100" type="text" onchange="checkIPValue(this.id)" required></td>
+                        <td class="ip"><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipStop')" type="button"></td>
+                    </tr>
+                </table>
+            </td>
+            <td witdh="50%">
+                <h2>Information</h2>
+                <iframe src="cgi-bin/hardinfo" width="100%" height="210px" frameborder="0"></iframe>
+            </td>
+        </tr>
+    </table>
 
-        <input type="checkbox" class="ipSetup" name="autoSetup" value="0" onclick="toggleAutoIPSetup(this, 'ipSetupCtrl'); toggleAutoIPSetup(this, 'ipSetupField');">Automatic setup</br>
+    <br /><br />
 
-        <table>
-            <tr>
-                </br>
-                <label ><span class="notice">NOTICE: The 192.168.2.0/24 subnetwork is reserved and must not be used.</span></label>
-            </tr>
-            <tr>
-                <td><label>AP IP-address</label></td>
-                <td><input class="ipSetupField" name="ipAP" id="ipAP" size="15" maxlength="15" value="192.168.20.1" type="text" onchange="checkIPValue(this.id)" required></td>
-                <td><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipAP')" type="button"></td>
-            </tr>
+<table cellspacing="0" width="100%">
+    <th>
+        <input type="submit" id="startButton" value="Start Wifi AP" class="btn" />
+        </form>
+    </th>
+    <th>
+        <form action="/cgi-bin/stopwifiap" method="post" onsubmit="return(stopAP());" target="hole">
+            <!--
+            <form action="/cgi-bin/stopwifiap" method="post" onsubmit="return(stopAP());">
+            -->
+            <input type="submit" id="stopButton" value="Stop Wifi AP" disabled="true" class="btn" />
+        </form>
+    </th>
+</table>
 
-            <tr>
-                <td><label>AP IP-netmask</label></td>
-                <td><input class="ipSetupField" name="ipMask" id="ipMask" size="15" maxlength="15" value="255.255.255.0" type="text" onchange="checkIPMask(this.id)" required></td>
-                <td><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipMask')" type="button"></td>
-            </tr>
+<br /><br />
+<div id='ipLog' contentEditable=true class="logBox"></div>
 
-            <tr>
-                <td><label>Start IP-address</label></td>
-                <td><input class="ipSetupField" name="ipStart" id="ipStart" size="15" maxlength="15" value="192.168.20.10" type="text" onchange="checkIPValue(this.id)" required></td>
-                <td><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipStart')" type="button"></td>
-            </tr>
 
-            <tr>
-                <td><label>Stop IP-address</label></td>
-                <td><input class="ipSetupField" name="ipStop" id="ipStop" size="15" maxlength="15" value="192.168.20.100" type="text" onchange="checkIPValue(this.id)" required></td>
-                <td><input class="ipSetupCtrl" name="ipSetupButton" value=" Reset " onclick="resetAPIPRange('ipStop')" type="button"></td>
-            </tr>
-        </table>
-    </fieldset>
-
-    </br>
-
-    <input type="submit" id="startButton" value="Start Wifi AP" /> </br>
-</form>
-
-</br>
-
-<form action="/cgi-bin/stopwifiap" method="post" onsubmit="return ( stopAP() );" target="hole">
-<!--
-<form action="/cgi-bin/stopwifiap" method="post" onsubmit="return ( stopAP() );">
--->
-    <input type="submit" id="stopButton" value="Stop Wifi AP" disabled="true"/> </br>
-</form>
-</center>
-
-</br>
-
-<center>
-    <fieldset>
-        <legend>Logs</legend>
-            <div id='ipLog' contentEditable=true style="width: 100%; height: 300px; overflow-y: scroll;"></div>
-    </fieldset>
-</center>
-
+<script src="scripts/hmi.js"></script>
+<script src="scripts/ip.js"></script>
+<script src="scripts/log.js"></script>
 <script type="text/javascript">
-//    refreshInterval = setInterval(refreshLogs, 1000);
+    refreshInterval = setInterval(refreshLogs, 2000);
 </script>
 
 </body>
 </html>
-

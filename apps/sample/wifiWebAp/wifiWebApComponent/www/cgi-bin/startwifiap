@@ -2,14 +2,6 @@
 
 source wifiexport
 
-#echo -en "HTTP/1.1 200 OK\r\n" >> ${LOG_MSG_FILE}
-#echo -en "Content-Type: text/html; charset=utf-8\r\n" >> ${LOG_MSG_FILE}
-##echo -en "Content-Type: text/plain;\r\n" >> ${LOG_MSG_FILE}
-#echo -en "Cache-Control: no-cache\r\n" >> ${LOG_MSG_FILE}
-#echo -en "Connection: close\r\n" >> ${LOG_MSG_FILE}
-#echo -en "\r\n" >> ${LOG_MSG_FILE}
-echo -en "<BR> <H1>WIFI AP SETTINGS RECEIVED<H1> <BR>\r\n" > ${LOG_MSG_FILE}
-
 get_var()
 {
     s='s/^.*'${1}'=\([^&]*\).*$/\1/p'
@@ -48,32 +40,26 @@ fi
 
 
 if [ -n "${WIFIAPSSID}" ]; then
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-    echo -en "Setting SSID to ${WIFIAPSSID}  <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setssid ${WIFIAPSSID}
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> Setting SSID to ${WIFIAPSSID}  <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setssid ${WIFIAPSSID} >> ${LOG_CMD_FILE}
 else
-    echo -en "ERROR SSID not found<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> ERROR SSID not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
 
 if [ -n "${WIFIAPMAXCLIENTS}" ]; then
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-    echo -en "Setting MaxClients to ${WIFIAPMAXCLIENTS}  <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setmaxclients ${WIFIAPMAXCLIENTS}
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> Setting MaxClients to ${WIFIAPMAXCLIENTS}  <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setmaxclients ${WIFIAPMAXCLIENTS} >> ${LOG_CMD_FILE}
 else
-    echo -en "ERROR MaxClients not found<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> ERROR MaxClients not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
 
 if [ -n "${WIFIAPSECURITY}" ]; then
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-    echo -en "Setting Security to ${WIFIAPSECURITY}  <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setsecurityproto ${WIFIAPSECURITY}
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> Setting Security to ${WIFIAPSECURITY}  <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setsecurityproto ${WIFIAPSECURITY} >> ${LOG_CMD_FILE}
 else
-    echo -en "ERROR Security not found<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> ERROR Security not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
 
@@ -81,73 +67,64 @@ fi
 if [ "${WIFIAPSECURITY}" = "1" ]; then
 
     if [ "${WIFIAPKEYTYPE}" = "psk" ]; then
-        echo -en "keytype PSK found :${WIFIAPKEYTYPE}<br>\r\n" >> ${LOG_MSG_FILE}
+        echo -en "<font color=\"black\" >$(date "+%T"):</font> keytype PSK found :${WIFIAPKEYTYPE}<br>\r\n" >> ${LOG_MSG_FILE}
         if [ -n "${WIFIAPKEY}" ]; then
-            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-            echo -en "Setting PSK to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
-            ${WIFITOOL} ap setpsk ${WIFIAPKEY}
-            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+            echo -en "<font color=\"black\" >$(date "+%T"):</font> Setting PSK to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
+            ${WIFITOOL} ap setpsk ${WIFIAPKEY} >> ${LOG_CMD_FILE}
         else
-            echo -en "ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
+            echo -en "<font color=\"black\" >$(date "+%T"):</font> ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
         fi
     else
     # passphrase
-        echo -en "keytype assumed passphrase found :${WIFIAPKEYTYPE}<br>\r\n" >> ${LOG_MSG_FILE}
+        echo -en "<font color=\"black\" >$(date "+%T"):</font> keytype assumed passphrase found :${WIFIAPKEYTYPE}<br>\r\n" >> ${LOG_MSG_FILE}
         if [ -n "${WIFIAPKEY}" ]; then
-            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-            echo -en "Setting PassPhrase to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
-            ${WIFITOOL} ap setpassphrase ${WIFIAPKEY}
-            #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+            echo -en "<font color=\"black\" >$(date "+%T"):</font> Setting PassPhrase to ${WIFIAPKEY}  <br>\r\n" >> ${LOG_MSG_FILE}
+            ${WIFITOOL} ap setpassphrase ${WIFIAPKEY} >> ${LOG_CMD_FILE}
         else
-            echo -en "ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
+            echo -en "<font color=\"black\" >$(date "+%T"):</font> ERROR PassPhrase or PSK not found<br>\r\n" >> ${LOG_MSG_FILE}
         fi
     fi
 fi
 
 if [ -n "${WIFIAPVISIBLE}" ]; then
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-    echo -en "Setting visibility to ${WIFIAPVISIBLE} <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setdiscoverable ${WIFIAPVISIBLE}
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> Setting visibility to ${WIFIAPVISIBLE} <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setdiscoverable ${WIFIAPVISIBLE} >> ${LOG_CMD_FILE}
 else
-    echo -en "ERROR visibility not found<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> ERROR visibility not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
 if [ -n "${WIFIAPCHANNEL}" ]; then
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-    echo -en "Setting channel to ${WIFIAPCHANNEL} <br>\r\n" >> ${LOG_MSG_FILE}
-    ${WIFITOOL} ap setchannel ${WIFIAPCHANNEL}
-    #echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> Setting channel to ${WIFIAPCHANNEL} <br>\r\n" >> ${LOG_MSG_FILE}
+    ${WIFITOOL} ap setchannel ${WIFIAPCHANNEL} >> ${LOG_CMD_FILE}
 else
-    echo -en "ERROR channel not found<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -en "<font color=\"black\" >$(date "+%T"):</font> ERROR channel not found<br>\r\n" >> ${LOG_MSG_FILE}
 fi
 
-echo -en "<br>\r\n" >> ${LOG_MSG_FILE}
-echo -en "Starting Wifi Access Point (this will take a little while) <br>\r\n" >> ${LOG_MSG_FILE}
-${WIFITOOL} ap start
+echo -en "<font color=\"black\" >$(date "+%T"):</font> Starting Wifi Access Point (this will take a little while) <br>\r\n" >> ${LOG_MSG_FILE}
+${WIFITOOL} ap start >> ${LOG_CMD_FILE}
 
 # @echo -en "Started Wifi Accesss Point<br>\r\n" >> /legato/systems/current/apps/wifiWebAp/read-only ${LOG_MSG_FILE}
 
 ##############################
 ### Configure the WLAN interface
-echo -ne "Mounting of ${INT_WIFI}... <br>\r\n" >> ${LOG_MSG_FILE}
-ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting of ${INT_WIFI}... <br>\r\n" >> ${LOG_MSG_FILE}
+ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up >> ${LOG_CMD_FILE}
 
-### Start the relay interface: rmnet0 | eth0
+### Start the relay interface: rmnet0/ppp0 | eth0
 ### WARNING: For rmnet interface, PINless code SIM must be used
-echo -ne "Mounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
 case "${INT_NET}" in
     eth*)
         ifconfig ${INT_NET} up
         ;;
-    rmnet*)
-        echo -ne "Enabling the radio on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+    rmnet* | ppp*)
+        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Enabling the radio on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
         cm radio on
         sleep 1
-        echo -ne "Enabling the data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Enabling the data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
         cm data connect &
         sleep 1
-        echo -ne "Waiting for data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Waiting for data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
         ;;
 esac
 
@@ -165,16 +142,17 @@ while [ ${RETRY} -lt 30 ] ; do
 done
 # echo -ne "${INT_NET} address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
 if [ "${INT_NET_ADDR}" == "" ]; then
-    echo -ne "Mounting of relay interface ${INT_NET} failed...<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting of relay interface ${INT_NET} failed...<br>\r\n" >> ${LOG_MSG_FILE}
 else
-    echo -ne "Relay interface ${INT_NET} IP address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
+    echo -ne "<font color=\"black\" >$(date "+%T"):</font> Relay interface ${INT_NET} IP address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
+    route add default gw ${INT_NET_ADDR} ${INT_NET}
 fi
 
 ### Turn on IP forwarding
-echo -ne "Enabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Enabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
 echo 1 > /proc/sys/net/ipv4/ip_forward
 ### Configure the NAT
-echo -ne "Configuring the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Configuring the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
 modprobe ipt_MASQUERADE
 iptables -A POSTROUTING -t nat -o $INT_NET -j MASQUERADE
 iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
@@ -182,24 +160,21 @@ iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW
 iptables -A INPUT -s $SUBNET --jump ACCEPT
 
 ### Stop the DHCP server
-echo -ne "Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-/etc/init.d/dnsmasq stop || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO STOP THE DHCP server\n"
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+/etc/init.d/dnsmasq stop || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO STOP THE DHCP server\n" >> ${LOG_CMD_FILE}
 ### Configure the IP addresses range for DHCP (dnsmasq)
 test -L /etc/dnsmasq.d/${DHCP_CFG_FILE} || ln -s /tmp/${DHCP_CFG_FILE} /etc/dnsmasq.d/${DHCP_CFG_FILE}
 
-echo -ne "Generating the configuration file for the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-echo -e "dhcp-range=${INT_WIFI},${WIFIAPSTART},${WIFIAPSTOP},24h" > /tmp/${DHCP_CFG_FILE}
-echo -e "dhcp-option=${INT_WIFI},3,${WIFIAPIP}" >> /tmp/${DHCP_CFG_FILE}
-echo -ne "dhcp-option=${INT_WIFI},6,${WIFIAPIP}" >> /tmp/${DHCP_CFG_FILE}
-
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Generating the configuration file for the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "dhcp-range=wlan0,${WIFIAPSTART},${WIFIAPSTOP},24h\nserver=8.8.8.8\n" >> /tmp/${DHCP_CFG_FILE}
 ### Start the DHCP server
-echo -ne "Restarting the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-/etc/init.d/dnsmasq start || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO START THE DHCP server\n"
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Restarting the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+/etc/init.d/dnsmasq start  || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO START THE DHCP server\n" >> ${LOG_CMD_FILE}
 # /etc/init.d/dnsmasq restart
 
 ### AP should be now up & running
-echo -ne "Access Point is now up and running.<br>\r\n" >> ${LOG_MSG_FILE}
-echo -ne "Waiting for connections...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Access Point is now up and running.<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Waiting for connections...<br>\r\n" >> ${LOG_MSG_FILE}
 ##############################
 
 ### DHCP server that the AP gives out a IP number.

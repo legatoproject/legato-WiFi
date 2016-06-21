@@ -4,20 +4,14 @@ source wifiexport
 
 #LOG_FILE=/tmp/wifi_http.log
 
-echo -en "HTTP/1.1 200 OK\r\n"
-echo -en "Content-Type: text/html; charset=utf-8\r\n"
-echo -en "Cache-Control: no-cache\r\n"
-echo -en "Connection: close\r\n"
-echo -en "\r\n"
-echo -en "<BR> <H1>Stopping Wifi Access Point<H1> <BR>\r\n"
-
+echo -en "<font color=\"black\" >$(date "+%T"):</font> Stopping Wifi Access Point...<br>\r\n" >> ${LOG_MSG_FILE}
 ##############################
 ${WIFITOOL} ap stop >> ${LOG_CMD_FILE}
-echo -en "Wifi Access Point is stopped.<br>\r\n" >> ${LOG_MSG_FILE}
+echo -en "<font color=\"black\" >$(date "+%T"):</font> Wifi Access Point is stopped.<br>\r\n" >> ${LOG_MSG_FILE}
 echo -en "Wifi Access Point is stopped.<br>\r\n"
 
 ### Stop the DHCP server
-echo -ne "Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
 # Instead of erasing the config file, it is replaced by the default one
 # in order to keep the USB interface up & running.
 /etc/init.d/dnsmasq stop
@@ -26,29 +20,30 @@ touch /tmp/dnsmasq.wlan.conf
 /etc/init.d/dnsmasq start
 
 ### Turn off IP forwarding
-echo -ne "Disabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Disabling IP forwarding...<br>\r\n" >> ${LOG_MSG_FILE}
 echo 0 > /proc/sys/net/ipv4/ip_forward
 ### Delete the NAT
-echo -ne "Deleting the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Deleting the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
 rmmod ipt_MASQUERADE
 iptables -t nat -F
 iptables -t mangle -F
 iptables -F
 iptables -X
+route del default gw ${INT_NET_ADDR} ${INT_NET}
 
 ### Shutdown the WLAN interface
-echo -ne "Unmounting ${INT_WIFI} <br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Unmounting ${INT_WIFI} <br>\r\n" >> ${LOG_MSG_FILE}
 /sbin/ifconfig ${INT_WIFI} down >> ${LOG_CMD_FILE}
 
 ### Shutdown the relay interface: rmnet0 | eth0
-echo -ne "Unmounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Unmounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
 case "${INT_NET}" in
     eth*) ifconfig ${INT_NET} down ;;
     rmnet*) cm radio off ;;
 esac
 
 ### AP should be now up & running
-echo -ne "Access Point is off.<br>\r\n" >> ${LOG_MSG_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Access Point is off.<br>\r\n" >> ${LOG_MSG_FILE}
 ##############################
 
 ### For test purpose on PC only

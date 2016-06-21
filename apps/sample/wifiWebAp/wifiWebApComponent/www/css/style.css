@@ -1,0 +1,96 @@
+body {
+    color:#526066;
+    font-family:sans-serif;
+    font-size:small;
+    font-weight:bold;
+    background-color:white;
+    margin:0px;
+}
+
+label {
+    text-align:left;
+}
+
+tr.ip {
+    height:30px;
+}
+
+td.ip {
+    text-align:right;
+}
+
+input:focus, textarea:focus{
+    background-color: #fbc49d;
+}
+
+legend {
+    display: block;
+    padding-left: 5px;
+    padding-right: 5px;
+    border: none;
+}
+
+.notice {
+    color: red;
+}
+
+#demo {
+    color:blue;
+    font-family:Consolas,monaco,monospace;
+    font-weight:bold;
+    white-space: nowrap;
+}
+
+#config {
+    width:100%;
+    text-align:center;
+    margin:auto;
+    border:0px;
+    border-collapse: separate;
+    border-spacing: 10px;
+    margin-top:70px;
+}
+
+td {
+    background-color:#f2f2f2;
+}
+
+td:hover {
+    background-color:#EEE;
+    color:black;
+}
+
+.btn {
+    background: #7395A0;
+    background-image: -webkit-linear-gradient(top, #7395A0, #7395A0);
+    background-image: -moz-linear-gradient(top, #7395A0, #7395A0);
+    background-image: -ms-linear-gradient(top, #7395A0, #7395A0);
+    background-image: -o-linear-gradient(top, #7395A0, #7395A0);
+    background-image: linear-gradient(to bottom, #7395A0, #7395A0);
+    font-family: sans-serif;
+    color: #ffffff;
+    font-size: 20px;
+    padding: 10px 20px 10px 20px;
+    border: solid #e6e6e6 0px;
+    text-decoration: none;
+}
+
+.btn:hover {
+    background: #F7781E;
+    background-image: -webkit-linear-gradient(top, #F7781E, #F7781E);
+    background-image: -moz-linear-gradient(top, #F7781E, #F7781E);
+    background-image: -ms-linear-gradient(top, #F7781E, #F7781E);
+    background-image: -o-linear-gradient(top, #F7781E, #F7781E);
+    background-image: linear-gradient(to bottom, #F7781E, #F7781E);
+    text-decoration: none;
+}
+
+.logBox {
+    width:100%;
+    height:250px;
+    overflow-y:scroll;
+    background-color:#ddd;
+    color:black;
+    border-top:1px solid #CCC;
+    padding-bottom:20px;
+}
