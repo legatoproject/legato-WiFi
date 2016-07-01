@@ -160,29 +160,6 @@ case $2 in
     # Run wpa_supplicant daemon
     (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i$1 -B) || exit 99
 
-    # Initial method (NOT WORKING)
-
-    # Run wpa_supplicant daemon
-    #/sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i$1 -B || exit 99
-
-    #/sbin/wpa_cli -i$1 disconnect
-    #for i in `/sbin/wpa_cli -i$1 list_networks | grep ^[0-9] | cut -f1`; do
-    #    /sbin/wpa_cli -i$1 remove_network $i
-    #done
-    #(/sbin/wpa_cli -i$1 add_network | grep 0) || exit 1
-    #(/sbin/wpa_cli -i$1 set_network 0 auth_alg OPEN | grep OK) || exit 2
-    #(/sbin/wpa_cli -i$1 set_network 0 key_mgmt WPA-PSK | grep OK) || exit 3
-    #(/sbin/wpa_cli -i$1 set_network 0 psk \"$4\" | grep OK) || exit 4
-    #(/sbin/wpa_cli -i$1 set_network 0 proto WPA | grep OK) || exit 5
-    #(/sbin/wpa_cli -i$1 set_network 0 pairwise TKIP | grep OK) || exit 6
-    #(/sbin/wpa_cli -i$1 set_network 0 group TKIP | grep OK) || exit 7
-    #(/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK) || exit 8
-    #(/sbin/wpa_cli -i$1 set_network 0 ssid \"$3\" | grep OK) || exit 9
-    #(/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 10
-    #(/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 11
-    #(/sbin/wpa_cli -i$1 reassociate | grep OK) || exit 12
-    #/sbin/wpa_cli -i$1 status
-
     # Verify connection status
     for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
     do
@@ -205,26 +182,6 @@ case $2 in
     # Run wpa_supplicant daemon
     (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i$1 -B) || exit 99
 
-    # Initial method (NOT WORKING)
-    # Run wpa_supplicant daemon
-    #/sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i$1 -B || exit 99
-
-    #/sbin/wpa_cli -i$1 disconnect
-    #for i in `/sbin/wpa_cli -i$1 list_networks | grep ^[0-9] | cut -f1`; do
-    #    /sbin/wpa_cli -i$1 remove_network $i
-    #done
-    #(/sbin/wpa_cli -i$1 add_network | grep 0) || exit 1
-    #(/sbin/wpa_cli -i$1 set_network 0 auth_alg OPEN | grep OK) || exit 2
-    #(/sbin/wpa_cli -i$1 set_network 0 key_mgmt WPA-PSK | grep OK) || exit 3
-    #(/sbin/wpa_cli -i$1 set_network 0 psk \"$4\" | grep OK) || exit 4
-    #(/sbin/wpa_cli -i$1 set_network 0 proto RSN | grep OK) || exit 5
-    #(/sbin/wpa_cli -i$1 set_network 0 pairwise CCMP | grep OK) || exit 6
-    #(/sbin/wpa_cli -i$1 set_network 0 group CCMP | grep OK) || exit 7
-    #(/sbin/wpa_cli -i$1 set_network 0 mode 0 | grep OK) || exit 8
-    #(/sbin/wpa_cli -i$1 set_network 0 ssid \"$3\" | grep OK) || exit 9
-    #(/sbin/wpa_cli -i$1 select_network 0 | grep OK) || exit 10
-    #(/sbin/wpa_cli -i$1 enable_network 0 | grep OK) || exit 11
-    #(/sbin/wpa_cli -i$1 reassociate | grep OK) || exit 12
     /sbin/wpa_cli -i$1 status
 
     # Verify connection status

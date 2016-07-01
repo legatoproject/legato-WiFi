@@ -34,20 +34,31 @@
 /** Maximum numbers of WiFi connections for the TI chip */
 #define TI_WIFI_MAX_USERS 10
 
+/** The current security protocol */
 static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol;
 
-static char SavedSsid[LE_WIFIDEFS_MAX_SSID_BYTES];
+/** The current SSID */
+static char SavedSsid[LE_WIFIDEFS_MAX_SSID_BYTES] = "";
 
+/** Defines whether the SSID is hidden or not */
 static bool SavedDiscoverable = true;
+/** The WiFi channel associated with the SSID */
 static int8_t SavedChannelNumber = 0;
+/** The maximum numbers of clients the AP is able to manage */
 static int SavedMaxNumClients = TI_WIFI_MAX_USERS;
 
 /** WPA-Personal */
+/** Passphrase used for authentication. Used only with WPA/WPA2 protocol. */
 static char SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_BYTES] = "";
+/** Pre-Shared-Key used for authentication. Used only with WPA/WPA2 protocol. */
 static char SavedPreSharedKey[LE_WIFIDEFS_MAX_PSK_BYTES] = "";
 
+/** The main thread running the WiFi service */
 static void* WifiApPaThreadMain(void* contextPtr);
+/** The handle of the WiFi service thread */
 static le_thread_Ref_t  WifiApPaThread = NULL;
+/** The handle of the input pipe used
+ * to be notified of the WiFi related events */
 static FILE *IwThreadFp = NULL;
 
 //--------------------------------------------------------------------------------------------------
@@ -585,12 +596,19 @@ le_result_t pa_wifiAp_SetSsid
         (int) ssidNumElements,
         (char*) ssidPtr );
 
-    if ( 0 != ssidNumElements )
+    if ( ( 0 != ssidNumElements ) && ( ssidNumElements <= LE_WIFIDEFS_MAX_SSID_LENGTH ) )
     {
-       strncpy( &SavedSsid[0], (const char *) &ssidPtr[0], ssidNumElements );
-       // Make sure there is a null termination
-       SavedSsid[ssidNumElements] = '\0';
-       result = LE_OK;
+        strncpy( &SavedSsid[0], (const char *) &ssidPtr[0], ssidNumElements );
+        // Make sure there is a null termination
+        SavedSsid[ssidNumElements] = '\0';
+        result = LE_OK;
+    }
+    else
+    {
+        // Notify on the console the user about the issue as this one can occur
+        // in background.
+        printf("ERROR: SSID length exceeds %d bytes\n", LE_WIFIDEFS_MAX_SSID_LENGTH);
+        LE_ERROR("ERROR: SSID length exceeds %d bytes\n", LE_WIFIDEFS_MAX_SSID_LENGTH);
     }
     return result;
 }
@@ -643,21 +661,29 @@ le_result_t pa_wifiAp_SetSecurityProtocol
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetPassPhrase
 (
-    const char* passphrase
+    const char* passPhrasePtr
         ///< [IN]
         ///< pass-phrase for PSK
 )
 {
     // Store Passphrase to be used later during startup procedure
     le_result_t result = LE_BAD_PARAMETER;
+    int32_t length;
+
     LE_INFO( "pa_wifiAp_SetPassPhrase" );
-    if( NULL != passphrase )
+    if ( NULL != passPhrasePtr )
     {
-       strncpy( &SavedPassphrase[0], &passphrase[0], LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH );
-       // Make sure there is a null termination
-       SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH] = '\0';
-       result = LE_OK;
+        length = strlen(passPhrasePtr);
+        if ((length >= LE_WIFIDEFS_MIN_PASSPHRASE_LENGTH) &&
+            (length <= LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH))
+        {
+           strncpy( &SavedPassphrase[0], &passPhrasePtr[0], length );
+           // Make sure there is a null termination
+           SavedPassphrase[length] = '\0';
+           result = LE_OK;
+        }
     }
+
     return result;
 }
 
@@ -674,21 +700,28 @@ le_result_t pa_wifiAp_SetPassPhrase
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetPreSharedKey
 (
-    const char* preSharedKey
+    const char* preSharedKeyPtr
         ///< [IN]
         ///< PSK. Note the difference between PSK and Pass Phrase.
 )
 {
     // Store PreSharedKey to be used later during startup procedure
     le_result_t result = LE_BAD_PARAMETER;
+    int32_t length;
+
     LE_INFO( "pa_wifiAp_SetPreSharedKey" );
-    if( NULL != preSharedKey )
+    if( NULL != preSharedKeyPtr )
     {
-       strncpy( &SavedPreSharedKey[0], &preSharedKey[0], LE_WIFIDEFS_MAX_PSK_LENGTH );
-       // Make sure there is a null termination
-       SavedPreSharedKey[LE_WIFIDEFS_MAX_PSK_LENGTH] = '\0';
-       result = LE_OK;
+        length = strlen(preSharedKeyPtr);
+        if (length <= LE_WIFIDEFS_MAX_PSK_LENGTH)
+        {
+           strncpy( &SavedPreSharedKey[0], &preSharedKeyPtr[0], length );
+           // Make sure there is a null termination
+           SavedPreSharedKey[length] = '\0';
+           result = LE_OK;
+        }
     }
+
     return result;
 }
 

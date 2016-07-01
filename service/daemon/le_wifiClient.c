@@ -128,11 +128,11 @@ static void PaEventHandler
 //--------------------------------------------------------------------------------------------------
 static le_wifiClient_AccessPointRef_t FindAccessPointRefFromSsid
 (
-    const uint8_t* SsidPtr,
+    const uint8_t* ssidPtr,
         ///< [OUT]
         ///< The SSID returned as a octet array.
 
-    size_t SsidNumElements
+    size_t ssidNumElements
         ///< [INOUT]
 )
 {
@@ -149,10 +149,10 @@ static le_wifiClient_AccessPointRef_t FindAccessPointRefFromSsid
             le_ref_Lookup( ScanApRefMap, accessPointRef );
             if ( accessPointPtr != NULL )
             {
-                if( ( accessPointPtr->accessPoint.ssidLength == SsidNumElements ) )
+                if( ( accessPointPtr->accessPoint.ssidLength == ssidNumElements ) )
                 {
-                    if ( 0 == memcmp( accessPointPtr->accessPoint.ssidBytes,  SsidPtr,
-                        SsidNumElements ) )
+                    if ( 0 == memcmp( accessPointPtr->accessPoint.ssidBytes,  ssidPtr,
+                        ssidNumElements ) )
                     {
                         LE_DEBUG( "FindAccessPointRefFromSsid found accessPointRef %p", accessPointRef );
                         return accessPointRef;
@@ -181,25 +181,25 @@ static le_wifiClient_AccessPointRef_t  AddAccessPointToApRefMap
 )
 {
     // first see if it alreay exists in our list of reference.
-    le_wifiClient_AccessPointRef_t returRef = FindAccessPointRefFromSsid( accessPointPtr->ssidBytes,
+    le_wifiClient_AccessPointRef_t returnRef = FindAccessPointRefFromSsid( accessPointPtr->ssidBytes,
         accessPointPtr->ssidLength );
 
-    if( NULL != returRef )
+    if( NULL != returnRef )
     {
         FoundAccessPoint_t* oldAccessPointPtr =
-            ( FoundAccessPoint_t* ) le_ref_Lookup( ScanApRefMap, returRef );
+            ( FoundAccessPoint_t* ) le_ref_Lookup( ScanApRefMap, returnRef );
 
 
         if( NULL != oldAccessPointPtr )
         {
             LE_DEBUG( "AddAccessPointToApRefMap Already exists %p. Update  SignalStrength %d",
-                    returRef, accessPointPtr->signalStrength);
+                    returnRef, accessPointPtr->signalStrength);
 
             oldAccessPointPtr->accessPoint.signalStrength = accessPointPtr->signalStrength;
             oldAccessPointPtr->foundInLatestScan = true;
         }
 
-        return returRef;
+        return returnRef;
     }
     else
     {
@@ -222,10 +222,10 @@ static le_wifiClient_AccessPointRef_t  AddAccessPointToApRefMap
             foundAccessPointPtr->foundInLatestScan = true;
 
             // Create a Safe Reference for this object.
-            returRef = le_ref_CreateRef( ScanApRefMap, foundAccessPointPtr );
+            returnRef = le_ref_CreateRef( ScanApRefMap, foundAccessPointPtr );
 
             LE_DEBUG( "AddAccessPointToApRefMap le_ref_CreateRef foundAccessPointPtr %p; Ref%p ",
-                            foundAccessPointPtr, returRef );
+                            foundAccessPointPtr, returnRef );
         }
         else
         {
@@ -233,7 +233,7 @@ static le_wifiClient_AccessPointRef_t  AddAccessPointToApRefMap
         }
     }
 
-    return returRef;
+    return returnRef;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -791,11 +791,11 @@ le_result_t le_wifiClient_GetSsid
         ///< [IN]
         ///< Wifi Access Point reference.
 
-    uint8_t* SsidPtr,
+    uint8_t* ssidPtr,
         ///< [OUT]
         ///< The SSID returned as a octet array.
 
-    size_t* SsidNumElementsPtr
+    size_t* ssidNumElementsPtr
         ///< [INOUT]
 )
 {
@@ -807,17 +807,17 @@ le_result_t le_wifiClient_GetSsid
         return LE_BAD_PARAMETER;
     }
 
-    if ( ( NULL == SsidPtr ) || ( NULL == SsidNumElementsPtr ) )
+    if ( ( NULL == ssidPtr ) || ( NULL == ssidNumElementsPtr ) )
     {
-        LE_ERROR( "le_wifiClient_GetSsid: parameter NULL %p %p", SsidPtr, SsidNumElementsPtr );
+        LE_ERROR( "le_wifiClient_GetSsid: parameter NULL %p %p", ssidPtr, ssidNumElementsPtr );
         return LE_BAD_PARAMETER;
     }
 
-    *SsidNumElementsPtr = accessPoint->accessPoint.ssidLength;
+    *ssidNumElementsPtr = accessPoint->accessPoint.ssidLength;
     LE_DEBUG( "le_wifiClient_GetSsid: accessPoint->AccessPoint.ssidLength %d",
                         accessPoint->accessPoint.ssidLength );
 
-    memcpy( &SsidPtr[0],
+    memcpy( &ssidPtr[0],
             &accessPoint->accessPoint.ssidBytes[0],
             accessPoint->accessPoint.ssidLength );
 
@@ -1023,15 +1023,15 @@ le_result_t le_wifiClient_SetSecurityProtocol
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_AccessPointRef_t le_wifiClient_Create
 (
-    const uint8_t* SsidPtr,
+    const uint8_t* ssidPtr,
         ///< [IN]
         ///< The SSID as a octet array.
 
-    size_t SsidNumElements
+    size_t ssidNumElements
         ///< [IN]
 )
 {
-    le_wifiClient_AccessPointRef_t returRef = NULL;
+    le_wifiClient_AccessPointRef_t returnRef = NULL;
 
     if( IsScanRunning() )
     {
@@ -1039,16 +1039,23 @@ le_wifiClient_AccessPointRef_t le_wifiClient_Create
         return NULL;
     }
 
-    if ( NULL == SsidPtr )
+    if ( NULL == ssidPtr )
     {
-        LE_ERROR( "le_wifiClient_Create ERROR: SsidPtr is NULL" );
+        LE_ERROR( "le_wifiClient_Create ERROR: ssidPtr is NULL" );
         return NULL;
     }
 
-    returRef = FindAccessPointRefFromSsid( SsidPtr, SsidNumElements );
+    if ( ssidNumElements > LE_WIFIDEFS_MAX_SSID_LENGTH )
+    {
+        LE_ERROR("ERROR: SSID length (%d) exceeds %d bytes\n",
+                ssidNumElements, LE_WIFIDEFS_MAX_SSID_LENGTH );
+        return NULL;
+    }
+
+    returnRef = FindAccessPointRefFromSsid( ssidPtr, ssidNumElements );
 
     // if the access point does not already exist, then create it.
-    if ( returRef == NULL )
+    if ( returnRef == NULL )
     {
         FoundAccessPoint_t* createdAccessPointPtr = le_mem_ForceAlloc( AccessPointPool );
 
@@ -1057,18 +1064,18 @@ le_wifiClient_AccessPointRef_t le_wifiClient_Create
             createdAccessPointPtr->foundInLatestScan = false;
 
             createdAccessPointPtr->accessPoint.signalStrength = SIGNAL_STRENGTH_DEFAULT;
-            createdAccessPointPtr->accessPoint.ssidLength = SsidNumElements;
+            createdAccessPointPtr->accessPoint.ssidLength = ssidNumElements;
             memcpy( &createdAccessPointPtr->accessPoint.ssidBytes[0],
-                SsidPtr,
-                SsidNumElements);
+                ssidPtr,
+                ssidNumElements);
 
             // Create a Safe Reference for this object.
-            returRef = le_ref_CreateRef( ScanApRefMap, createdAccessPointPtr );
+            returnRef = le_ref_CreateRef( ScanApRefMap, createdAccessPointPtr );
 
             LE_DEBUG( "le_wifiClient_Create AP[%p %p] SignalStrength %d"
                                 "SSID length %d SSID: \"%.*s\"",
                 createdAccessPointPtr,
-                returRef,
+                returnRef,
                 createdAccessPointPtr->accessPoint.signalStrength,
                 createdAccessPointPtr->accessPoint.ssidLength,
                 createdAccessPointPtr->accessPoint.ssidLength,
@@ -1081,13 +1088,13 @@ le_wifiClient_AccessPointRef_t le_wifiClient_Create
         }
     }
 
-    return returRef;
+    return returnRef;
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Deletes an accessPointRef.
+ * Delete an accessPointRef.
  *
  * @note The handle becomes invalid after it has been deleted.
  * @return LE_BAD_PARAMETER accessPointRef was not found.
@@ -1120,6 +1127,8 @@ le_result_t le_wifiClient_Delete
     }
     return result;
 }
+
+
 //--------------------------------------------------------------------------------------------------
 /**
  * Connect to the Wifi Access Point.

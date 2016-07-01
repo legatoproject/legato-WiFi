@@ -97,7 +97,7 @@ static void WifiReadScanResults
         {
             uint8_t ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES];
             // Contains ssidNumElements number of bytes
-            size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_BYTES;
+            size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_LENGTH;
 
             if( LE_OK == (result=le_wifiClient_GetSsid( accessPointRef,
                                                 &ssidBytes[0],
@@ -268,7 +268,7 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "scan") == 0)
     {
-        //"wifi client scan
+        // wifi client scan
         printf("starting scan\n");
 
         // Add an handler function to handle message reception
@@ -282,21 +282,27 @@ void ExecuteWifiClientCommand
         }
     }
     else if (strcmp(commandPtr, "create") == 0)
-    { // >wifi client create "SSID"
-        const char * ssid_string = le_arg_GetArg(2);
+    {
+        // wifi client create "SSID"
+        const char * ssidStringPtr = le_arg_GetArg(2);
 
-        if ( NULL == ssid_string )
+        if ( NULL == ssidStringPtr )
         {
             printf("ERROR: Missing argument\n");
             exit(EXIT_FAILURE);
         }
-
+        if ( strlen((const char *)ssidStringPtr) > LE_WIFIDEFS_MAX_SSID_LENGTH )
+        {
+            printf("ERROR: SSID length exceeds %d bytes\n", LE_WIFIDEFS_MAX_SSID_LENGTH);
+            LE_ERROR("ERROR: SSID length exceeds %d bytes\n", LE_WIFIDEFS_MAX_SSID_LENGTH);
+            exit(EXIT_FAILURE);
+        }
         le_wifiClient_AccessPointRef_t createdAccessPoint =
-            le_wifiClient_Create ( (const uint8_t *) ssid_string, strlen(ssid_string) );
+            le_wifiClient_Create ( (const uint8_t *) ssidStringPtr, strlen(ssidStringPtr) );
 
         if (NULL != createdAccessPoint)
         {
-            printf("Created %s has reference %p\n", ssid_string, createdAccessPoint);
+            printf("Created %s has reference %p\n", ssidStringPtr, createdAccessPoint);
             exit(EXIT_SUCCESS);
         }
         else
@@ -331,7 +337,8 @@ void ExecuteWifiClientCommand
         }
     }
     else if (strcmp(commandPtr, "connect") == 0)
-    { // wifi client connect [REF]
+    {
+        // wifi client connect [REF]
         const char * arg2 = le_arg_GetArg(2);
         le_wifiClient_AccessPointRef_t accessPointRef = NULL;
 
@@ -389,7 +396,8 @@ void ExecuteWifiClientCommand
         }
     }
     else if (strcmp(commandPtr, "setpassphrase") == 0)
-    { // wifi client setpassphrase [REF] [passPhrase]
+    {
+        // wifi client setpassphrase [REF] [passPhrase]
         const char * arg2 = le_arg_GetArg(2);
         const char * passPhrase = le_arg_GetArg(3);
         le_wifiClient_AccessPointRef_t accessPointRef = NULL;
@@ -414,7 +422,8 @@ void ExecuteWifiClientCommand
         }
     }
     else if (strcmp(commandPtr, "setpsk") == 0)
-    { // wifi client setpsk [REF] [PSK]
+    {
+        // wifi client setpsk [REF] [PSK]
         const char * arg2 = le_arg_GetArg(2);
         const char * psk = le_arg_GetArg(3);
         le_wifiClient_AccessPointRef_t accessPointRef = NULL;
@@ -439,7 +448,8 @@ void ExecuteWifiClientCommand
         }
     }
     else if (strcmp(commandPtr, "setusercred") == 0)
-    { // wifi client setusercred [REF] [userName] [password]
+    {
+        // wifi client setusercred [REF] [userName] [password]
         const char * arg2 = le_arg_GetArg(2);
         const char * username = le_arg_GetArg(3);
         const char * password = le_arg_GetArg(4);
@@ -465,7 +475,8 @@ void ExecuteWifiClientCommand
         }
     }
     else if (strcmp(commandPtr, "setwepkey") == 0)
-    { // wifi client setwepkey [REF] [WEPKEY]
+    {
+        // wifi client setwepkey [REF] [WEPKEY]
         const char * arg2 = le_arg_GetArg(2);
         const char * wepkey = le_arg_GetArg(3);
         le_wifiClient_AccessPointRef_t accessPointRef = NULL;
