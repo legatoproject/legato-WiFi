@@ -1148,18 +1148,33 @@ le_result_t pa_wifiClient_SetPassphrase
         ///< Passphrase used for authentication
 )
 {
+    uint32_t length;
     // Store Passphrase to be used later during connection procedure
     le_result_t result = LE_BAD_PARAMETER;
 
     LE_INFO("Set passphrase");
     if (NULL != passphrasePtr)
     {
-       strncpy(&SavedPassphrase[0], &passphrasePtr[0], LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH);
-       // Make sure there is a null termination
-       SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH] = '\0';
-       // Clear the PSK because PSK and passphrase are exlusive.
-       SavedPreSharedKey[0] = '\0';
-       result = LE_OK;
+        length = strlen(passphrasePtr);
+
+        LE_INFO("Set passphrase");
+        if ((LE_WIFIDEFS_MIN_PASSPHRASE_LENGTH <= length) &&
+            (length <= LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH))
+        {
+           strncpy(&SavedPassphrase[0], &passphrasePtr[0], LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH);
+           // Make sure there is a null termination
+           SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH] = '\0';
+           // Clear the PSK because PSK and passphrase are exlusive.
+           SavedPreSharedKey[0] = '\0';
+           result = LE_OK;
+        }
+        else
+        {
+            LE_ERROR("Invalid passphrase length (%d) [%d..%d]",
+                length,
+                LE_WIFIDEFS_MIN_PASSPHRASE_LENGTH,
+                LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH);
+        }
     }
     return result;
 }
