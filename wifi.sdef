@@ -20,7 +20,8 @@ apps:
     $LEGATO_ROOT/apps/platformServices/smsInboxService
     $LEGATO_ROOT/apps/platformServices/voiceCallService
     $LEGATO_ROOT/apps/platformServices/gpioService
-    $LEGATO_ROOT/apps/platformServices/atService
+    $LEGATO_ROOT/apps/platformServices/atClient
+    $LEGATO_ROOT/apps/platformServices/atServer
 
     $LEGATO_WIFI_ROOT/service/wifiService.adef
     $LEGATO_WIFI_ROOT/apps/sample/wifiClientTest/wifiClientTest.adef
