@@ -35,8 +35,18 @@ ifndef LEGATO_WIFI_PA
   export LEGATO_WIFI_PA = ti
 endif
 
-# Only use WiFi module on WP85
-ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp85)
+# Only use WiFi module on WP750x/WP85
+ifndef LEGATO_WIFI_BUILD
+  LEGATO_WIFI_BUILD = 0
+  ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp750x)
+    LEGATO_WIFI_BUILD = 1
+  endif
+  ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp85)
+    LEGATO_WIFI_BUILD = 1
+  endif
+endif
+
+ifeq ($(LEGATO_WIFI_BUILD),1)
   $(info ********************* VERSION ********************)
   $(info Legato WiFi version: $(LEGATO_WIFI_VERSION))
   $(info **************************************************)
@@ -44,3 +54,4 @@ ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp85)
   # Override the default sdef file to use the MangOH one
   export SDEF_TO_USE = $(LEGATO_WIFI_ROOT)/wifi.sdef
 endif
+
