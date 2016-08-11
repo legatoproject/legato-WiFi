@@ -1,9 +1,9 @@
- /**
-  * This module implements a test for Wifi Client.
-  *
-  * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
-  *
-  */
+/**
+ * This module implements a test for WiFi client.
+ *
+ * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+ *
+ */
 
 #include "legato.h"
 #include "interfaces.h"
@@ -12,25 +12,36 @@
 //--------------------------------------------------------------------------------------------------
 //                                       Test Function
 //--------------------------------------------------------------------------------------------------
-#define TEST_SSID     "ExampleSSID"
-#define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID)-1)
-#define TEST_PASSPHRASE "passphrase"
+#define TEST_SSID           "ExampleSSID"
+#define TEST_SSID_NBR_BYTES (sizeof(TEST_SSID)-1)
+#define TEST_PASSPHRASE     "passphrase"
 
-#define NBR_OF_SCAN_LOOPS 2
-#define NBR_OF_PINGS   "5"
+#define NBR_OF_SCAN_LOOPS   2
+#define NBR_OF_PINGS        "5"
+
 //--------------------------------------------------------------------------------------------------
 /**
  * Event handler reference.
  */
 //--------------------------------------------------------------------------------------------------
 static le_wifiClient_NewEventHandlerRef_t HdlrRef = NULL;
+//--------------------------------------------------------------------------------------------------
+/**
+ * Access point reference.
+ */
+//--------------------------------------------------------------------------------------------------
 static le_wifiClient_AccessPointRef_t AccessPointRefToConnectTo = NULL;
+//--------------------------------------------------------------------------------------------------
+/**
+ * WiFi scans counter
+ */
+//--------------------------------------------------------------------------------------------------
+static uint32_t ScanDoneEventCounter = 0;
 
-static int ScanDoneEventCounter = 0;
 
 //--------------------------------------------------------------------------------------------------
 /**
- * IP Handling must be done by the application once the Wifi link is established
+ * IP Handling must be done by the application once the WiFi link is established
  */
 //--------------------------------------------------------------------------------------------------
 static void AskForIpAddress
@@ -38,25 +49,25 @@ static void AskForIpAddress
     void
 )
 {
-    int16_t systemResult;
+    int  systemResult;
     char tmpString[512];
 
-    // DHCP Client
-    snprintf( tmpString,
-            sizeof( tmpString ),
-            "PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin;"
-            "/sbin/udhcpc -R -b -i wlan0"
-    );
+    // DHCP client
+    snprintf(tmpString,
+        sizeof(tmpString),
+        "PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin;"
+        "/sbin/udhcpc -R -b -i wlan0"
+   );
 
-    systemResult = system( tmpString );
+    systemResult = system(tmpString);
     // Return value of -1 means that the fork() has failed (see man system).
-    if ( 0 == WEXITSTATUS( systemResult ) )
+    if (0 == WEXITSTATUS(systemResult))
     {
         LE_INFO("le_wifiClient_Connect DHCP client: %s", tmpString);
     }
     else
     {
-        LE_ERROR( "le_wifiClient_Connect DHCP client %s Failed: (%d)", tmpString, systemResult );
+        LE_ERROR("le_wifiClient_Connect DHCP client %s Failed: (%d)", tmpString, systemResult);
     }
 }
 
@@ -71,27 +82,22 @@ static void TestToPingGooglesDNS
     void
 )
 {
-    int16_t systemResult;
+    int  systemResult;
     char tmpString[512];
 
-
     // PING
-    snprintf( tmpString,
-            sizeof( tmpString ),
-            "ping -c " NBR_OF_PINGS " 8.8.8.8"
-    );
-
+    snprintf(tmpString, sizeof(tmpString), "ping -c " NBR_OF_PINGS " 8.8.8.8");
 
     LE_INFO("pinging 8.8.8.8 5x times: %s", tmpString);
-    systemResult = system( tmpString );
+    systemResult = system(tmpString);
     // Return value of -1 means that the fork() has failed (see man system).
-    if ( 0 == WEXITSTATUS( systemResult ) )
+    if (0 == WEXITSTATUS(systemResult))
     {
         LE_INFO("le_wifiClient_Connect Ping: %s", tmpString);
     }
     else
     {
-        LE_ERROR( "le_wifiClient_Connect Ping %s Failed: (%d)", tmpString, systemResult );
+        LE_ERROR("le_wifiClient_Connect Ping %s Failed: (%d)", tmpString, systemResult);
     }
 }
 //--------------------------------------------------------------------------------------------------
@@ -105,45 +111,44 @@ static void TestReadScanResults
 )
 {
     le_wifiClient_AccessPointRef_t accessPointRef = 0;
-    int countNbrFound = 0;
+    uint32_t                       countNbrFound  = 0;
 
-    //< Wifi Scan result for available Access Points available
-    LE_DEBUG( "TestReadScanResults" );
-    if( NULL != (accessPointRef = le_wifiClient_GetFirstAccessPoint()) )
+    //< WiFi Scan result for available access points available
+    LE_DEBUG("TestReadScanResults");
+    if (NULL != (accessPointRef = le_wifiClient_GetFirstAccessPoint()))
     {
         do
         {
-            LE_DEBUG( "TestReadScanResults:le_wifiClient_GetSignalStrength %d ",
-            le_wifiClient_GetSignalStrength(accessPointRef));
+            // SSID container
             uint8_t ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES];
-            //< Contains ssidLength number of bytes
+            // SSID length in bytes
             size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_BYTES;
 
+            LE_DEBUG("TestReadScanResults:le_wifiClient_GetSignalStrength %d ",
+                le_wifiClient_GetSignalStrength(accessPointRef));
 
             countNbrFound++;
 
-            LE_DEBUG( "TestReadScanResults:le_wifiClient_GetFirstAccessPoint OK");
+            LE_DEBUG("TestReadScanResults:le_wifiClient_GetFirstAccessPoint OK");
 
-            if( LE_OK == le_wifiClient_GetSsid( accessPointRef,
-                                                &ssidBytes[0],
-                                                &ssidNumElements) )
+            if (LE_OK == le_wifiClient_GetSsid(accessPointRef, &ssidBytes[0], &ssidNumElements))
             {
-                LE_DEBUG( "TestReadScanResults:le_wifiClient_GetSsid OK, ssidLength %d;"
-                                    "SSID: \"%.*s\" ",
-                                    (int) ssidNumElements,
-                                    (int) ssidNumElements,
-                                    (char*) &ssidBytes[0]);
-        }
-        else
-        {
-            LE_ERROR( "TestReadScanResults:le_wifiClient_GetSsid ERROR");
-        }
-        }while ( NULL != (accessPointRef = le_wifiClient_GetNextAccessPoint( )) );
-        LE_DEBUG( "TestReadScanResults::wifi: TESTRESULT: Found %d of AccessPoints", countNbrFound);
+                LE_DEBUG("TestReadScanResults:le_wifiClient_GetSsid OK, ssidLength %d;"
+                    "SSID: \"%.*s\" ",
+                    (int)ssidNumElements,
+                    (int)ssidNumElements,
+                    (char *)&ssidBytes[0]);
+            }
+            else
+            {
+                LE_ERROR("TestReadScanResults:le_wifiClient_GetSsid ERROR");
+            }
+        } while (NULL != (accessPointRef = le_wifiClient_GetNextAccessPoint()));
+        LE_DEBUG("TestReadScanResults::WiFi: TESTRESULT: Found %d of AccessPoints", countNbrFound);
     }
     else
     {
-        LE_ERROR( "le_wifiClient_GetFirstAccessPoint ERROR");
+        LE_ERROR("le_wifiClient_GetFirstAccessPoint ERROR");
     }
 }
 
@@ -160,54 +165,55 @@ static void TestConnect
 )
 {
     // the AccessPointRefToConnectTo should still be valid after a Scan (if this will fail)
-    if ( NULL != AccessPointRefToConnectTo )
+    if (NULL != AccessPointRefToConnectTo)
     {
-        LE_DEBUG( " test AP valid  ");
+        LE_DEBUG(" test AP valid  ");
 
 
-        LE_ASSERT( LE_OK == le_wifiClient_SetSecurityProtocol( AccessPointRefToConnectTo,
-                                                    LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL ));
+        LE_ASSERT(LE_OK == le_wifiClient_SetSecurityProtocol(AccessPointRefToConnectTo,
+            LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL));
 
-        LE_ASSERT( LE_OK == le_wifiClient_SetPassphrase( AccessPointRefToConnectTo,
-                                                         TEST_PASSPHRASE ));
+        LE_ASSERT(LE_OK == le_wifiClient_SetPassphrase(AccessPointRefToConnectTo,
+            TEST_PASSPHRASE));
 
-        if( LE_OK == le_wifiClient_Connect( AccessPointRefToConnectTo ) )
+        if (LE_OK == le_wifiClient_Connect(AccessPointRefToConnectTo))
         {
-            LE_DEBUG( "le_wifiClient_Connect OK");
+            LE_DEBUG("le_wifiClient_Connect OK");
         }
         else
         {
-            LE_ERROR( "le_wifiClient_Connect ERROR");
+            LE_ERROR("le_wifiClient_Connect ERROR");
         }
 
     }
     else
     {
-        LE_ERROR( "AccessPointRefToConnectTo  ERROR: AccessPointRefToConnectTo not found.");
+        LE_ERROR("AccessPointRefToConnectTo  ERROR: AccessPointRefToConnectTo not found.");
     }
 }
 //--------------------------------------------------------------------------------------------------
 /**
- * Handler for Wifi Client changes
- *
- * @param event
- *        Handles the wifi events
- * @param contextPtr
+ * Handler for WiFi client changes
  */
 //--------------------------------------------------------------------------------------------------
 static void WifiClientEventHandler
 (
+
     le_wifiClient_Event_t event,
-    void* contextPtr
+        ///< [IN]
+        ///< WiFi event to process
+    void *contextPtr
+        ///< [IN]
+        ///< Associated WiFi event context
 )
 {
-    LE_DEBUG( "Wifi Client event received");
-    switch( event )
+    LE_DEBUG("WiFi client event received");
+    switch(event)
     {
         case LE_WIFICLIENT_EVENT_CONNECTED:
         {
-            ///< Wifi Client Connected
-            LE_DEBUG( "LE_WIFICLIENT_EVENT_CONNECTED");
+            ///< WiFi Client Connected
+            LE_DEBUG("LE_WIFICLIENT_EVENT_CONNECTED");
 
             AskForIpAddress();
 
@@ -218,32 +224,33 @@ static void WifiClientEventHandler
 
         case LE_WIFICLIENT_EVENT_DISCONNECTED:
         {
-            ///< Wifi Client Disconnected
-            LE_DEBUG( "LE_WIFICLIENT_EVENT_DISCONNECTED");
+            ///< WiFi client Disconnected
+            LE_DEBUG("LE_WIFICLIENT_EVENT_DISCONNECTED");
         }
         break;
 
         case LE_WIFICLIENT_EVENT_SCAN_DONE:
         {
             ScanDoneEventCounter++;
-            LE_DEBUG( "LE_WIFICLIENT_EVENT_SCAN_DONE: Now read the results (ScanDoneEventCounter %d)"
-            , ScanDoneEventCounter);
+            LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: "
+                "Now read the results (ScanDoneEventCounter %d)",
+                ScanDoneEventCounter);
             TestReadScanResults();
-            if( ScanDoneEventCounter < NBR_OF_SCAN_LOOPS )
+            if (ScanDoneEventCounter < NBR_OF_SCAN_LOOPS)
             {
                 sleep(2);
-                LE_DEBUG( "LE_WIFICLIENT_EVENT_SCAN_DONE: Start New Scan %d)", ScanDoneEventCounter);
+                LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: Start New Scan %d)", ScanDoneEventCounter);
                 le_wifiClient_Scan();
             }
             else
             {
-                LE_DEBUG( "LE_WIFICLIENT_EVENT_SCAN_DONE: try connect. %d)", ScanDoneEventCounter);
+                LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: try connect. %d)", ScanDoneEventCounter);
                 TestConnect();
             }
         }
         break;
         default:
-            LE_ERROR( "ERROR Unknown event %d", event);
+            LE_ERROR("ERROR Unknown event %d", event);
         break;
     }
 }
@@ -252,8 +259,7 @@ static void WifiClientEventHandler
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Test: Wifi Client
- *
+ * Test: WiFi client
  */
 //--------------------------------------------------------------------------------------------------
 void Testle_wifiClient
@@ -261,50 +267,45 @@ void Testle_wifiClient
     void
 )
 {
-    LE_DEBUG( "Start Test Testle_wifiClient");
+    LE_DEBUG("Start Test Testle_wifiClient");
 
     // Add an handler function to handle message reception
-    HdlrRef=le_wifiClient_AddNewEventHandler(WifiClientEventHandler, NULL);
+    HdlrRef = le_wifiClient_AddNewEventHandler(WifiClientEventHandler, NULL);
 
-
-    if( LE_OK == le_wifiClient_Start() )
+    if (LE_OK == le_wifiClient_Start())
     {
-        LE_DEBUG( "le_wifiClient_Start OK");
+        LE_DEBUG("le_wifiClient_Start OK");
     }
     else
     {
-        LE_ERROR( "le_wifiClient_Start ERROR");
+        LE_ERROR("le_wifiClient_Start ERROR");
     }
 
+    AccessPointRefToConnectTo = le_wifiClient_Create((const uint8_t *)TEST_SSID,
+        TEST_SSID_NBR_BYTES);
+    LE_DEBUG("test called le_wifiClient_Create. returned %p", AccessPointRefToConnectTo);
 
-    AccessPointRefToConnectTo =
-        le_wifiClient_Create( (const uint8_t *) TEST_SSID, TEST_SSID_NBR_BYTES);
-    LE_DEBUG( "test called le_wifiClient_Create. returned %p", AccessPointRefToConnectTo);
+    LE_DEBUG("test Scan started. Waiting X seconds for it to finish");
 
-
-    LE_DEBUG( "test Scan started. Waiting X seconds for it to finish");
-
-    if( LE_OK == le_wifiClient_Scan() )
+    if (LE_OK == le_wifiClient_Scan())
     {
-        LE_DEBUG( "le_wifiClient_Scan OK");
+        LE_DEBUG("le_wifiClient_Scan OK");
     }
     else
     {
-        LE_DEBUG( "le_wifiClient_Scan ERROR");
+        LE_ERROR("le_wifiClient_Scan ERROR");
     }
 }
-
 
 
 //--------------------------------------------------------------------------------------------------
 /**
  * App init.
- *
  */
 //--------------------------------------------------------------------------------------------------
 COMPONENT_INIT
 {
-    // Wifi Init
-    LE_DEBUG( "======== Wifi Client Test  ========");
+    // WiFi Init
+    LE_DEBUG("======== WiFi Client Test  ========");
     Testle_wifiClient();
 }

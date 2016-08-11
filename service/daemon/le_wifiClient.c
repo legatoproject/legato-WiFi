@@ -1,6 +1,6 @@
 // -------------------------------------------------------------------------------------------------
 /**
- *  Legato Wifi Client
+ *  Legato WiFi Client
  *
  *  Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  *
@@ -18,14 +18,14 @@
  * Note that the pool will grow automatically if it is needed.
  */
 //-------------------------------------------------------------------------------------------------
-#define INIT_NBR_OF_AP 32
+#define INIT_AP_COUNT 32
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Value of signal strength that indicates that no value was found.
  */
 //-------------------------------------------------------------------------------------------------
-#define SIGNAL_STRENGTH_DEFAULT  ( 0xfff )
+#define SIGNAL_STRENGTH_DEFAULT  (0xfff)
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -36,7 +36,7 @@
 typedef struct
 {
     pa_wifiClient_AccessPoint_t accessPoint;
-    bool foundInLatestScan;
+    bool                        foundInLatestScan;
 }
 FoundAccessPoint_t;
 
@@ -61,7 +61,7 @@ static le_mem_PoolRef_t AccessPointPool;
  *
  */
 //--------------------------------------------------------------------------------------------------
-static int16_t FoundWifiApCount = 0;
+static uint32_t FoundWifiApCount = 0;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -89,7 +89,7 @@ static le_thread_Ref_t ScanThreadRef = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Event ID for Wifi Event message notification.
+ * Event ID for WiFi Event message notification.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -98,31 +98,32 @@ static le_event_Id_t NewWifiEventId;
 //--------------------------------------------------------------------------------------------------
 /**
  * The number of calls to le_wifiClient_Start().
- * This is used to call stop the wifi hardware, when the last client calls stop.
+ * This is used to call stop the WiFi hardware, when the last client calls stop.
  */
 //--------------------------------------------------------------------------------------------------
-static int16_t ClientStartCount = 0;
+static uint32_t ClientStartCount = 0;
+
 
 //--------------------------------------------------------------------------------------------------
 /**
  * CallBack for PA Events.
  */
 //--------------------------------------------------------------------------------------------------
-
 static void PaEventHandler
 (
     le_wifiClient_Event_t event,
-    void* contextPtr
+    void *contextPtr
 )
 {
-    LE_DEBUG( "PaEventHandler event: %d ", event );
+    LE_DEBUG("PaEventHandler event: %d ", event);
 
-    le_event_Report( NewWifiEventId, (void*)&event, sizeof( le_wifiClient_Event_t ) );
+    le_event_Report(NewWifiEventId, (void *)&event, sizeof(le_wifiClient_Event_t));
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Local function to find an access point reference based on SSID among the AP:s found in scan.
+ * Local function to find an access point reference based on SSID among the AP found in scan.
  * If not found will return NULL.
  */
 //--------------------------------------------------------------------------------------------------
@@ -130,44 +131,45 @@ static le_wifiClient_AccessPointRef_t FindAccessPointRefFromSsid
 (
     const uint8_t* ssidPtr,
         ///< [OUT]
-        ///< The SSID returned as a octet array.
+        ///< The SSID returned as a byte array.
 
     size_t ssidNumElements
         ///< [INOUT]
+        ///< SSID length in bytes.
 )
 {
-    le_wifiClient_AccessPointRef_t accessPointRef = NULL;
-    le_ref_IterRef_t iter = le_ref_GetIterator( ScanApRefMap );
-    LE_DEBUG( "FindAccessPointRefFromSsid" );
+    le_wifiClient_AccessPointRef_t apRef = NULL;
+    le_ref_IterRef_t               iter  = le_ref_GetIterator(ScanApRefMap);
 
-    while ( le_ref_NextNode( iter ) == LE_OK )
+    LE_DEBUG("FindAccessPointRefFromSsid");
+
+    while (le_ref_NextNode(iter) == LE_OK)
     {
-        accessPointRef = ( le_wifiClient_AccessPointRef_t ) le_ref_GetSafeRef( iter );
-        if ( NULL != accessPointRef )
+        apRef = (le_wifiClient_AccessPointRef_t)le_ref_GetSafeRef(iter);
+        if (NULL != apRef)
         {
-            FoundAccessPoint_t* accessPointPtr = ( FoundAccessPoint_t* )
-            le_ref_Lookup( ScanApRefMap, accessPointRef );
-            if ( accessPointPtr != NULL )
+            FoundAccessPoint_t *apPtr = (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, apRef);
+            if (NULL != apPtr)
             {
-                if( ( accessPointPtr->accessPoint.ssidLength == ssidNumElements ) )
+                if ((apPtr->accessPoint.ssidLength == ssidNumElements))
                 {
-                    if ( 0 == memcmp( accessPointPtr->accessPoint.ssidBytes,  ssidPtr,
-                        ssidNumElements ) )
+                    if (0 == memcmp(apPtr->accessPoint.ssidBytes, ssidPtr, ssidNumElements))
                     {
-                        LE_DEBUG( "FindAccessPointRefFromSsid found accessPointRef %p", accessPointRef );
-                        return accessPointRef;
+                        LE_DEBUG("FindAccessPointRefFromSsid found apRef %p", apRef);
+                        return apRef;
                     }
                 }
             }
         }
         else
         {
-            LE_ERROR( "FindAccessPointRefFromSsid ERROR le_ref_GetSafeRef"
-                                " returned NULL iter:%p", iter );
+            LE_ERROR("FindAccessPointRefFromSsid ERROR le_ref_GetSafeRef"
+                " returned NULL iter:%p", iter);
         }
     }
     return NULL;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -175,66 +177,68 @@ static le_wifiClient_AccessPointRef_t FindAccessPointRefFromSsid
  */
 //--------------------------------------------------------------------------------------------------
 
-static le_wifiClient_AccessPointRef_t  AddAccessPointToApRefMap
+static le_wifiClient_AccessPointRef_t AddAccessPointToApRefMap
 (
-    pa_wifiClient_AccessPoint_t * accessPointPtr
+    pa_wifiClient_AccessPoint_t *apPtr
 )
 {
     // first see if it alreay exists in our list of reference.
-    le_wifiClient_AccessPointRef_t returnRef = FindAccessPointRefFromSsid( accessPointPtr->ssidBytes,
-        accessPointPtr->ssidLength );
+    le_wifiClient_AccessPointRef_t returnedRef = FindAccessPointRefFromSsid(
+        apPtr->ssidBytes,
+        apPtr->ssidLength);
 
-    if( NULL != returnRef )
+    if (NULL != returnedRef)
     {
-        FoundAccessPoint_t* oldAccessPointPtr =
-            ( FoundAccessPoint_t* ) le_ref_Lookup( ScanApRefMap, returnRef );
+        FoundAccessPoint_t *oldAccessPointPtr =
+            (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, returnedRef);
 
 
-        if( NULL != oldAccessPointPtr )
+        if (NULL != oldAccessPointPtr)
         {
-            LE_DEBUG( "AddAccessPointToApRefMap Already exists %p. Update  SignalStrength %d",
-                    returnRef, accessPointPtr->signalStrength);
+            LE_DEBUG("AddAccessPointToApRefMap Already exists %p. Update  SignalStrength %d",
+                returnedRef, apPtr->signalStrength);
 
-            oldAccessPointPtr->accessPoint.signalStrength = accessPointPtr->signalStrength;
+            oldAccessPointPtr->accessPoint.signalStrength = apPtr->signalStrength;
             oldAccessPointPtr->foundInLatestScan = true;
         }
 
-        return returnRef;
+        return returnedRef;
     }
     else
     {
-        FoundAccessPoint_t* foundAccessPointPtr = le_mem_ForceAlloc( AccessPointPool );
+        FoundAccessPoint_t *foundAccessPointPtr = le_mem_ForceAlloc(AccessPointPool);
 
-        if ( foundAccessPointPtr )
+        if (foundAccessPointPtr)
         {
             FoundWifiApCount++;
-            LE_DEBUG( "AddAccessPointToApRefMap New AP[%d] SignalStrength %d"
-                                "SSID length %d SSID: \"%.*s\"",
+            LE_DEBUG("AddAccessPointToApRefMap New AP[%d] SignalStrength %d"
+                "SSID length %d SSID: \"%.*s\"",
                 FoundWifiApCount,
-                accessPointPtr->signalStrength,
-                accessPointPtr->ssidLength,
-                accessPointPtr->ssidLength,
-                ( char* ) accessPointPtr->ssidBytes
-                );
+                apPtr->signalStrength,
+                apPtr->ssidLength,
+                apPtr->ssidLength,
+                (char *)apPtr->ssidBytes
+               );
 
             // struct member value copy
-            foundAccessPointPtr->accessPoint = *accessPointPtr;
+            foundAccessPointPtr->accessPoint = *apPtr;
             foundAccessPointPtr->foundInLatestScan = true;
 
             // Create a Safe Reference for this object.
-            returnRef = le_ref_CreateRef( ScanApRefMap, foundAccessPointPtr );
+            returnedRef = le_ref_CreateRef(ScanApRefMap, foundAccessPointPtr);
 
-            LE_DEBUG( "AddAccessPointToApRefMap le_ref_CreateRef foundAccessPointPtr %p; Ref%p ",
-                            foundAccessPointPtr, returnRef );
+            LE_DEBUG("AddAccessPointToApRefMap le_ref_CreateRef foundAccessPointPtr %p; Ref%p ",
+                foundAccessPointPtr, returnedRef);
         }
         else
         {
-            LE_ERROR( "AddAccessPointToApRefMap le_mem_ForceAlloc failed.  Count %d", FoundWifiApCount );
+            LE_ERROR("AddAccessPointToApRefMap le_mem_ForceAlloc failed.  Count %d", FoundWifiApCount);
         }
     }
 
-    return returnRef;
+    return returnedRef;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -244,21 +248,21 @@ static le_wifiClient_AccessPointRef_t  AddAccessPointToApRefMap
 
 static void RemoveAccessPoint
 (
-    le_wifiClient_AccessPointRef_t accessPointRef
+    le_wifiClient_AccessPointRef_t apRef
 )
 {
-    FoundAccessPoint_t* accessPointPtr =
-                        ( FoundAccessPoint_t* ) le_ref_Lookup( ScanApRefMap, accessPointRef );
+    FoundAccessPoint_t *apPtr = (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, apRef);
 
-    if (accessPointPtr == NULL )
+    if (apPtr == NULL)
     {
-        LE_ERROR( "Bad reference" );
+        LE_ERROR("Bad reference");
         return;
     }
 
-    le_ref_DeleteRef( ScanApRefMap, accessPointRef );
-    le_mem_Release( accessPointPtr );
+    le_ref_DeleteRef(ScanApRefMap, apRef);
+    le_mem_Release(apPtr);
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -272,21 +276,21 @@ static void ReleaseAllAccessPoints
     void
 )
 {
-    le_wifiClient_AccessPointRef_t accessPointRef= NULL;
-    le_ref_IterRef_t iter = le_ref_GetIterator( ScanApRefMap );
-    LE_DEBUG( "ReleaseAllAccessPoints" );
+    le_wifiClient_AccessPointRef_t apRef = NULL;
+    le_ref_IterRef_t               iter  = le_ref_GetIterator(ScanApRefMap);
 
-    while ( le_ref_NextNode( iter ) == LE_OK )
+    LE_DEBUG("ReleaseAllAccessPoints");
+
+    while (le_ref_NextNode(iter) == LE_OK)
     {
-        accessPointRef = ( le_wifiClient_AccessPointRef_t ) le_ref_GetSafeRef( iter );
-        if ( NULL != accessPointRef )
+        apRef = (le_wifiClient_AccessPointRef_t)le_ref_GetSafeRef(iter);
+        if (NULL != apRef)
         {
-            RemoveAccessPoint( accessPointRef );
+            RemoveAccessPoint(apRef);
         }
         else
         {
-            LE_ERROR( "ReleaseAllAccessPoints ERROR le_ref_GetSafeRef"
-                                " returned NULL iter:%p", iter );
+            LE_ERROR("ReleaseAllAccessPoints ERROR le_ref_GetSafeRef returned NULL iter:%p", iter);
             return;
         }
     }
@@ -295,7 +299,7 @@ static void ReleaseAllAccessPoints
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Marks the current AccessPoints as old by changing the values for foundInLatestScan
+ * Marks the current access points as old by changing the values for foundInLatestScan
  * and signalStrength.
  * These values will be updated later, if the same AP is still found.
  * This way the new and old AccessPoints can be separated.
@@ -308,63 +312,64 @@ static void MarkAllAccessPointsOld
     void
 )
 {
-    le_wifiClient_AccessPointRef_t accessPointRef= NULL;
-    le_ref_IterRef_t iter = le_ref_GetIterator( ScanApRefMap );
-    int counter = 0;
-    LE_DEBUG( "MarkAllAccessPointsOld" );
+    le_wifiClient_AccessPointRef_t apRef   = NULL;
+    le_ref_IterRef_t               iter    = le_ref_GetIterator(ScanApRefMap);
+    uint32_t                       counter = 0;
 
+    LE_DEBUG("MarkAllAccessPointsOld");
 
-    while ( le_ref_NextNode( iter ) == LE_OK )
+    while (le_ref_NextNode(iter) == LE_OK)
     {
-        accessPointRef = ( le_wifiClient_AccessPointRef_t ) le_ref_GetSafeRef( iter );
-        if ( NULL != accessPointRef )
+        apRef = (le_wifiClient_AccessPointRef_t)le_ref_GetSafeRef(iter);
+        if (NULL != apRef)
         {
-            FoundAccessPoint_t* accessPointPtr =
-                ( FoundAccessPoint_t* ) le_ref_Lookup( ScanApRefMap, accessPointRef );
+            FoundAccessPoint_t* apPtr =
+                (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, apRef);
 
-            if (accessPointPtr != NULL )
+            if (apPtr != NULL)
             {
-                accessPointPtr->accessPoint.signalStrength = SIGNAL_STRENGTH_DEFAULT;
-                accessPointPtr->foundInLatestScan = false;
-                LE_DEBUG( "Marking %p as old", accessPointRef );
+                apPtr->accessPoint.signalStrength = SIGNAL_STRENGTH_DEFAULT;
+                apPtr->foundInLatestScan = false;
+                LE_DEBUG("Marking %p as old", apRef);
                 counter++;
             }
             else
             {
-                LE_ERROR( "MarkAllAccessPointsOld: Bad reference" );
+                LE_ERROR("MarkAllAccessPointsOld: Bad reference");
                 return;
             }
 
         }
         else
         {
-            LE_ERROR( "MarkAllAccessPointsOld ERROR le_ref_GetSafeRef"
-                                " returned NULL iter:%p", iter );
+            LE_ERROR("MarkAllAccessPointsOld ERROR le_ref_GetSafeRef returned NULL iter:%p", iter);
             break;
         }
     }
-    LE_DEBUG( "MarkAllAccessPointsOld marked: %d", counter );
+    LE_DEBUG("MarkAllAccessPointsOld marked: %d", counter);
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Start Scanning for Wifi Access points
+ * Start Scanning for WiFi Access points
  * Will result in event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available.
  *
  * @return LE_FAULT         Function failed.
  * @return LE_OK            Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
-static void* ScanThread
+static void *ScanThread
 (
-    void* contextPtr
+    void *contextPtr
 )
 {
     pa_wifiClient_AccessPoint_t accessPoint;
-    le_result_t paResult = pa_wifiClient_Scan();
-    if ( LE_OK != paResult )
+    le_result_t                 paResult    = pa_wifiClient_Scan();
+
+    if (LE_OK != paResult)
     {
-        LE_ERROR( "le_wifiClient_Scan failed (%d)", paResult );
+        LE_ERROR("le_wifiClient_Scan failed (%d)", paResult);
         return NULL;
     }
 
@@ -372,15 +377,16 @@ static void* ScanThread
 
     MarkAllAccessPointsOld();
 
-    while( LE_OK == ( paResult = pa_wifiClient_GetScanResult( &accessPoint )) )
+    while (LE_OK == (paResult = pa_wifiClient_GetScanResult(&accessPoint)))
     {
-         AddAccessPointToApRefMap( &accessPoint );
+        AddAccessPointToApRefMap(&accessPoint);
     }
 
     pa_wifiClient_ScanDone();
 
     return NULL;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -389,11 +395,12 @@ static void* ScanThread
 //--------------------------------------------------------------------------------------------------
 static void ScanThreadDestructor(void *context)
 {
-    LE_DEBUG( "ScanThreadDestructor: Scan thread exited.");
+    LE_DEBUG("ScanThreadDestructor: Scan thread exited.");
     ScanThreadRef = NULL;
     // use the PA callback to generate the event.
-    PaEventHandler( LE_WIFICLIENT_EVENT_SCAN_DONE, NULL );
+    PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_DONE, NULL);
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -403,57 +410,57 @@ static void ScanThreadDestructor(void *context)
 //--------------------------------------------------------------------------------------------------
 static void CloseSessionEventHandler
 (
-    le_msg_SessionRef_t sessionRef,
-    void*               contextPtr
+    le_msg_SessionRef_t  sessionRef,
+    void                *contextPtr
 )
 {
-    LE_DEBUG( "CloseSessionEventHandler sessionRef %p GetFirstSessionRef %p",
+    LE_DEBUG("CloseSessionEventHandler sessionRef %p GetFirstSessionRef %p",
         sessionRef,
-        GetFirstSessionRef );
+        GetFirstSessionRef);
 
-    if ( sessionRef == GetFirstSessionRef )
+    if (sessionRef == GetFirstSessionRef)
     {
         GetFirstSessionRef = NULL;
     }
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Is Scan running. Checks if the ScanThread is still running
  */
 //--------------------------------------------------------------------------------------------------
-static bool IsScanRunning( void )
+static bool IsScanRunning(void)
 {
-    LE_DEBUG( "IsScanRunning .%d", ( NULL != ScanThreadRef ));
-    return ( NULL != ScanThreadRef );
+    LE_DEBUG("IsScanRunning .%d", (NULL != ScanThreadRef));
+    return (NULL != ScanThreadRef);
 }
 //--------------------------------------------------------------------------------------------------
 /**
- * The first-layer Wifi Client Event Handler.
+ * The first-layer WiFi Client Event Handler.
  *
  */
 //--------------------------------------------------------------------------------------------------
 static void FirstLayerWifiClientEventHandler
 (
-    void* reportPtr,
-    void* secondLayerHandlerFunc
+    void *reportPtr,
+    void *secondLayerHandlerFunc
 )
 {
-    le_wifiClient_NewEventHandlerFunc_t clientHandlerFunc = secondLayerHandlerFunc;
+    le_wifiClient_NewEventHandlerFunc_t  clientHandlerFunc = secondLayerHandlerFunc;
+    le_wifiClient_Event_t               *wifiEventPtr      = (le_wifiClient_Event_t *)reportPtr;
 
-    le_wifiClient_Event_t  * wifiEvent = ( le_wifiClient_Event_t* ) reportPtr;
-
-
-    if ( NULL != wifiEvent )
+    if (NULL != wifiEventPtr)
     {
-        LE_DEBUG( "FirstLayerWifiClientEventHandler event: %d", *wifiEvent );
-        clientHandlerFunc( *wifiEvent, le_event_GetContextPtr() );
+        LE_DEBUG("FirstLayerWifiClientEventHandler event: %d", *wifiEventPtr);
+        clientHandlerFunc(*wifiEventPtr, le_event_GetContextPtr());
     }
     else
     {
-        LE_ERROR( "FirstLayerWifiClientEventHandler event is NULL" );
+        LE_ERROR("FirstLayerWifiClientEventHandler event is NULL");
     }
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -463,24 +470,23 @@ static void FirstLayerWifiClientEventHandler
 //--------------------------------------------------------------------------------------------------
 static bool WasApFoundInLastScan
 (
-    le_wifiClient_AccessPointRef_t accessPointRef
+    le_wifiClient_AccessPointRef_t apRef
         ///< [IN]
-        ///< Wifi Access Point reference.
-
+        ///< WiFi Access Point reference.
 )
 {
-    FoundAccessPoint_t* accessPointPtr =
-                            ( FoundAccessPoint_t* ) le_ref_Lookup( ScanApRefMap, accessPointRef );
+    FoundAccessPoint_t *apPtr =
+        (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, apRef);
 
-    if (accessPointPtr == NULL )
+    if (apPtr == NULL)
     {
-        LE_ERROR( "Bad reference" );
+        LE_ERROR("Bad reference");
         return false;
     }
 
-    return accessPointPtr->foundInLatestScan;
-
+    return apPtr->foundInLatestScan;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -493,30 +499,32 @@ le_wifiClient_NewEventHandlerRef_t le_wifiClient_AddNewEventHandler
 (
     le_wifiClient_NewEventHandlerFunc_t handlerFuncPtr,
         ///< [IN]
+        ///< Event handling function
 
-    void* contextPtr
+    void *contextPtr
         ///< [IN]
+        ///< Associated event context
 )
 {
-    // Note: THIS ONE REGISTERS THE CB function..
-    LE_DEBUG( "le_wifiClient_AddNewEventHandler" );
     le_event_HandlerRef_t handlerRef;
+
+    // Note: THIS ONE REGISTERS THE CB function..
+    LE_DEBUG("le_wifiClient_AddNewEventHandler");
 
     if (handlerFuncPtr == NULL)
     {
-        LE_KILL_CLIENT( "handlerFuncPtr is NULL !" );
+        LE_KILL_CLIENT("handlerFuncPtr is NULL !");
         return NULL;
     }
 
-    handlerRef = le_event_AddLayeredHandler( "NewWiFiClientMsgHandler",
-                    NewWifiEventId,
-                    FirstLayerWifiClientEventHandler,
-                    (le_event_HandlerFunc_t)handlerFuncPtr);
+    handlerRef = le_event_AddLayeredHandler("NewWiFiClientMsgHandler",
+        NewWifiEventId,
+        FirstLayerWifiClientEventHandler,
+        (le_event_HandlerFunc_t)handlerFuncPtr);
 
-    le_event_SetContextPtr( handlerRef, contextPtr );
+    le_event_SetContextPtr(handlerRef, contextPtr);
 
-    return ( le_wifiClient_NewEventHandlerRef_t )( handlerRef );
-
+    return (le_wifiClient_NewEventHandlerRef_t)(handlerRef);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -526,20 +534,22 @@ le_wifiClient_NewEventHandlerRef_t le_wifiClient_AddNewEventHandler
 //--------------------------------------------------------------------------------------------------
 void le_wifiClient_RemoveNewEventHandler
 (
-    le_wifiClient_NewEventHandlerRef_t addHandlerRef
+    le_wifiClient_NewEventHandlerRef_t handlerRef
         ///< [IN]
+        ///< Reference of the event handler to remove
 )
 {
-    LE_DEBUG( "le_wifiClient_RemoveNewEventHandler" );
-    le_event_RemoveHandler( (le_event_HandlerRef_t) addHandlerRef );
+    LE_DEBUG("le_wifiClient_RemoveNewEventHandler");
+    le_event_RemoveHandler((le_event_HandlerRef_t)handlerRef);
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function starts the WIFI device.
+ * This function starts the WiFi device.
  *
  * @return LE_FAULT         The function failed.
- * @return LE_BUSY          If the WIFI device is already started.
+ * @return LE_BUSY          If the WiFi device is already started.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -550,32 +560,33 @@ le_result_t le_wifiClient_Start
 )
 {
     le_result_t pa_result = LE_OK;
-    LE_DEBUG( "le_wifiClient_Start" );
+
+    LE_DEBUG("le_wifiClient_Start");
 
     // Count the number of Clients calling start.
     ClientStartCount++;
 
     // first client starts the hardware
-    if( 1 == ClientStartCount )
+    if (1 == ClientStartCount)
     {
         pa_result = pa_wifiClient_Start();
     }
 
-    if ( LE_OK != pa_result )
+    if (LE_OK != pa_result)
     {
-        LE_ERROR( "COMPONENT_INIT (wifi) ERROR: pa_wifiClient_Init returns %d",
-                            pa_result );
+        LE_ERROR("COMPONENT_INIT (wifi) ERROR: pa_wifiClient_Init returns %d", pa_result);
     }
 
     return pa_result;
 }
 
+
 //--------------------------------------------------------------------------------------------------
 /**
- * This function stops the WIFI device.
+ * This function stops the WiFi device.
  *
  * @return LE_FAULT         The function failed.
- * @return LE_DUPLICATE     If the WIFI device is already stopped.
+ * @return LE_DUPLICATE     If the WiFi device is already stopped.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -585,26 +596,37 @@ le_result_t le_wifiClient_Stop
     void
 )
 {
-    ClientStartCount--;
-    LE_DEBUG( "le_wifiClient_Stop: ClientStartCount %d", ClientStartCount );
-
-    // last client closes the hardware
-    if ( 0 == ClientStartCount )
+    if (ClientStartCount)
     {
-        pa_wifiClient_ClearAllCredentials();
-        pa_wifiClient_Stop();
-        ReleaseAllAccessPoints();
-        LE_DEBUG( "le_wifiClient_Stop: Last client pa_wifiClient_Release." );
+        ClientStartCount--;
+
+        LE_DEBUG("le_wifiClient_Stop: ClientStartCount %d", ClientStartCount);
+
+        // last client closes the hardware
+        if (0 == ClientStartCount)
+        {
+            LE_INFO("le_wifiClient_Stop: Clearing credentials...");
+            pa_wifiClient_ClearAllCredentials();
+            LE_INFO("le_wifiClient_Stop: Stopping client...");
+            pa_wifiClient_Stop();
+            LE_INFO("le_wifiClient_Stop: Releasing all APs.");
+            ReleaseAllAccessPoints();
+            LE_DEBUG("le_wifiClient_Stop: Last client pa_wifiClient_Release.");
+            LE_INFO("le_wifiClient_Stop: Last client pa_wifiClient_Release.");
+        }
+    }
+    else
+    {
+        LE_INFO("le_wifiClient_Stop: WiFi is already stopped.");
     }
 
     return LE_OK;
 }
 
 
-
 //--------------------------------------------------------------------------------------------------
 /**
- * Start Scanning for Wifi Access points
+ * Start scanning for WiFi access points
  * Will result in event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available.
  *
  * @return LE_FAULT         Function failed.
@@ -616,20 +638,20 @@ le_result_t le_wifiClient_Scan
     void
 )
 {
-    if ( !IsScanRunning() )
+    if (!IsScanRunning())
     {
-        LE_DEBUG( "le_wifiClient_Scan started" );
+        LE_DEBUG("le_wifiClient_Scan started");
 
         // Start the thread
-        ScanThreadRef = le_thread_Create( "Wifi Client Scan Thread", ScanThread, NULL );
-        le_thread_AddChildDestructor( ScanThreadRef, ScanThreadDestructor, NULL );
+        ScanThreadRef = le_thread_Create("WiFi Client Scan Thread", ScanThread, NULL);
+        le_thread_AddChildDestructor(ScanThreadRef, ScanThreadDestructor, NULL);
 
-        le_thread_Start( ScanThreadRef );
+        le_thread_Start(ScanThreadRef);
         return LE_OK;
     }
     else
     {
-        LE_DEBUG( "le_wifiClient_Scan ERROR: Scan already running" );
+        LE_DEBUG("le_wifiClient_Scan ERROR: Scan already running");
         return LE_BUSY;
     }
 }
@@ -637,11 +659,11 @@ le_result_t le_wifiClient_Scan
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Get the first Wifi Access Point found.
- * Will return the Access Points in the order of found.
+ * Get the first WiFi access point found.
+ * It returns the first discovered access point.
  *
- * @return Wifi Access Point reference if ok.
- * @return NULL if no Access Point reference available.
+ * @return WiFi access point reference if ok.
+ * @return NULL if no access point reference available.
  */
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_AccessPointRef_t le_wifiClient_GetFirstAccessPoint
@@ -649,37 +671,37 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetFirstAccessPoint
     void
 )
 {
-    le_wifiClient_AccessPointRef_t accessPointRef = NULL;
-    bool found = false;
+    le_wifiClient_AccessPointRef_t apRef = NULL;
+    bool                           found = false;
 
-    if ( IsScanRunning() )
+    if (IsScanRunning())
     {
-        LE_ERROR( "le_wifiClient_GetFirstAccessPoint: ERROR: Scan is running." );
+        LE_ERROR("le_wifiClient_GetFirstAccessPoint: ERROR: Scan is running.");
         return NULL;
     }
-    IterRef = le_ref_GetIterator( ScanApRefMap );
+    IterRef = le_ref_GetIterator(ScanApRefMap);
     GetFirstSessionRef = le_wifiClient_GetClientSessionRef();
 
-    LE_DEBUG( "le_wifiClient_GetFirstAccessPoint" );
+    LE_DEBUG("le_wifiClient_GetFirstAccessPoint");
 
-    while (le_ref_NextNode( IterRef ) == LE_OK )
+    while (le_ref_NextNode(IterRef) == LE_OK)
     {
-        accessPointRef = ( le_wifiClient_AccessPointRef_t ) le_ref_GetSafeRef( IterRef );
-        if( WasApFoundInLastScan( accessPointRef ) )
+        apRef = (le_wifiClient_AccessPointRef_t)le_ref_GetSafeRef(IterRef);
+        if (WasApFoundInLastScan(apRef))
         {
             found = true;
             break;
         }
     }
 
-    if( found )
+    if (found)
     {
-        LE_DEBUG( "le_wifiClient_GetFirstAccessPoint %p", accessPointRef );
-        return accessPointRef;
+        LE_DEBUG("le_wifiClient_GetFirstAccessPoint %p", apRef);
+        return apRef;
     }
     else
     {
-        LE_DEBUG( "le_wifiClient_GetFirstAccessPoint NOT FOUND" );
+        LE_DEBUG("le_wifiClient_GetFirstAccessPoint NOT FOUND");
         return NULL;
     }
 }
@@ -687,11 +709,11 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetFirstAccessPoint
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Get the next Wifi Access Point.
+ * Get the next WiFi Access Point.
  * Will return the Access Points in the order of found.
  * This function must be called in the same context as the GetFirstAccessPoint
  *
- * @return Wifi Access Point reference if ok.
+ * @return WiFi Access Point reference if ok.
  * @return NULL if no Access Point reference available.
 */
 //--------------------------------------------------------------------------------------------------
@@ -700,54 +722,52 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetNextAccessPoint
     void
 )
 {
-    le_wifiClient_AccessPointRef_t accessPointRef = NULL;
-    bool found = false;
+    le_wifiClient_AccessPointRef_t apRef = NULL;
+    bool                           found = false;
 
-    LE_DEBUG( "le_wifiClient_GetNextAccessPoint" );
-    if ( IsScanRunning() )
+    LE_DEBUG("le_wifiClient_GetNextAccessPoint");
+    if (IsScanRunning())
     {
-        LE_ERROR( "le_wifiClient_GetFirstAccessPoint: ERROR: Scan is running." );
+        LE_ERROR("le_wifiClient_GetFirstAccessPoint: ERROR: Scan is running.");
         return NULL;
     }
 
     /* This check to protect the variable IterRef that shouldn't be called from different contexts*/
-    if ( le_wifiClient_GetClientSessionRef() != GetFirstSessionRef )
+    if (le_wifiClient_GetClientSessionRef() != GetFirstSessionRef)
     {
-        LE_ERROR( "le_wifiClient_GetNextAccessPoint ERROR: Called from"
-                            "different context than GetFirstAccessPoint");
+        LE_ERROR("le_wifiClient_GetNextAccessPoint ERROR: Called from"
+            "different context than GetFirstAccessPoint");
         return NULL;
     }
 
-    while ( le_ref_NextNode( IterRef ) == LE_OK )
+    while (le_ref_NextNode(IterRef) == LE_OK)
     {
-        accessPointRef = ( le_wifiClient_AccessPointRef_t ) le_ref_GetSafeRef( IterRef );
-        LE_DEBUG( "le_wifiClient_GetNextAccessPoint %p", accessPointRef );
-        if( WasApFoundInLastScan( accessPointRef ) )
+        apRef = (le_wifiClient_AccessPointRef_t)le_ref_GetSafeRef(IterRef);
+        LE_DEBUG("le_wifiClient_GetNextAccessPoint %p", apRef);
+        if (WasApFoundInLastScan(apRef))
         {
             found = true;
             break;
         }
     }
 
-
-    if ( found )
+    if (found)
     {
-        LE_DEBUG( "le_wifiClient_GetNextAccessPoint %p", accessPointRef );
-        return accessPointRef;
+        LE_DEBUG("le_wifiClient_GetNextAccessPoint %p", apRef);
+        return apRef;
     }
     else
     {
-        LE_DEBUG( "le_wifiClient_GetNextAccessPoint NOT FOUND" );
+        LE_DEBUG("le_wifiClient_GetNextAccessPoint NOT FOUND");
         GetFirstSessionRef = NULL;
         return NULL;
     }
 }
 
 
-
 //--------------------------------------------------------------------------------------------------
 /**
- * Get the signal strength of the AccessPoint
+ * Get the signal strength of the Access Point
  *
  * @return
  *  - signal strength in dBm. Example -30 = -30dBm
@@ -756,22 +776,21 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetNextAccessPoint
 //--------------------------------------------------------------------------------------------------
 int16_t le_wifiClient_GetSignalStrength
 (
-    le_wifiClient_AccessPointRef_t accessPointRef
+    le_wifiClient_AccessPointRef_t apRef
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 )
 {
-    FoundAccessPoint_t * accessPoint = le_ref_Lookup( ScanApRefMap, accessPointRef );
-    LE_DEBUG( "le_wifiClient_GetSignalStrength" );
-    if ( NULL == accessPoint )
+    FoundAccessPoint_t *apPtr = le_ref_Lookup(ScanApRefMap, apRef);
+
+    LE_DEBUG("le_wifiClient_GetSignalStrength");
+    if (NULL == apPtr)
     {
-        LE_ERROR( "le_wifiClient_GetSignalStrength: invalid accessPointRef" );
+        LE_ERROR("le_wifiClient_GetSignalStrength: invalid access point reference.");
         return SIGNAL_STRENGTH_DEFAULT;
     }
-    else
-    {
-        return accessPoint->accessPoint.signalStrength;
-    }
+
+    return apPtr->accessPoint.signalStrength;
 }
 
 
@@ -787,52 +806,54 @@ int16_t le_wifiClient_GetSignalStrength
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_GetSsid
 (
-    le_wifiClient_AccessPointRef_t accessPointRef,
+    le_wifiClient_AccessPointRef_t apRef,
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 
-    uint8_t* ssidPtr,
+    uint8_t *ssidPtr,
         ///< [OUT]
         ///< The SSID returned as a octet array.
 
-    size_t* ssidNumElementsPtr
+    size_t *ssidNumElementsPtr
         ///< [INOUT]
+        ///< SSID length in octets.
 )
 {
-    FoundAccessPoint_t * accessPoint = le_ref_Lookup( ScanApRefMap, accessPointRef );
-    LE_DEBUG( "le_wifiClient_GetSsid: ref %p", accessPointRef );
-    if ( NULL == accessPoint )
+    FoundAccessPoint_t *apPtr = le_ref_Lookup(ScanApRefMap, apRef);
+
+    LE_DEBUG("le_wifiClient_GetSsid: ref %p", apRef);
+    if (NULL == apPtr)
     {
-        LE_ERROR( "le_wifiClient_GetSsid: invalid accessPointRef" );
+        LE_ERROR("le_wifiClient_GetSsid: invalid access point reference.");
         return LE_BAD_PARAMETER;
     }
 
-    if ( ( NULL == ssidPtr ) || ( NULL == ssidNumElementsPtr ) )
+    if ((NULL == ssidPtr) || (NULL == ssidNumElementsPtr))
     {
-        LE_ERROR( "le_wifiClient_GetSsid: parameter NULL %p %p", ssidPtr, ssidNumElementsPtr );
+        LE_ERROR("le_wifiClient_GetSsid: parameter NULL %p %p", ssidPtr, ssidNumElementsPtr);
         return LE_BAD_PARAMETER;
     }
 
-    *ssidNumElementsPtr = accessPoint->accessPoint.ssidLength;
-    LE_DEBUG( "le_wifiClient_GetSsid: accessPoint->AccessPoint.ssidLength %d",
-                        accessPoint->accessPoint.ssidLength );
+    *ssidNumElementsPtr = apPtr->accessPoint.ssidLength;
+    LE_DEBUG("le_wifiClient_GetSsid: apPtr->AccessPoint.ssidLength %d",
+        apPtr->accessPoint.ssidLength);
 
-    memcpy( &ssidPtr[0],
-            &accessPoint->accessPoint.ssidBytes[0],
-            accessPoint->accessPoint.ssidLength );
+    memcpy(&ssidPtr[0],
+        &apPtr->accessPoint.ssidBytes[0],
+        apPtr->accessPoint.ssidLength);
 
     return LE_OK;
-
-
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Set the passphrase used to generate the PSK.
  *
- * @note the difference between le_wifiClient_SetPreSharedKey() and this function
+ * @note This is one way to authenticate against the access point. The other one is provided by the
+ * le_wifiClient_SetPreSharedKey() function. Both ways are exclusive and are effective only when used
+ * with WPA-personal authentication.
  *
- * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -840,38 +861,42 @@ le_result_t le_wifiClient_GetSsid
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetPassphrase
 (
-    le_wifiClient_AccessPointRef_t accessPointRef,
+    le_wifiClient_AccessPointRef_t apRef,
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 
-    const char* PassPhrase
+    const char *passPhrasePtr
         ///< [IN]
         ///< pass-phrase for PSK
 )
 {
     le_result_t result = LE_BAD_PARAMETER;
-    LE_DEBUG( "le_wifiClient_SetPassphrase" );
 
-    if ( NULL == le_ref_Lookup( ScanApRefMap, accessPointRef) )
+    LE_DEBUG("le_wifiClient_SetPassphrase");
+
+    if (NULL == le_ref_Lookup(ScanApRefMap, apRef))
     {
-        LE_ERROR( "le_wifiClient_SetPassphrase: invalid accessPointRef" );
+        LE_ERROR("le_wifiClient_SetPassphrase: invalid access point reference.");
         return LE_BAD_PARAMETER;
     }
 
-    if ( NULL != PassPhrase )
+    if (NULL != passPhrasePtr)
     {
-        result =  pa_wifiClient_SetPassphrase( PassPhrase );
+        result = pa_wifiClient_SetPassphrase(passPhrasePtr);
     }
 
     return result;
 }
 
+
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the Pre Shared Key, PSK.
- * @note the difference between le_wifiClient_SetPassphrase() and this function
+ * Set the pre-shared key (PSK).
  *
- * @return LE_FAULT         Function failed.
+ * @note This is one way to authenticate against the access point. The other one is provided by the
+ * le_wifiClient_SetPassPhrase() function. Both ways are exclusive and are effective only when used
+ * with WPA-personal authentication.
+ *
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
  *
@@ -879,30 +904,32 @@ le_result_t le_wifiClient_SetPassphrase
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetPreSharedKey
 (
-    le_wifiClient_AccessPointRef_t accessPointRef,
+    le_wifiClient_AccessPointRef_t apRef,
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 
-    const char* PreSharedKey
+    const char *preSharedKeyPtr
         ///< [IN]
-        ///< PSK. Note the difference between PSK and Pass Phrase.
+        ///< Pre-shared key used to authenticate against the access point.
 )
 {
     le_result_t result = LE_BAD_PARAMETER;
-    LE_DEBUG( "le_wifiClient_SetPreSharedKey" );
-    if ( NULL == le_ref_Lookup( ScanApRefMap, accessPointRef ) )
+
+    LE_DEBUG("le_wifiClient_SetPreSharedKey");
+    if (NULL == le_ref_Lookup(ScanApRefMap, apRef))
     {
-        LE_ERROR( "le_wifiClient_SetPreSharedKey: invalid accessPointRef" );
+        LE_ERROR("le_wifiClient_SetPreSharedKey: invalid access point reference.");
         return LE_BAD_PARAMETER;
     }
 
-    if ( NULL != PreSharedKey)
+    if (NULL != preSharedKeyPtr)
     {
-        result = pa_wifiClient_SetPreSharedKey( PreSharedKey );
+        result = pa_wifiClient_SetPreSharedKey(preSharedKeyPtr);
     }
 
     return result;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -917,34 +944,36 @@ le_result_t le_wifiClient_SetPreSharedKey
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetUserCredentials
 (
-    le_wifiClient_AccessPointRef_t accessPointRef,
+    le_wifiClient_AccessPointRef_t apRef,
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 
-    const char* userName,
+    const char *userNamePtr,
         ///< [IN]
-        ///< UserName used for WPA-Enterprise.
+        ///< UserName used for WPA-Enterprise authentication protocol.
 
-    const char* password
+    const char *passwordPtr
         ///< [IN]
-        ///< Password used for WPA-Enterprise.
+        ///< Password used for WPA-Enterprise authentication protocol.
 )
 {
     le_result_t result = LE_BAD_PARAMETER;
-    LE_DEBUG( "le_wifiClient_SetUserCredentials" );
-    if ( NULL == le_ref_Lookup( ScanApRefMap, accessPointRef ) )
+
+    LE_DEBUG("le_wifiClient_SetUserCredentials");
+    if (NULL == le_ref_Lookup(ScanApRefMap, apRef))
     {
-        LE_ERROR( "le_wifiClient_SetUserCredentials: invalid accessPointRef" );
+        LE_ERROR("le_wifiClient_SetUserCredentials: invalid access point reference.");
         return LE_BAD_PARAMETER;
     }
 
-    if (( NULL != userName) && ( NULL != password))
+    if ((NULL != userNamePtr) && (NULL != passwordPtr))
     {
-        result = pa_wifiClient_SetUserCredentials( userName, password );
+        result = pa_wifiClient_SetUserCredentials(userNamePtr, passwordPtr);
     }
 
-    return result ;
+    return result;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -956,30 +985,32 @@ le_result_t le_wifiClient_SetUserCredentials
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetWepKey
 (
-    le_wifiClient_AccessPointRef_t accessPointRef,
+    le_wifiClient_AccessPointRef_t apRef,
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 
-    const char* wepKey
+    const char *wepKeyPtr
         ///< [IN]
-        ///< WEP key
+        ///< Wired Equivalent Privacy (WEP) key used for authentication
 )
 {
     le_result_t result = LE_BAD_PARAMETER;
-    LE_DEBUG( "le_wifiClient_SetWepKey" );
-    if ( NULL == le_ref_Lookup( ScanApRefMap, accessPointRef ) )
+
+    LE_DEBUG("le_wifiClient_SetWepKey");
+    if (NULL == le_ref_Lookup(ScanApRefMap, apRef))
     {
-        LE_ERROR( "le_wifiClient_SetWepKey: invalid accessPointRef" );
+        LE_ERROR("le_wifiClient_SetWepKey: invalid access point reference.");
         return LE_BAD_PARAMETER;
     }
 
-    if ( NULL != wepKey )
+    if (NULL != wepKeyPtr)
     {
-        result = pa_wifiClient_SetWepKey( wepKey );
+        result = pa_wifiClient_SetWepKey(wepKeyPtr);
     }
 
-    return result ;
+    return result;
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -993,136 +1024,132 @@ le_result_t le_wifiClient_SetWepKey
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetSecurityProtocol
 (
-    le_wifiClient_AccessPointRef_t accessPointRef,
+    le_wifiClient_AccessPointRef_t apRef,
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 
     le_wifiClient_SecurityProtocol_t securityProtocol
         ///< [IN]
         ///< Security Mode
 )
 {
-    LE_DEBUG( "le_wifiClient_SetSecurityProtocol" );
-    if( NULL == le_ref_Lookup(ScanApRefMap, accessPointRef) )
+    LE_DEBUG("le_wifiClient_SetSecurityProtocol");
+    if (NULL == le_ref_Lookup(ScanApRefMap, apRef))
     {
-        LE_ERROR( "le_wifiClient_SetSecurityProtocol: invalid accessPointRef" );
+        LE_ERROR("le_wifiClient_SetSecurityProtocol: invalid access point reference.");
         return LE_BAD_PARAMETER;
     }
 
-    return pa_wifiClient_SetSecurityProtocol( securityProtocol );
+    return pa_wifiClient_SetSecurityProtocol(securityProtocol);
 }
+
 
 //--------------------------------------------------------------------------------------------------
 /**
- * If an AccessPoint is not announcing it's precense, it will not show up in the scan.
- * But if the SSID is known, a connnection can be tried using this create function.
- * First create the AccessPoint, then le_wifiClient_Connect() to connect to it.
+ * If an Access Point is not announcing it's presence, it will not show up in the scan.
+ * But if the SSID is known, a connection can be tried using this create function.
+ * First create the Access Point, then le_wifiClient_Connect() to connect to it.
  *
  * @return AccessPoint reference to the current
  */
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_AccessPointRef_t le_wifiClient_Create
 (
-    const uint8_t* ssidPtr,
+    const uint8_t *ssidPtr,
         ///< [IN]
         ///< The SSID as a octet array.
 
     size_t ssidNumElements
         ///< [IN]
+        ///< Length of the SSID in octets.
 )
 {
-    le_wifiClient_AccessPointRef_t returnRef = NULL;
+    le_wifiClient_AccessPointRef_t returnedRef = NULL;
 
-    if( IsScanRunning() )
+    if (IsScanRunning())
     {
-        LE_ERROR( "le_wifiClient_Create ERROR: Scan is running" );
+        LE_ERROR("le_wifiClient_Create ERROR: Scan is running");
         return NULL;
     }
 
-    if ( NULL == ssidPtr )
+    if (NULL == ssidPtr)
     {
-        LE_ERROR( "le_wifiClient_Create ERROR: ssidPtr is NULL" );
+        LE_ERROR("le_wifiClient_Create ERROR: ssidPtr is NULL");
         return NULL;
     }
 
-    if ( ssidNumElements > LE_WIFIDEFS_MAX_SSID_LENGTH )
-    {
-        LE_ERROR("ERROR: SSID length (%d) exceeds %d bytes\n",
-                ssidNumElements, LE_WIFIDEFS_MAX_SSID_LENGTH );
-        return NULL;
-    }
-
-    returnRef = FindAccessPointRefFromSsid( ssidPtr, ssidNumElements );
+    returnedRef = FindAccessPointRefFromSsid(ssidPtr, ssidNumElements);
 
     // if the access point does not already exist, then create it.
-    if ( returnRef == NULL )
+    if (returnedRef == NULL)
     {
-        FoundAccessPoint_t* createdAccessPointPtr = le_mem_ForceAlloc( AccessPointPool );
+        FoundAccessPoint_t* createdAccessPointPtr = le_mem_ForceAlloc(AccessPointPool);
 
-        if ( createdAccessPointPtr )
+        if (createdAccessPointPtr)
         {
             createdAccessPointPtr->foundInLatestScan = false;
 
             createdAccessPointPtr->accessPoint.signalStrength = SIGNAL_STRENGTH_DEFAULT;
             createdAccessPointPtr->accessPoint.ssidLength = ssidNumElements;
-            memcpy( &createdAccessPointPtr->accessPoint.ssidBytes[0],
+            memcpy(&createdAccessPointPtr->accessPoint.ssidBytes[0],
                 ssidPtr,
                 ssidNumElements);
 
             // Create a Safe Reference for this object.
-            returnRef = le_ref_CreateRef( ScanApRefMap, createdAccessPointPtr );
+            returnedRef = le_ref_CreateRef(ScanApRefMap, createdAccessPointPtr);
 
-            LE_DEBUG( "le_wifiClient_Create AP[%p %p] SignalStrength %d"
-                                "SSID length %d SSID: \"%.*s\"",
+            LE_DEBUG("le_wifiClient_Create AP[%p %p] SignalStrength %d"
+                "SSID length %d SSID: \"%.*s\"",
                 createdAccessPointPtr,
-                returnRef,
+                returnedRef,
                 createdAccessPointPtr->accessPoint.signalStrength,
                 createdAccessPointPtr->accessPoint.ssidLength,
                 createdAccessPointPtr->accessPoint.ssidLength,
-                ( char* ) createdAccessPointPtr->accessPoint.ssidBytes
-                );
+                (char *)createdAccessPointPtr->accessPoint.ssidBytes
+               );
         }
         else
         {
-            LE_ERROR( "le_wifiClient_Create le_mem_ForceAlloc failed." );
+            LE_ERROR("le_wifiClient_Create le_mem_ForceAlloc failed.");
         }
     }
 
-    return returnRef;
+    return returnedRef;
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Delete an accessPointRef.
+ * Deletes an apRef.
  *
  * @note The handle becomes invalid after it has been deleted.
- * @return LE_BAD_PARAMETER accessPointRef was not found.
+ * @return LE_BAD_PARAMETER apRef was not found.
  * @return LE_BUSY          Function called during scan.
  * @return LE_OK            Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Delete
 (
-    le_wifiClient_AccessPointRef_t accessPointRef
+    le_wifiClient_AccessPointRef_t apRef
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi Access Point reference.
 )
 {
-    le_result_t result = LE_BAD_PARAMETER;
-    FoundAccessPoint_t * accessPointPtr = le_ref_Lookup( ScanApRefMap, accessPointRef );
-    LE_DEBUG( "le_wifiClient_Delete called");
+    le_result_t         result = LE_BAD_PARAMETER;
+    FoundAccessPoint_t *apPtr  = le_ref_Lookup(ScanApRefMap, apRef);
 
-    if( IsScanRunning() )
+    LE_DEBUG("le_wifiClient_Delete called");
+
+    if (IsScanRunning())
     {
-        LE_ERROR( "le_wifiClient_Delete ERROR: Scan is running" );
+        LE_ERROR("le_wifiClient_Delete ERROR: Scan is running");
         return LE_BUSY;
     }
 
     // verify le_ref_Lookup
-    if ( NULL !=  accessPointPtr)
+    if (NULL != apPtr)
     {
-        RemoveAccessPoint( accessPointRef );
+        RemoveAccessPoint(apRef);
         result = LE_OK;
     }
     return result;
@@ -1131,7 +1158,7 @@ le_result_t le_wifiClient_Delete
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Connect to the Wifi Access Point.
+ * Connect to the WiFi Access Point.
  * All authentication must be set prior to calling this function.
  *
  * @return LE_FAULT         Function failed.
@@ -1144,31 +1171,31 @@ le_result_t le_wifiClient_Delete
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Connect
 (
-    le_wifiClient_AccessPointRef_t accessPointRef
+    le_wifiClient_AccessPointRef_t apRef
         ///< [IN]
-        ///< Wifi Access Point reference.
+        ///< WiFi access point reference.
 )
 {
-    le_result_t result = LE_BAD_PARAMETER;
-    FoundAccessPoint_t * accessPointPtr = le_ref_Lookup( ScanApRefMap, accessPointRef );
+    le_result_t         result = LE_BAD_PARAMETER;
+    FoundAccessPoint_t *apPtr  = le_ref_Lookup(ScanApRefMap, apRef);
 
     // verify le_ref_Lookup
-    if ( NULL !=  accessPointPtr )
+    if (NULL !=  apPtr)
     {
         LE_DEBUG( "le_wifiClient_Connect called. SSID length %d SSID: \"%.*s\"",
-                    accessPointPtr->accessPoint.ssidLength,
-                    accessPointPtr->accessPoint.ssidLength,
-                    ( char* ) accessPointPtr->accessPoint.ssidBytes);
+            apPtr->accessPoint.ssidLength,
+            apPtr->accessPoint.ssidLength,
+            (char *)apPtr->accessPoint.ssidBytes);
 
-        result = pa_wifiClient_Connect( accessPointPtr->accessPoint.ssidBytes,
-                                        accessPointPtr->accessPoint.ssidLength );
+        result = pa_wifiClient_Connect(apPtr->accessPoint.ssidBytes, apPtr->accessPoint.ssidLength);
     }
     return result;
 }
 
+
 //--------------------------------------------------------------------------------------------------
 /**
- * Disconnect from the Wifi Access Point.
+ * Disconnect from the WiFi Access Point.
  *
  * @return LE_FAULT         Function failed.
  * @return LE_OK            Function succeeded.
@@ -1178,14 +1205,14 @@ le_result_t le_wifiClient_Disconnect
 (
 )
 {
-    LE_DEBUG( "le_wifiClient_Disconnect");
+    LE_DEBUG("le_wifiClient_Disconnect");
     return pa_wifiClient_Disconnect();
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- *  Wifi Client COMPONENT Init
+ *  WiFi Client COMPONENT Init
  */
 //--------------------------------------------------------------------------------------------------
 void le_wifiClient_Init
@@ -1193,29 +1220,25 @@ void le_wifiClient_Init
     void
 )
 {
-    LE_DEBUG( "Wifi Client Service is ready" );
+    LE_DEBUG("WiFi client service starting...");
 
     pa_wifiClient_Init();
 
-     // Create the Access Point object pool.
-    AccessPointPool = le_mem_CreatePool( "le_wifi_FoundAccessPointPool",
-                                         sizeof( FoundAccessPoint_t ) );
-    le_mem_ExpandPool( AccessPointPool, INIT_NBR_OF_AP );
+    // Create the Access Point object pool.
+    AccessPointPool = le_mem_CreatePool("le_wifi_FoundAccessPointPool",
+        sizeof(FoundAccessPoint_t));
+    le_mem_ExpandPool(AccessPointPool, INIT_AP_COUNT);
 
     // Create the Safe Reference Map to use for FoundAccessPoint_t object Safe References.
-    ScanApRefMap = le_ref_CreateMap( "le_wifiClient_AccessPoints", INIT_NBR_OF_AP );
+    ScanApRefMap = le_ref_CreateMap("le_wifiClient_AccessPoints", INIT_AP_COUNT);
 
-    // Create an event Id for new Wifi Events
-    NewWifiEventId = le_event_CreateId( "WifiClientEvent", sizeof( le_wifiClient_Event_t ) );
+    // Create an event Id for new WiFi Events
+    NewWifiEventId = le_event_CreateId("WifiClientEvent", sizeof(le_wifiClient_Event_t));
 
     // register for events from PA.
-    pa_wifiClient_AddEventHandler( PaEventHandler, NULL );
-
+    pa_wifiClient_AddEventHandler(PaEventHandler, NULL);
 
     // Add a handler to handle the close
-    le_msg_AddServiceCloseHandler( le_wifiClient_GetServiceRef(),
-                                   CloseSessionEventHandler,
-                                   NULL );
-
-
+    le_msg_AddServiceCloseHandler(le_wifiClient_GetServiceRef(), CloseSessionEventHandler, NULL);
 }
+

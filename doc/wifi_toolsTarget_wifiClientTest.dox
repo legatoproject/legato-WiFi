@@ -2,19 +2,19 @@
 
 The sample shows how to use the @ref c_le_wifi_client.
 
-To use this app, you should have basic understanding of how a WiFi client works and
-the Legato interface.
+To use this application, you should have basic understanding of the Legato interface
+and how a WiFi client works.
 
 @section wifi_sample_Apps_wificlient_testapp_usage Usage
 When started the WiFi client first performs a few scan loops and recovers the result.<br>
 The results are visible in the log. <br>
-It then tries to connect to an WiFi Access Point named <i>"wifiWebApSSID"</i>, <br>
+It then tries to connect to a WiFi access point named <i>"wifiWebApSSID"</i>, <br>
 with WPA2 passphrase: <i>"passphrase"</i>. <br>
 
 @note It will also provide IP addresses.
-This is not a part of the WiFi Service, but is provided for the sample apps.
+This is not a part of the WiFi Service, but is provided as one of the sample applications.
 
-This sample app is not started by default;it needs to be started manually.
+This sample application is not started by default, it needs to be started manually.
 
 Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 

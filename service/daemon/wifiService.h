@@ -1,7 +1,7 @@
 // -------------------------------------------------------------------------------------------------
 /**
  *
- *  Handles the component init for both Wifi Client and Access Point.
+ *  Handles the component init for both WiFi Client and Access Point.
  *
  *  Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  *
@@ -14,8 +14,8 @@
 
 #include "interfaces.h"
 
-void le_wifiClient_Init( void );
+void le_wifiClient_Init(void);
 
-void le_wifiAp_Init( void );
+void le_wifiAp_Init(void);
 
 #endif //WIFI_SERVICE

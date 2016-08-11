@@ -13,43 +13,46 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Event Handler for PA Wifi Access Point changes
+ * Event handler for PA WiFi access point changes.
  *
- * @param event
- *        Handles the PA  wifi events.
- *        Two events are directly generated from the PA
- *            LE_WIFIAP_EVENT_CONNECTED,
- *            LE_WIFIAP_EVENT_DISCONNECTED,
- * @param contextPtr
+ * Handles the PA WiFi events.
  */
 //--------------------------------------------------------------------------------------------------
 typedef void (*pa_wifiAp_NewEventHandlerFunc_t)
 (
     le_wifiAp_Event_t event,
-    void* contextPtr
+        ///< [IN]
+        ///< WiFi event to process
+    void *contextPtr
+        ///< [IN]
+        ///< Associated WiFi event context
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Add handler function for PA EVENT 'le_wifiAp_Event_t'
+ * Add handler function for WiFi related events.
  *
- * This event provide information on PA Wifi Ap event changes.
+ * These events provide information on WiFi access point status.
+ *
+ * @return LE_OK Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
-LE_SHARED le_result_t  pa_wifiAp_AddEventHandler
+LE_SHARED le_result_t pa_wifiAp_AddEventHandler
 (
     pa_wifiAp_NewEventHandlerFunc_t handlerPtr,
         ///< [IN]
+        ///< Event handler function pointer
 
-    void* contextPtr
+    void *contextPtr
         ///< [IN]
+        ///< Associated event context
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function must be called to initialize the PA WIFI Access Point.
+ * This function must be called to initialize the PA WiFi Access Point.
  *
- * @return LE_OK     The function succeed.
+ * @return LE_OK     The function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t pa_wifiAp_Init
@@ -59,9 +62,9 @@ LE_SHARED le_result_t pa_wifiAp_Init
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function must be called to release the PA WIFI Module.
+ * This function must be called to release the platform adaptor WiFi module.
  *
- * @return LE_OK     The function succeed.
+ * @return LE_OK     The function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t pa_wifiAp_Release
@@ -71,9 +74,9 @@ LE_SHARED le_result_t pa_wifiAp_Release
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function starts the WIFI Access Point.
+ * This function starts the WiFi access point.
  * Note that all settings, if to be used, such as security, username, password must set prior to
- * starting the Access Point.
+ * starting the access point.
  *
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
@@ -87,7 +90,7 @@ le_result_t pa_wifiAp_Start
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function stops the WIFI Access Point.
+ * This function stops the WiFi access point.
  *
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
@@ -101,9 +104,10 @@ le_result_t pa_wifiAp_Stop
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the Security protocol to use.
- * Default value is SECURITY_WPA2.
- * @note that the SSID does not have to be human readable ASCII values, but often has.
+ * Set the security protocol to use.
+ *
+ * @note WEP is not supported as it is unsecure and has been deprecated in favor of WPA/WPA2.
+ * This limitation applies to access point mode only.
  *
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
@@ -113,14 +117,14 @@ le_result_t pa_wifiAp_SetSecurityProtocol
 (
     le_wifiAp_SecurityProtocol_t securityProtocol
         ///< [IN]
-        ///< The security protocol to use.
+        ///< The security protocol used to communicate with the access point.
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the Service set identification (SSID) of the AccessPoint
- * Default value is "LEGATO Access Point"
- * @note that the SSID does not have to be human readable ASCII values, but often has.
+ * Set the Service Set IDentification (SSID) of the access point.
+ *
+ * @note The SSID does not have to be human readable ASCII values, but often is.
  *
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
@@ -128,56 +132,58 @@ le_result_t pa_wifiAp_SetSecurityProtocol
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetSsid
 (
-    const uint8_t* ssidPtr,
+    const uint8_t *ssidPtr,
         ///< [IN]
-        ///< The SSID to set as a octet array.
+        ///< The SSID to set as an octet array.
 
     size_t ssidNumElements
         ///< [IN]
+        ///< The length of the SSID in octets.
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Set the passphrase used to generate the PSK.
- * Default value is "ChangeThisPassword".
  *
- * @note the difference between le_wifiAp_SetPreSharedKey() and this function
+ * @note This is one way to authenticate against the access point. The other one is provided by the
+ * le_wifiAp_SetPreSharedKey() function. Both ways are exclusive and are effective only when used
+ * with WPA-personal authentication.
  *
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
- *
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetPassPhrase
 (
-    const char* passphrase
+    const char *passphrasePtr
         ///< [IN]
-        ///< pass-phrase for PSK
+        ///< Passphrase to authenticate against the access point.
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the Pre Shared Key, PSK.
- * There is no default value, since le_wifiAp_SetPassPhrase is used as default.
- * @note the difference between le_wifiAp_SetPassPhrase() and this function
+ * Set the pre-shared key (PSK).
+ *
+ * @note This is one way to authenticate against the access point. The other one is provided by the
+ * le_wifiAp_SetPassPhrase() function. Both ways are exclusive and are effective only when used
+ * with WPA-personal authentication.
  *
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
- *
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetPreSharedKey
 (
-    const char* preSharedKey
+    const char *preSharedKeyPtr
         ///< [IN]
-        ///< PSK. Note the difference between PSK and Pass Phrase.
+        ///< Pre-shared key used to authenticate against the access point.
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Set if the Access Point should announce it's presence.
  * Default value is TRUE.
- * If the value is set to FALSE, the Access Point will be hidden.
+ * If the value is set to FALSE, the access point will be hidden.
  *
  * @return LE_OK            Function succeeded.
  *
@@ -185,14 +191,14 @@ le_result_t pa_wifiAp_SetPreSharedKey
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetDiscoverable
 (
-    bool discoverable
+    bool isDiscoverable
         ///< [IN]
-        ///< If TRUE the Acces Point will annonce it's SSID, else it's hidden.
+        ///< If TRUE, the access point SSID is visible by the clients otherwise it is hidden.
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set which Wifi Channel to use.
+ * Set the WiFi channel to use.
  * Default value is 1.
  * Some legal restrictions for values 12 - 14 might apply for your region.
  *
@@ -210,8 +216,10 @@ le_result_t pa_wifiAp_SetChannel
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the maximum number of clients allowed to be connected to WiFi Access Point.
+ * Set the maximum number of clients connected to WiFi access point at the same time.
  * Default value is 10.
+ *
+ * @note This value depends on the hardware/software capabilities of the WiFi module used.
  *
  * @return LE_OUT_OF_RANGE  Requested number of users exceeds the capabilities of the Access Point.
  * @return LE_OK            Function succeeded.
@@ -222,12 +230,14 @@ le_result_t pa_wifiAp_SetMaxNumberClients
 (
     int maxNumberClients
         ///< [IN]
-        ///< the maximum number of clients (1-255).
+        ///< the maximum number of clients regarding the WiFi driver and hardware capabilities.
 );
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Defines the IP adresses range for the host AP.
+ * Define the access point IP address and the client IP addresses range.
+ *
+ * @note The access point IP address must be defined outside the client IP addresses range.
  *
  * @return LE_BAD_PARAMETER At least, one of the given IP addresses is invalid.
  * @return LE_FAULT         A system call has failed.
@@ -237,13 +247,13 @@ le_result_t pa_wifiAp_SetMaxNumberClients
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetIpRange
 (
-    const char *ip_ap,
+    const char *ipApPtr,
         ///< [IN]
         ///< the IP address of the Access Point.
-    const char *ip_start,
+    const char *ipStartPtr,
         ///< [IN]
         ///< the start IP address of the Access Point.
-    const char *ip_stop
+    const char *ipStopPtr
         ///< [IN]
         ///< the stop IP address of the Access Point.
 );

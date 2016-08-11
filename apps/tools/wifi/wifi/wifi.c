@@ -2,7 +2,7 @@
 /**
  * @file wifi_ap.c
  *
- * Wifi Service Command line.
+ * WiFi Service Command line.
  *
  * Note that since the command is run in new context each time,
  * nothing can be saved between runs.
@@ -21,22 +21,22 @@
  * General help message for both client & ap.
  */
 //--------------------------------------------------------------------------------------------------
-static void PrintHelp( void )
+static void PrintHelp(void)
 {
-        printf("wifi command line usage\n"
-           "==========\n\n"
-           "To run Wifi Client:\n"
-           "\twifi client help\n"
-           "To run Wifi Access Point:\n"
-           "\twifi ap help\n"
-           "\n");
+    printf("WiFi command line usage\n"
+        "==========\n\n"
+        "To run WiFi client:\n"
+        "\twifi client help\n"
+        "To run WiFi access point:\n"
+        "\twifi ap help\n"
+        "\n");
 }
 
 
 //--------------------------------------------------------------------------------------------------
 COMPONENT_INIT
 {
-    // calling just "wifi client/ap" without arguments will give helpmenu
+    // calling just "WiFi client/ap" without arguments will give helpmenu
     if (le_arg_NumArgs() <= 1)
     {
         PrintHelp();
@@ -44,25 +44,25 @@ COMPONENT_INIT
     }
     else
     {
-        const char* service = le_arg_GetArg(0);
-        const char* command = le_arg_GetArg(1);
+        const char *servicePtr = le_arg_GetArg(0);
+        const char *commandPtr = le_arg_GetArg(1);
 
-        if ( (0 == strcmp(service, "help")) ||
-             (0 == strcmp(service, "--help")) ||
-             (0 == strcmp(service, "-h")) )
+        if ((0 == strcmp(servicePtr, "help")) ||
+            (0 == strcmp(servicePtr, "--help")) ||
+            (0 == strcmp(servicePtr, "-h")))
         {
             PrintHelp();
             exit(EXIT_SUCCESS);
         }
         else
         {
-            if (strcmp(service, "client" ) == 0)
+            if (strcmp(servicePtr, "client") == 0)
             {
-                ExecuteWifiClientCommand(command, le_arg_NumArgs());
+                ExecuteWifiClientCommand(commandPtr, le_arg_NumArgs());
             }
-            else if (strcmp(service, "ap" ) == 0)
+            else if (strcmp(servicePtr, "ap") == 0)
             {
-                ExecuteWifiApCommand(command, le_arg_NumArgs());;
+                ExecuteWifiApCommand(commandPtr, le_arg_NumArgs());;
             }
             else
             {

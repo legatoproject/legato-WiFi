@@ -1,10 +1,10 @@
 /** @page wifi_toolsTarget_wifi WiFi Command Line Tool
 
-This topic provides details on using the @c wifi command line tool to control the Wifi Service.
+This topic provides details on using the @c wifi command line tool to control the WiFi service.
 
 The <b><c> wifi </c></b> command line tool supports both client and access point options.
 
-Also see the wifi command line help:
+Also see the @c wifi command line help:
 
 @verbatim
 # wifi help
@@ -20,17 +20,15 @@ To run Wifi Access Point:
 
 @section wifi_toolsTarget_cl_client WiFi Client
 
-The wifi client command line has these options:
-
 The wifi client command line has the following options:
 @verbatim
 # wifi client help
 wifi command line usage
 ==========
 
-To start using the Wifi Client:
+To start using the WiFi client:
 	wifi client start
-To stop  using the Wifi Client:
+To stop  using the WiFi client:
 	wifi client stop
 To start a scan:
 	wifi client scan
@@ -54,9 +52,9 @@ To delete the access point set in 'create':
 To set WPA/WPA2 passphrase that generates PSK :
 	wifi client setpassphrase [REF] [passphrase]
 To set WPA/WPA2 PSK directly:
-	wifi client setpsk [REF] [psk]
+	wifi client setpsk [REF] [PSK]
 To set WPA/WPA2 Enterprise user credentials:
-	wifi client setusercred [REF] [userName] [password]
+	wifi client setusercred [REF] [username] [password]
 To set WEP Key:
 	wifi client setwepkey [REF] [WEPKEY]
 @endverbatim
@@ -102,42 +100,55 @@ Lease of 192.168.43.25 obtained, lease time 3600
 /etc/udhcpc.d/50default: Adding DNS 192.168.43.1
 @endverbatim
 
-// now try your IP connection towards the internet by pinging Googles DNS
+// now try your IP connection towards the internet by pinging Google's DNS
 @verbatim
 > ping 8.8.8.8
 @endverbatim
 
 
-@section toolsTarget_wifi_ap WiFi Access Point
+@section toolsTarget_wifi_ap WiFi access point
 
 The wifi access point command line has the following options:
 
 @verbatim
 # wifi ap help
-wifi command line Access Point usage
+WiFi command line access point usage
 ==========
 
-To start the  Wifi Access Point:
+To start the WiFi access point:
 	wifi ap start
-To stop the  Wifi Access Point:
+
+To stop the WiFi access point:
 	wifi ap stop
-To set the SSID of the Wifi Access Point:
+
+To set the SSID of the WiFi access point:
 	wifi ap setssid [SSID]
-To set the channel of the Wifi Access Point:
+
+To set the channel of the WiFi access point:
 	wifi ap setchannel [ChannelNo]
+
 To set the security protocol used :
 	wifi ap setsecurityproto [SecuProto]
 Values for SecuProto;
 	0: No security
 	1: Using WPA2
+
+
 To set WPA2 passphrase that generates PSK :
-	wifi ap setpassphrase  [passphrase]
+	wifi ap setpassphrase [passphrase]
+
 To set WPA2 PSK directly:
 	wifi ap setpsk [PSK]
-To setdiscoverablity for the Wifi Access Point:
+
+To set the discoverablity of the WiFi access point:
 	wifi ap setdiscoverable
-To maximum nbr of clients for the Wifi Access Point:
+
+To maximum nbr of clients for the WiFi access point:
 	wifi ap setmaxclients [MAXNBR]
+
+To define the address of the AP and the IP addresses range as well:
+WARNING: Only IPv4 addresses are supported.
+	wifi ap setiprange [IP AP] [IP START] [IP STOP]
 @endverbatim
 
 @subsection wifi_toolsTarget_wifi_ap_example Access Point Example
@@ -151,7 +162,7 @@ This example shows how to setup a open access point WPA2 security.<BR>
 
 // set the pass phrase
 @verbatim
-> wifi ap setpassphrase  secret123
+> wifi ap setpassphrase secret123
 @endverbatim
 
 // set the name of the access point
@@ -172,10 +183,10 @@ This example shows how to setup a open access point WPA2 security.<BR>
 
 
 // Configure the interfaces
-// interface du point of access wifi
-> export INT_WIFI="wlan0"
-// interface wlan or eth0 with internet (or "eth0"
-> export INT_NET="rmnet0"
+// interface of the WiFi access point (LAN - Local Area Network)
+> export ITF_LAN="wlan0"
+// interface WAN: "rmnet0" or "eth0" (WAN - Wide Area Network)
+> export ITF_WAN="rmnet0"
 
 //IP & mask for subnet
 > export SUBNET="192.168.10.0/24"
@@ -191,16 +202,16 @@ This example shows how to setup a open access point WPA2 security.<BR>
 >/sbin/ifconfig wlan0 $IP up
 
 // DNSMASQ Startup
-> /usr/bin/dnsmasq --interface=$INT_WIFI --dhcp-range=$IP_RANGE_START,$IP_RANGE_END,12h -d --bogus-priv&
+> /usr/bin/dnsmasq --interface=${ITF_LAN} --dhcp-range=$IP_RANGE_START,$IP_RANGE_END,12h -d --bogus-priv&
 
 // Turn on IP forwarding
 > echo 1 > /proc/sys/net/ipv4/ip_forward
 // load masquerade module
 > /proc/sys/kernel/modprobe ipt_MASQUERADE
-> /usr/sbin/iptables -A POSTROUTING -t nat -o $INT_NET -j MASQUERADE
+> /usr/sbin/iptables -A POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
 > /usr/sbin/iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
-> /usr/sbin/iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
-> /usr/sbin/iptables -A INPUT -s $SUBNET --jump ACCEPT
+> /usr/sbin/iptables -A FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
+> /usr/sbin/iptables -A INPUT -s ${SUBNET} --jump ACCEPT
 @endverbatim
 
 Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.

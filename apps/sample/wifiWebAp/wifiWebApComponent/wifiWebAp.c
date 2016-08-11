@@ -1,12 +1,12 @@
  /**
-  * This module implements a Web interface for setting up the Wifi Access Point
+  * This module implements a Web interface for setting up the WiFi access point
   *
   * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
   *
   * It starts the webserver and
-  * it subscribes to the Wifi Access Point events and logs them to a logfile.
+  * it subscribes to the WiFi access point events and logs them to a logfile.
   * The page index.html provides an interface page with two parts.
-  *   The first part is an interface to setup the Wifi Access Point.
+  *   The first part is an interface to setup the WiFi access point.
   *   The second part is the content of the logfile provided by this app.
   */
 
@@ -15,14 +15,17 @@
 #include "legato.h"
 #include "interfaces.h"
 
-#define LOGFILE          "/tmp/wifi_http.log"
-#define BUF_SIZE          256
-#define STR_SIZE          1024
-#define HTTP_PORT_NUMBER "8080"
-#define HTTP_SYS_CMD     "/usr/sbin/httpd -v -p " HTTP_PORT_NUMBER " -u root -h /legato/systems/current/apps/wifiWebAp/read-only/var/www/ 2>&1"
+#define LOGFILE                "/tmp/wifi_http.log"
+#define BUF_SIZE               256
+#define STR_SIZE               1024
+#define HTTP_PORT_NUMBER       "8080"
+#define HTTP_SYS_CMD           "/usr/sbin/httpd -v -p " HTTP_PORT_NUMBER \
+    " -u root -h /legato/systems/current/apps/wifiWebAp/read-only/var/www/ 2>&1"
+#define HTTP_CONNECTION_REPORT "<font color=\"black\" >%s:</font>" \
+    " Total clients connected: %d</br>\r\n"
 
-static FILE *HttpdCmdFp = NULL;
-static FILE *LogFileFp = NULL;
+static FILE *HttpdCmdPipePtr = NULL;
+static FILE *LogFilePipePtr  = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -31,56 +34,94 @@ static FILE *LogFileFp = NULL;
 //--------------------------------------------------------------------------------------------------
 static le_wifiAp_NewEventHandlerRef_t HdlrRef = NULL;
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * The number of clients connected to the WiFi Access point (based on Connect/Disconnect events)
+ */
+//--------------------------------------------------------------------------------------------------
+static uint32_t NumberClients = 0;
 
 //--------------------------------------------------------------------------------------------------
 /**
- * The number of clients connected to the Wifi Access point (based on Connect/Disconnect events)
+ * Log WiFi events in the given file
  */
 //--------------------------------------------------------------------------------------------------
-static uint16_t NumberClients = 0;
-
-//--------------------------------------------------------------------------------------------------
-/**
- * Handler for Wifi events
- *
- * @param event
- *        Handles the wifi events
- * @param contextPtr
- */
-//--------------------------------------------------------------------------------------------------
-static void WiFiEventHandler
+static le_result_t WifiEventLog
 (
-    le_wifiAp_Event_t event,
-    void* contextPtr
+    const char *data,
+    FILE *file
 )
 {
-    char str[BUF_SIZE];
-    LE_INFO( "Wifi Ap event received");
+    size_t length;
 
-    LogFileFp = fopen( LOGFILE, "a");
-
-    if( LogFileFp == NULL )
+    if (file == NULL)
     {
-        LE_ERROR( "fopen failed for " LOGFILE ":  errno:%d %s",
-                        errno,
-                        strerror( errno ));
+        LE_ERROR("WifiEventLog: Invalid file handler");
+        return LE_BAD_PARAMETER;
+    }
+    if (data == NULL)
+    {
+        LE_ERROR("WifiEventLog: Invalid data parameter");
+        return LE_BAD_PARAMETER;
+    }
+    if (*data == '\0')
+    {
+        LE_INFO("WifiEventLog; Nothing to log");
+        return LE_OK;
+    }
+    length = strlen(data);
+    if (length != fwrite(data, 1, length, file))
+    {
+        LE_ERROR("WifiEventLog: Write operation failed.");
+        return LE_FAULT;
     }
 
-    char buffer[BUF_SIZE];
-    time_t timestamp = time(NULL);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Handler for WiFi events
+ */
+//--------------------------------------------------------------------------------------------------
+static void WifiEventHandler
+(
+    le_wifiAp_Event_t event,
+        ///< [IN]
+        ///< WiFi event to process
+    void *contextPtr
+        ///< [IN]
+        ///< Associated WiFi event context
+)
+{
+    char   str[BUF_SIZE];
+    char   buffer[BUF_SIZE];
+    time_t timestamp        = time(NULL);
+
+    LE_INFO("WiFi Ap event received");
+
+    LogFilePipePtr = fopen(LOGFILE, "a");
+
+    if (LogFilePipePtr == NULL)
+    {
+        LE_ERROR("fopen failed for " LOGFILE ":  errno:%d %s", errno, strerror(errno));
+        return;
+    }
+
     strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&timestamp));
 
-    switch( event )
+    switch (event)
     {
         case LE_WIFIAP_EVENT_CLIENT_CONNECTED:
         {
             NumberClients++;
-            if( LogFileFp != NULL )
+            if (LogFilePipePtr != NULL)
             {
                 ///< A client connect to AP
-                snprintf(str, BUF_SIZE, "<font color=\"black\" >%s:</font> Total Clients Connected: %d</br>\r\n", buffer, NumberClients);
-                LE_INFO( "%s", str );
-                fwrite(str , 1 , strlen(str) , LogFileFp );
+                snprintf(str, BUF_SIZE, HTTP_CONNECTION_REPORT, buffer, NumberClients);
+                LE_INFO("%s", str);
+                WifiEventLog(str, LogFilePipePtr);
             }
         }
         break;
@@ -88,31 +129,30 @@ static void WiFiEventHandler
         case LE_WIFIAP_EVENT_CLIENT_DISCONNECTED:
         {
             ///< A client disconnect from AP
-            // Check the number of clients because sometimes a spurious disconnection event may occur.
+            // Check the number of clients because sometimes
+            // a spurious disconnection event may occur.
             if (NumberClients > 0)
             {
                 NumberClients--;
             }
-            if( LogFileFp != NULL )
+            if (LogFilePipePtr != NULL)
             {
-                snprintf(str, BUF_SIZE, "<font color=\"black\" >%s:</font> Total Clients Connected: %d</br>\r\n", buffer, NumberClients);
-                LE_INFO(  "%s", str );
-                fwrite(str , 1 , strlen(str) , LogFileFp );
+                snprintf(str, BUF_SIZE, HTTP_CONNECTION_REPORT, buffer, NumberClients);
+                LE_INFO("%s", str);
+                WifiEventLog(str, LogFilePipePtr);
             }
         }
         break;
 
-
         default:
-            LE_ERROR( "ERROR Unknown event %d", event);
+            LE_ERROR("ERROR Unknown event %d", event);
         break;
     }
 
-    if( LogFileFp != NULL )
+    if (LogFilePipePtr != NULL)
     {
-        fclose(LogFileFp);
+        fclose(LogFilePipePtr);
     }
-
 }
 
 
@@ -128,14 +168,12 @@ static void SubscribeApEvents
     void
 )
 {
-    LE_INFO( "SubscribeApEvents");
+    LE_INFO("SubscribeApEvents");
     // todo: Clear log file at startup?
 
     // Add an handler function to handle message reception
-    HdlrRef=le_wifiAp_AddNewEventHandler( WiFiEventHandler, NULL );
+    HdlrRef = le_wifiAp_AddNewEventHandler(WifiEventHandler, NULL);
     LE_ASSERT(HdlrRef != NULL);
-
-
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -150,55 +188,54 @@ static void StartWebServer
     void
 )
 {
-    char tmpString[] = HTTP_SYS_CMD;
+    char tmpString[]   = HTTP_SYS_CMD;
     char str[STR_SIZE];
 
-    LE_INFO( "StartWebServer : popen : " HTTP_SYS_CMD );
-    HttpdCmdFp = popen( tmpString, "r" );
-    LE_INFO( "StartWebServer : AFTER (command did not hang) %p", HttpdCmdFp);
-    if ( NULL == HttpdCmdFp )
+    LE_INFO("StartWebServer : popen : " HTTP_SYS_CMD);
+    HttpdCmdPipePtr = popen(tmpString, "r");
+    LE_INFO("StartWebServer : AFTER (command did not hang) %p", HttpdCmdPipePtr);
+    if (NULL == HttpdCmdPipePtr)
     {
         LE_ERROR("StartWebServer: Failed to run command:\"%s\" errno:%d %s",
-                        (tmpString),
-                        errno,
-                        strerror( errno ));
-        LE_ERROR("StartWebServer:  errno:%d %s",
-                        errno,
-                        strerror( errno ));
+            (tmpString),
+            errno,
+            strerror(errno));
+        LE_ERROR("StartWebServer:  errno:%d %s", errno, strerror(errno));
 
         return;
     }
 
     // Read the output a line at a time - output it.
-    while ( NULL != fgets( str, sizeof(str)-1, HttpdCmdFp ) )
+    while (NULL != fgets(str, sizeof(str) - 1, HttpdCmdPipePtr))
     {
-        LE_INFO( "PARSING:%s: len:%d", str, (int) strnlen( str,sizeof(str)-1 ) );
+        LE_INFO("PARSING:%s: len:%d", str, (int)strnlen(str, sizeof(str) - 1));
     }
 
-
-    if ( NULL != HttpdCmdFp )
+    if (NULL != HttpdCmdPipePtr)
     {
-        pclose( HttpdCmdFp );
+        pclose(HttpdCmdPipePtr);
     }
 
     // This clears and starts the log file.
-    LogFileFp = fopen(LOGFILE, "w");
+    LogFilePipePtr = fopen(LOGFILE, "w");
 
-    if( LogFileFp != NULL )
+    if (LogFilePipePtr != NULL)
     {
+        char   buffer[BUF_SIZE];
+        time_t timestamp        = time(NULL);
+
         LE_INFO("STARTING WIFI HTTP INTERFACE");
-        char buffer[BUF_SIZE];
-        time_t timestamp = time(NULL);
         strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&timestamp));
-        snprintf(str, BUF_SIZE, "<font color=\"black\" >%s:</font> Starting WiFi HTTP interface...</br>\r\n", buffer);
-        fwrite(str , 1 , strlen(str) , LogFileFp );
-        fclose(LogFileFp);
+        snprintf(str,
+            BUF_SIZE,
+            "<font color=\"black\" >%s:</font> Starting WiFi HTTP interface...</br>\r\n",
+            buffer);
+        WifiEventLog(str, LogFilePipePtr);
+        fclose(LogFilePipePtr);
     }
     else
     {
-        LE_ERROR("ERROR: fopen failed for " LOGFILE ":  errno:%d %s",
-                 errno,
-                 strerror( errno ));
+        LE_ERROR("ERROR: fopen failed for " LOGFILE ":  errno:%d %s", errno, strerror(errno));
     }
 }
 
@@ -209,26 +246,26 @@ static void StartWebServer
 //--------------------------------------------------------------------------------------------------
 static void RunSystemCommand
 (
-    char * commandString
+    char *commandStringPtr
 )
 {
-    int16_t systemResult;
+    int systemResult;
 
-    if( NULL == commandString )
+    if (NULL == commandStringPtr)
     {
-        LE_ERROR( "RunSystemCommand ERROR Parameter is NULL" );
+        LE_ERROR("RunSystemCommand ERROR Parameter is NULL");
         return;
     }
 
-    systemResult = system( commandString );
+    systemResult = system(commandStringPtr);
     // Return value of -1 means that the fork() has failed (see man system).
-    if ( 0 == WEXITSTATUS( systemResult ) )
+    if (0 == WEXITSTATUS(systemResult))
     {
-        LE_INFO("RunSystemCommand Success: %s", commandString);
+        LE_INFO("RunSystemCommand Success: %s", commandStringPtr);
     }
     else
     {
-        LE_ERROR( "RunSystemCommand Error %s Failed: (%d)", commandString, systemResult );
+        LE_ERROR("RunSystemCommand Error %s Failed: (%d)", commandStringPtr, systemResult);
     }
 
 }
@@ -244,25 +281,25 @@ static void StopWebServer
     int signalId
 )
 {
-    LE_INFO( "StopWebServer : Received signal %d", signalId );
-    LE_INFO( "StopWebServer : Killing of instance of httpd server" );
-    RunSystemCommand( "killall httpd" );
+    LE_INFO("StopWebServer : Received signal %d", signalId);
+    LE_INFO("StopWebServer : Killing of instance of httpd server");
+    RunSystemCommand("killall httpd");
 
     // Stop the AP
     le_wifiAp_Stop();
 
     // Turn off IP forwarding
-    LE_INFO( "StopWebServer - Disabling IP forwarding" );
+    LE_INFO("StopWebServer - Disabling IP forwarding");
     RunSystemCommand("echo 0 > /proc/sys/net/ipv4/ip_forward");
     // Removing masquerade modules
-    LE_INFO( "StopWebServer - Removing the masquerading module..." );
+    LE_INFO("StopWebServer - Removing the masquerading module...");
     RunSystemCommand("modprobe ipt_MASQUERADE");
 
     // Turn off the iptables
-    RunSystemCommand( "iptables -t nat -f" );
-    RunSystemCommand( "iptables -t mangle -F" );
-    RunSystemCommand( "iptables -F" );
-    RunSystemCommand( "iptables -X" );
+    RunSystemCommand("iptables -t nat -f");
+    RunSystemCommand("iptables -t mangle -F");
+    RunSystemCommand("iptables -F");
+    RunSystemCommand("iptables -X");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -273,12 +310,13 @@ static void StopWebServer
 //--------------------------------------------------------------------------------------------------
 COMPONENT_INIT
 {
-    LE_INFO( "======== Wifi Web Ap ======== on port " HTTP_PORT_NUMBER);
+    LE_INFO("======== WiFi Web Ap ======== on port " HTTP_PORT_NUMBER);
 
     // Set the environment
-    putenv("PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
+    putenv("PATH=/legato/systems/current/bin:"
+        "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
 
-    // subscribes to Access Points events and logs them.
+    // subscribes to access points events and logs them.
     SubscribeApEvents();
 
     signal(SIGINT, StopWebServer);

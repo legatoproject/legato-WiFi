@@ -1,6 +1,6 @@
 // -------------------------------------------------------------------------------------------------
 /**
- *  Legato Wifi Access Point
+ *  Legato WiFi Access Point
  *
  *  Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  *
@@ -15,7 +15,7 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Event ID for Wifi AccessPoint Event message notification.
+ * Event ID for WiFi Access Point Event message notification.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -30,41 +30,39 @@ static le_event_Id_t NewWifiApEventId;
 static void PaEventApHandler
 (
     le_wifiAp_Event_t event,
-    void * ctxPtr
+    void *ctxPtr
 )
 {
 
-    LE_DEBUG( "PaEventApHandler event: %d", event );
+    LE_DEBUG("PaEventApHandler event: %d", event);
 
-    le_event_Report( NewWifiApEventId, (void*)&event, sizeof( le_wifiAp_Event_t ) );
+    le_event_Report(NewWifiApEventId, (void *)&event, sizeof(le_wifiAp_Event_t));
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- * The first-layer Wifi Ap Event Handler.
+ * The first-layer WiFi Ap Event Handler.
  *
  */
 //--------------------------------------------------------------------------------------------------
 static void FirstLayerWifiApEventHandler
 (
-    void* reportPtr,
-    void* secondLayerHandlerFunc
+    void *reportPtr,
+    void *secondLayerHandlerFunc
 )
 {
-    le_wifiAp_EventHandlerFunc_t clientHandlerFunc = secondLayerHandlerFunc;
+    le_wifiAp_EventHandlerFunc_t  clientHandlerFunc = secondLayerHandlerFunc;
+    le_wifiAp_Event_t            *wifiEventPtr      = (le_wifiAp_Event_t *)reportPtr;
 
-    le_wifiAp_Event_t  * wifiEvent = (le_wifiAp_Event_t*)reportPtr;
-
-
-    if ( NULL != wifiEvent)
+    if (NULL != wifiEventPtr)
     {
-        LE_DEBUG( "FirstLayerWifiApEventHandler event: %d", *wifiEvent );
-        clientHandlerFunc( *wifiEvent, le_event_GetContextPtr());
+        LE_DEBUG("FirstLayerWifiApEventHandler event: %d", *wifiEventPtr);
+        clientHandlerFunc(*wifiEventPtr, le_event_GetContextPtr());
     }
     else
     {
-        LE_ERROR( "FirstLayerWifiApEventHandler event is NULL" );
+        LE_ERROR("FirstLayerWifiApEventHandler event is NULL");
     }
 }
 
@@ -72,35 +70,37 @@ static void FirstLayerWifiApEventHandler
 /**
  * Add handler function for EVENT 'le_wifiAp_NewEvent'
  *
- * These events provide information on Wifi Access Point
+ * These events provide information on WiFi Access Point
  */
 //--------------------------------------------------------------------------------------------------
 le_wifiAp_NewEventHandlerRef_t le_wifiAp_AddNewEventHandler
 (
     le_wifiAp_EventHandlerFunc_t handlerFuncPtr,
         ///< [IN]
+        ///< Event handler function
 
-    void* contextPtr
+    void *contextPtr
         ///< [IN]
+        ///< Associated event context
 )
 {
-    LE_DEBUG( "le_wifiAp_AddNewEventHandler");
     le_event_HandlerRef_t handlerRef;
 
-    if( handlerFuncPtr == NULL )
+    LE_DEBUG("le_wifiAp_AddNewEventHandler");
+    if (handlerFuncPtr == NULL)
     {
-        LE_KILL_CLIENT("handlerFuncPtr is NULL !" );
+        LE_KILL_CLIENT("handlerFuncPtr is NULL !");
         return NULL;
     }
 
-    handlerRef = le_event_AddLayeredHandler( "NewWiFiApMsgHandler",
-                    NewWifiApEventId,
-                    FirstLayerWifiApEventHandler,
-                    ( le_event_HandlerFunc_t ) handlerFuncPtr );
+    handlerRef = le_event_AddLayeredHandler("NewWiFiApEventHandler",
+        NewWifiApEventId,
+        FirstLayerWifiApEventHandler,
+        (le_event_HandlerFunc_t)handlerFuncPtr);
 
-    le_event_SetContextPtr( handlerRef, contextPtr );
+    le_event_SetContextPtr(handlerRef, contextPtr);
 
-    return ( le_wifiAp_NewEventHandlerRef_t )( handlerRef );
+    return (le_wifiAp_NewEventHandlerRef_t)(handlerRef);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -110,15 +110,17 @@ le_wifiAp_NewEventHandlerRef_t le_wifiAp_AddNewEventHandler
 //--------------------------------------------------------------------------------------------------
 void le_wifiAp_RemoveNewEventHandler
 (
-    le_wifiAp_NewEventHandlerRef_t addHandlerRef
+    le_wifiAp_NewEventHandlerRef_t handlerRef
         ///< [IN]
+        ///< Event handler function to remove.
 )
 {
+    le_event_RemoveHandler((le_event_HandlerRef_t)handlerRef);
 }
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function starts the WIFI Access Point.
+ * This function starts the WiFi Access Point.
  * Note that all settings, if to be used, such as security, username, password must set prior to
  * starting the Access Point.
  *
@@ -137,7 +139,7 @@ le_result_t le_wifiAp_Start
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function stops the WIFI Access Point.
+ * This function stops the WiFi Access Point.
  *
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
@@ -155,9 +157,9 @@ le_result_t le_wifiAp_Stop
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the Service set identification (SSID) of the AccessPoint
- * Default value is "LEGATO Access Point"
- * @note that the SSID does not have to be human readable ASCII values, but often has.
+ * Set the Service Set IDentification (SSID) of the access point
+ *
+ * @note The SSID does not have to be human readable ASCII values, but often is.
  *
  * @return LE_BAD_PARAMETER Some parameter is invalid.
  * @return LE_OK            Function succeeded.
@@ -165,22 +167,23 @@ le_result_t le_wifiAp_Stop
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiAp_SetSsid
 (
-    const uint8_t* ssidPtr,
+    const uint8_t *ssidPtr,
         ///< [IN]
         ///< The SSID to set as a octet array.
 
     size_t ssidNumElements
         ///< [IN]
+        ///< The length of the SSID in octets.
 )
 {
-    return pa_wifiAp_SetSsid( ssidPtr, ssidNumElements );
+    return pa_wifiAp_SetSsid(ssidPtr, ssidNumElements);
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the Security protocol to use.
- * Default value is SECURITY_WPA2.
+ * Set the security protocol to use.
+ *
  * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
  * @return LE_BAD_PARAMETER Some parameter is invalid.
@@ -191,19 +194,20 @@ le_result_t le_wifiAp_SetSecurityProtocol
 (
     le_wifiAp_SecurityProtocol_t securityProtocol
         ///< [IN]
-        ///< The security protocol to use.
+        ///< The security protocol used to communicate with the access point.
 )
 {
-    return pa_wifiAp_SetSecurityProtocol( securityProtocol );
+    return pa_wifiAp_SetSecurityProtocol(securityProtocol);
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Set the passphrase used to generate the PSK.
- * Default value is "ChangeThisPassword".
  *
- * @note the difference between le_wifiAp_SetPreSharedKey() and this function
+ * @note This is one way to authenticate against the access point. The other one is provided by the
+ * le_wifiAp_SetPreSharedKey() function. Both ways are exclusive and are effective only when used
+ * with WPA-personal authentication.
  *
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
@@ -212,20 +216,22 @@ le_result_t le_wifiAp_SetSecurityProtocol
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiAp_SetPassPhrase
 (
-    const char* passPhrase
+    const char *passphrasePtr
         ///< [IN]
-        ///< pass-phrase for PSK
+        ///< Passphrase to authenticate against the access point.
 )
 {
-    return pa_wifiAp_SetPassPhrase( passPhrase );
+    return pa_wifiAp_SetPassPhrase(passphrasePtr);
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the Pre Shared Key, PSK.
- * There is no default value, since le_wifiAp_SetPassPhrase is used as default.
- * @note the difference between le_wifiAp_SetPassPhrase() and this function
+ * Set the pre-shared key (PSK).
+ *
+ * @note This is one way to authenticate against the access point. The other one is provided by the
+ * le_wifiAp_SetPassPhrase() function. Both ways are exclusive and are effective only when used
+ * with WPA-personal authentication.
  *
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
@@ -234,12 +240,12 @@ le_result_t le_wifiAp_SetPassPhrase
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiAp_SetPreSharedKey
 (
-    const char* preSharedKey
+    const char *preSharedKeyPtr
         ///< [IN]
-        ///< PSK. Note the difference between PSK and Pass Phrase.
+        ///< Pre-shared key used to authenticate against the access point.
 )
 {
-    return pa_wifiAp_SetPreSharedKey( preSharedKey );
+    return pa_wifiAp_SetPreSharedKey(preSharedKeyPtr);
 }
 
 
@@ -255,23 +261,23 @@ le_result_t le_wifiAp_SetPreSharedKey
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiAp_SetDiscoverable
 (
-    bool discoverable
+    bool isDiscoverable
         ///< [IN]
         ///< If TRUE the Access Point shows up on scans, else it is hidden.
 )
 {
-    return pa_wifiAp_SetDiscoverable( discoverable );
+    return pa_wifiAp_SetDiscoverable(isDiscoverable);
 }
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set which Wifi Channel to use.
+ * Set the WiFi channel used to communicate with the access point.
  * Default value is 1.
  * Some legal restrictions for values 12 - 14 might apply for your region.
  *
  * @return LE_OUT_OF_RANGE Requested channel number is out of range.
- * @return LE_OK            Function succeeded.
+ * @return LE_OK           Function succeeded.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -288,7 +294,7 @@ le_result_t le_wifiAp_SetChannel
 
 //--------------------------------------------------------------------------------------------------
 /**
- *  Wifi Access Point COMPONENT Init
+ *  WiFi access point component initialization.
  */
 //--------------------------------------------------------------------------------------------------
 void le_wifiAp_Init
@@ -296,15 +302,15 @@ void le_wifiAp_Init
     void
 )
 {
-    LE_DEBUG( "Wifi Access Point Service is ready" );
+    LE_DEBUG("WiFi Access Point Service is ready");
 
     pa_wifiAp_Init();
 
-    // Create an event Id for new Wifi Events
-    NewWifiApEventId = le_event_CreateId( "WiFiApEventId", sizeof( le_wifiAp_Event_t ) );
+    // Create an event Id for new WiFi Events
+    NewWifiApEventId = le_event_CreateId("WiFiApEventId", sizeof(le_wifiAp_Event_t));
 
     // register for events from PA.
-    pa_wifiAp_AddEventHandler( PaEventApHandler, NULL );
+    pa_wifiAp_AddEventHandler(PaEventApHandler, NULL);
 
 }
 
@@ -319,16 +325,16 @@ void le_wifiAp_Init
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiAp_SetMaxNumberOfClients
 (
-    int8_t maxNumberOfClient
+    int8_t maxNumberOfClients
         ///< [IN]
         ///< the maximum number of clients
 )
 {
-    if( 0 == maxNumberOfClient )
+    if (0 == maxNumberOfClients)
     {
         return LE_OUT_OF_RANGE;
     }
-    return pa_wifiAp_SetMaxNumberClients( maxNumberOfClient );
+    return pa_wifiAp_SetMaxNumberClients(maxNumberOfClients);
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -29,16 +29,16 @@ iptables -t nat -F
 iptables -t mangle -F
 iptables -F
 iptables -X
-route del default gw ${INT_NET_ADDR} ${INT_NET}
+route del default gw ${ITF_WAN_ADDR} ${ITF_WAN}
 
 ### Shutdown the WLAN interface
-echo -ne "<font color=\"black\" >$(date "+%T"):</font> Unmounting ${INT_WIFI} <br>\r\n" >> ${LOG_MSG_FILE}
-/sbin/ifconfig ${INT_WIFI} down >> ${LOG_CMD_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Unmounting ${ITF_LAN} <br>\r\n" >> ${LOG_MSG_FILE}
+/sbin/ifconfig ${ITF_LAN} down >> ${LOG_CMD_FILE}
 
 ### Shutdown the relay interface: rmnet0 | eth0
-echo -ne "<font color=\"black\" >$(date "+%T"):</font> Unmounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
-case "${INT_NET}" in
-    eth*) ifconfig ${INT_NET} down ;;
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Unmounting the relay interface ${ITF_WAN}...<br>\r\n" >> ${LOG_MSG_FILE}
+case "${ITF_WAN}" in
+    eth*) ifconfig ${ITF_WAN} down ;;
     rmnet*) cm radio off ;;
 esac
 

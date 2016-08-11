@@ -1,5 +1,5 @@
  /**
-  * This module implements a test for Wifi Access Point
+  * This module implements a test for WiFi access point
   *
   * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
   *
@@ -14,14 +14,13 @@
 //--------------------------------------------------------------------------------------------------
 #define TEST_SSID_STR "wifiApSSID"
 
-#define TEST_SECU_PROTO  LE_WIFIAP_SECURITY_WPA2
+#define TEST_SECU_PROTO LE_WIFIAP_SECURITY_WPA2
 #define TEST_PASSPHRASE "passphrase"
-
 
 
 //--------------------------------------------------------------------------------------------------
 // PREREQUISITE!!     IP HANDLING
-// Please note that IP handling is not provided by the Wifi Service,
+// Please note that IP handling is not provided by the WiFi Service,
 // but the following is provided as an example of how the user can setup IP.
 // For the following to work the file :
 //  /etc/dnsmasq.d/wifiAP.conf
@@ -33,29 +32,26 @@
 // Then reboot! Because this is read at startup.
 //--------------------------------------------------------------------------------------------------
 
-//# IP & mask of subnet created on the wlan
-#define  SUBNET "192.168.0.0/24"
-#define  HOST_IP "192.168.10.1"
-
+// IP & mask of subnet created on the wlan
+#define SUBNET         "192.168.0.0/24"
+#define HOST_IP        "192.168.10.1"
+// IP range allotted to clients
 #define IP_RANGE_START "192.168.10.10"
-#define IP_RANGE_END "192.168.10.20"
-#define MASK "255.255.255.0"
-
+#define IP_RANGE_END   "192.168.10.20"
 
 
 //--------------------------------------------------------------------------------------------------
 //                                       Internal defines
 //--------------------------------------------------------------------------------------------------
 
-//# interface du the Access Point
-#define INT_WIFI "wlan0"
+// interface of the access point (LAN - Local Area Network)
+#define ITF_LAN "wlan0"
+// bridge interface to access the Internet (WAN - Wide Area Network)
+#define ITF_WAN "eth0"
 
 // defines because the SSID is actually uint8 not char.
-#define TEST_SSID     ((const uint8_t *) TEST_SSID_STR)
-#define TEST_SSID_NBR_BYTES     (sizeof(TEST_SSID_STR)-1)
-
-//# interface wlan to eth0 that has access to Internet
-#define INT_NET "eth0"
+#define TEST_SSID           ((const uint8_t *)TEST_SSID_STR)
+#define TEST_SSID_NBR_BYTES (sizeof(TEST_SSID_STR)-1)
 
 
 //--------------------------------------------------------------------------------------------------
@@ -73,28 +69,32 @@ static le_wifiAp_NewEventHandlerRef_t HdlrRef = NULL;
 //--------------------------------------------------------------------------------------------------
 static void RunSystemCommand
 (
-    char * commandString
+    char *commandStringPtr
 )
 {
-    int16_t systemResult;
+    int systemResult;
 
-    if( NULL == commandString )
+    if (NULL == commandStringPtr)
     {
-        LE_ERROR( "RunSystemCommand ERROR Parameter is NULL" );
+        LE_ERROR("RunSystemCommand ERROR Parameter is NULL.");
+        return;
+    }
+    if ('\0' == *commandStringPtr)
+    {
+        LE_INFO("RunSystemCommand INFO Nothing to execute.");
         return;
     }
 
-    systemResult = system( commandString );
+    systemResult = system(commandStringPtr);
     // Return value of -1 means that the fork() has failed (see man system).
-    if ( 0 == WEXITSTATUS( systemResult ) )
+    if (0 == WEXITSTATUS(systemResult))
     {
-        LE_INFO("RunSystemCommand Success: %s", commandString);
+        LE_INFO("RunSystemCommand Success: %s", commandStringPtr);
     }
     else
     {
-        LE_ERROR( "RunSystemCommand Error %s Failed: (%d)", commandString, systemResult );
+        LE_ERROR("RunSystemCommand Error %s Failed: (%d)", commandStringPtr, systemResult);
     }
-
 }
 
 
@@ -109,24 +109,19 @@ static void Testle_startDhcpServerAndbridgeConnection
     void
 )
 {
-    RunSystemCommand("/sbin/ifconfig " INT_WIFI " " HOST_IP " up");
+    RunSystemCommand("ifconfig " ITF_LAN " " HOST_IP " up");
 
-    //# DNSMASQ Startup
-//    RunSystemCommand( "/usr/bin/dnsmasq --interface=" INT_WIFI
-//                     " --dhcp-range=" IP_RANGE_START "," IP_RANGE_END ",12h -d --bogus-priv&");
-
-    //# Turn on IP forwarding (faire suivre les paquets d'une interface à l'autre)
+    // Turn on IP forwarding
     RunSystemCommand("echo 1 > /proc/sys/net/ipv4/ip_forward");
-    //# load masquerade module
-    RunSystemCommand("/sbin/modprobe ipt_MASQUERADE");
+    // Load masquerade module
+    RunSystemCommand("modprobe ipt_MASQUERADE");
 
-    RunSystemCommand("/usr/sbin/iptables -A POSTROUTING -t nat -o " INT_NET " -j MASQUERADE");
-    RunSystemCommand("/usr/sbin/iptables -A FORWARD --match state "
-                      "--state RELATED,ESTABLISHED --jump ACCEPT");
-    RunSystemCommand("/usr/sbin/iptables -A FORWARD -i " INT_WIFI " --destination " SUBNET
-                    " --match state --state NEW --jump ACCEPT");
-
-
+    RunSystemCommand("iptables -A POSTROUTING -t nat -o " ITF_WAN " -j MASQUERADE");
+    RunSystemCommand("iptables -A FORWARD --match state "
+        "--state RELATED,ESTABLISHED --jump ACCEPT");
+    RunSystemCommand("iptables -A FORWARD -i " ITF_LAN " --destination " SUBNET
+        " --match state --state NEW --jump ACCEPT");
+    RunSystemCommand("iptables -A INPUT -s " SUBNET " --jump ACCEPT");
 }
 
 //! [SetCred]
@@ -140,50 +135,51 @@ static void Testle_setCredentials
     void
 )
 {
-    LE_ASSERT(LE_OK == le_wifiAp_SetPassPhrase ( TEST_PASSPHRASE ));
+    LE_ASSERT(LE_OK == le_wifiAp_SetPassPhrase(TEST_PASSPHRASE));
 
-    LE_ASSERT(LE_OK == le_wifiAp_SetSecurityProtocol ( TEST_SECU_PROTO ));
+    LE_ASSERT(LE_OK == le_wifiAp_SetSecurityProtocol(TEST_SECU_PROTO));
 
-    LE_ASSERT(LE_OK == le_wifiAp_SetDiscoverable ( true ));
+    LE_ASSERT(LE_OK == le_wifiAp_SetDiscoverable(true));
 }
 //! [SetCred]
 
 //! [Subscribe]
 //--------------------------------------------------------------------------------------------------
 /**
- * Handler for Wifi Client changes
+ * Handler for WiFi client changes
  *
- * @param event
- *        Handles the wifi events
- * @param contextPtr
  */
 //--------------------------------------------------------------------------------------------------
 static void myMsgHandler
 (
     le_wifiAp_Event_t event,
-    void* contextPtr
+        ///< [IN]
+        ///< WiFi event to process
+    void *contextPtr
+        ///< [IN]
+        ///< Associated event context
 )
 {
-    LE_INFO( "Wifi Ap event received");
-    switch( event )
+    LE_INFO("WiFi access point event received");
+    switch(event)
     {
         case LE_WIFIAP_EVENT_CLIENT_CONNECTED:
         {
-            ///< A client connect to AP
-            LE_INFO( "LE_WIFIAP_EVENT_CLIENT_CONNECTED");
+            // Client connected to AP
+            LE_INFO("LE_WIFIAP_EVENT_CLIENT_CONNECTED");
         }
         break;
 
         case LE_WIFIAP_EVENT_CLIENT_DISCONNECTED:
         {
-            ///< A client connect to AP
-            LE_INFO( "LE_WIFICLIENT_EVENT_DISCONNECTED");
+            // Client disconnected from AP
+            LE_INFO("LE_WIFICLIENT_EVENT_DISCONNECTED");
         }
         break;
 
 
         default:
-            LE_ERROR( "ERROR Unknown event %d", event);
+            LE_ERROR("ERROR Unknown event %d", event);
         break;
     }
 }
@@ -191,7 +187,7 @@ static void myMsgHandler
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Tests the Wifi Access Point.
+ * Tests the WiFi access point.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -200,31 +196,29 @@ void Testle_wifiApStart
     void
 )
 {
-    LE_INFO( "Start Test Wifi Access Point");
+    LE_INFO("Start Test WiFi access point");
 
     // Add an handler function to handle message reception
-    HdlrRef=le_wifiAp_AddNewEventHandler( myMsgHandler, NULL );
+    HdlrRef=le_wifiAp_AddNewEventHandler(myMsgHandler, NULL);
 
     LE_ASSERT(HdlrRef != NULL);
 
-    LE_ASSERT(LE_OK == le_wifiAp_SetSsid( TEST_SSID, TEST_SSID_NBR_BYTES ));
+    LE_ASSERT(LE_OK == le_wifiAp_SetSsid(TEST_SSID, TEST_SSID_NBR_BYTES));
 
     Testle_setCredentials();
 
-    if( LE_OK == le_wifiAp_Start() )
+    if (LE_OK == le_wifiAp_Start())
     {
-        LE_INFO( "le_wifiAp_Start OK");
+        LE_INFO("le_wifiAp_Start OK");
 
         Testle_startDhcpServerAndbridgeConnection();
     }
     else
     {
-        LE_ERROR( "le_wifiAp_Start ERROR");
+        LE_ERROR("le_wifiAp_Start ERROR");
     }
 
-    LE_ASSERT(LE_OK == le_wifiAp_SetIpRange("192.168.10.1",
-                                            "192.168.10.10",
-                                            "192.168.10.100"));
+    LE_ASSERT(LE_OK == le_wifiAp_SetIpRange(HOST_IP, IP_RANGE_START, IP_RANGE_END));
 }
 //! [Subscribe]
 
@@ -239,26 +233,27 @@ static void Testle_wifiApStop
     int signalId
 )
 {
-    LE_INFO( "WIFI AP STOP : Received signal %d", signalId );
+    LE_INFO("WIFI AP STOP : Received signal %d", signalId);
 
     // Stop the AP
     le_wifiAp_Stop();
 
     // Turn off IP forwarding
-    LE_INFO( "WIFI AP STOP - Disabling IP forwarding" );
+    LE_INFO("WIFI AP STOP - Disabling IP forwarding");
     RunSystemCommand("echo 0 > /proc/sys/net/ipv4/ip_forward");
     // Removing masquerade modules
-    LE_INFO( "WIFI AP STOP - Removing the masquerading module..." );
-    RunSystemCommand("modprobe ipt_MASQUERADE");
+    LE_INFO("WIFI AP STOP - Removing the masquerading module...");
+    RunSystemCommand("rmmod ipt_MASQUERADE");
 
     // Turn off the iptables
-    RunSystemCommand( "iptables -t nat -f" );
-    RunSystemCommand( "iptables -t mangle -F" );
-    RunSystemCommand( "iptables -F" );
-    RunSystemCommand( "iptables -X" );
+    RunSystemCommand("iptables -t nat -f");
+    RunSystemCommand("iptables -t mangle -F");
+    RunSystemCommand("iptables -F");
+    RunSystemCommand("iptables -X");
+
 
     // Flush the IP address of the wlan0 interface
-    RunSystemCommand( "ip addr flush dev " INT_WIFI );
+    RunSystemCommand("ip addr flush dev " ITF_LAN);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -269,10 +264,11 @@ static void Testle_wifiApStop
 //--------------------------------------------------------------------------------------------------
 COMPONENT_INIT
 {
-    // Wifi Init
-    LE_INFO( "======== Wifi Ap Test  ========");
+    // WiFi Init
+    LE_INFO("======== WiFi AP Test  ========");
 
-    putenv("PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
+    putenv("PATH=/legato/systems/current/bin:/usr/local/bin:"
+        "/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
 
     signal(SIGINT, Testle_wifiApStop);
     signal(SIGTERM, Testle_wifiApStop);

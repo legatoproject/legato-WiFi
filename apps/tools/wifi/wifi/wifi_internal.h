@@ -2,7 +2,7 @@
 /**
  * @file wifi_internal.h
  *
- * Wifi Service Command line internal headerfile
+ * WiFi Service Command line internal headerfile
  *
  * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  */
@@ -16,38 +16,38 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Print help for Wifi Client
+ * Print help for WiFi client
  */
 //--------------------------------------------------------------------------------------------------
-void PrintClientHelp( void );
+void PrintClientHelp(void);
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Print help for Wifi Access Point
+ * Print help for WiFi access point
  */
 //--------------------------------------------------------------------------------------------------
-void PrintApHelp( void );
+void PrintApHelp(void);
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Process commands for Wifi Client service.
+ * Process commands for WiFi client service.
  */
 //--------------------------------------------------------------------------------------------------
 void ExecuteWifiClientCommand
 (
-    const char * commandPtr,       ///< [IN] Command to execute (NULL = run default command)
+    const char *commandPtr, ///< [IN] Command to execute (NULL = run default command)
     size_t numArgs          ///< [IN] Number of arguments
 );
 
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Process commands for Wifi Client service.
+ * Process commands for WiFi client service.
  */
 //--------------------------------------------------------------------------------------------------
 void ExecuteWifiApCommand
 (
-    const char * commandPtr,       ///< [IN] Command to execute (NULL = run default command)
+    const char *commandPtr, ///< [IN] Command to execute (NULL = run default command)
     size_t numArgs          ///< [IN] Number of arguments
 );
 

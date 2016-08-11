@@ -107,45 +107,42 @@ ${WIFITOOL} ap start >> ${LOG_CMD_FILE}
 
 ##############################
 ### Configure the WLAN interface
-echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting of ${INT_WIFI}... <br>\r\n" >> ${LOG_MSG_FILE}
-ifconfig ${INT_WIFI} ${WIFIAPIP} netmask ${WIFIAPMASK} up >> ${LOG_CMD_FILE}
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting of ${ITF_LAN}... <br>\r\n" >> ${LOG_MSG_FILE}
+ifconfig ${ITF_LAN} ${WIFIAPIP} netmask ${WIFIAPMASK} up >> ${LOG_CMD_FILE}
 
 ### Start the relay interface: rmnet0/ppp0 | eth0
 ### WARNING: For rmnet interface, PINless code SIM must be used
-echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting the relay interface ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
-case "${INT_NET}" in
+echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting the relay interface ${ITF_WAN}...<br>\r\n" >> ${LOG_MSG_FILE}
+case "${ITF_WAN}" in
     eth*)
-        ifconfig ${INT_NET} up
+        ifconfig ${ITF_WAN} up
         ;;
     rmnet* | ppp*)
-        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Enabling the radio on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Enabling the radio on ${ITF_WAN}...<br>\r\n" >> ${LOG_MSG_FILE}
         cm radio on
         sleep 1
-        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Enabling the data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Enabling the data connection on ${ITF_WAN}...<br>\r\n" >> ${LOG_MSG_FILE}
         cm data connect &
         sleep 1
-        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Waiting for data connection on ${INT_NET}...<br>\r\n" >> ${LOG_MSG_FILE}
+        echo -ne "<font color=\"black\" >$(date "+%T"):</font> Waiting for data connection on ${ITF_WAN}...<br>\r\n" >> ${LOG_MSG_FILE}
         ;;
 esac
 
 RETRY=0
 while [ ${RETRY} -lt 30 ] ; do
-    # INT_NET_ADDR=$(ifconfig ${INT_NET} | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
-    INT_NET_ADDR=$(ifconfig ${INT_NET} | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
-    # echo -ne "${INT_NET} address is [${INT_NET_ADDR}]...${RETRY}<br>\r\n" >> ${LOG_MSG_FILE}
-    if [ "${INT_NET_ADDR}" == "" ]; then
+    ITF_WAN_ADDR=$(ifconfig ${ITF_WAN} | grep "inet addr" | cut -d ':' -f 2 | cut -d ' ' -f 1)
+    if [ "${ITF_WAN_ADDR}" == "" ]; then
         sleep 1
         RETRY=$((${RETRY} + 1))
     else
         break
     fi
 done
-# echo -ne "${INT_NET} address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
-if [ "${INT_NET_ADDR}" == "" ]; then
-    echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting of relay interface ${INT_NET} failed...<br>\r\n" >> ${LOG_MSG_FILE}
+if [ "${ITF_WAN_ADDR}" == "" ]; then
+    echo -ne "<font color=\"black\" >$(date "+%T"):</font> Mounting of relay interface ${ITF_WAN} failed...<br>\r\n" >> ${LOG_MSG_FILE}
 else
-    echo -ne "<font color=\"black\" >$(date "+%T"):</font> Relay interface ${INT_NET} IP address is ${INT_NET_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
-    route add default gw ${INT_NET_ADDR} ${INT_NET}
+    echo -ne "<font color=\"black\" >$(date "+%T"):</font> Relay interface ${ITF_WAN} IP address is ${ITF_WAN_ADDR}<br>\r\n" >> ${LOG_MSG_FILE}
+    route add default gw ${ITF_WAN_ADDR} ${ITF_WAN}
 fi
 
 ### Turn on IP forwarding
@@ -154,10 +151,10 @@ echo 1 > /proc/sys/net/ipv4/ip_forward
 ### Configure the NAT
 echo -ne "<font color=\"black\" >$(date "+%T"):</font> Configuring the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
 modprobe ipt_MASQUERADE
-iptables -A POSTROUTING -t nat -o $INT_NET -j MASQUERADE
+iptables -A POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
 iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
-iptables -A FORWARD -i $INT_WIFI --destination $SUBNET --match state --state NEW --jump ACCEPT
-iptables -A INPUT -s $SUBNET --jump ACCEPT
+iptables -A FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
+iptables -A INPUT -s ${SUBNET} --jump ACCEPT
 
 ### Stop the DHCP server
 echo -ne "<font color=\"black\" >$(date "+%T"):</font> Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
