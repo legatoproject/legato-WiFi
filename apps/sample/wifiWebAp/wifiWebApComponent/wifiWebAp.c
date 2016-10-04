@@ -56,23 +56,23 @@ static le_result_t WifiEventLog
 
     if (file == NULL)
     {
-        LE_ERROR("WifiEventLog: Invalid file handler");
+        LE_ERROR("Invalid file handler");
         return LE_BAD_PARAMETER;
     }
     if (data == NULL)
     {
-        LE_ERROR("WifiEventLog: Invalid data parameter");
+        LE_ERROR("Invalid data parameter");
         return LE_BAD_PARAMETER;
     }
     if (*data == '\0')
     {
-        LE_INFO("WifiEventLog; Nothing to log");
+        LE_INFO("Nothing to log");
         return LE_OK;
     }
     length = strlen(data);
     if (length != fwrite(data, 1, length, file))
     {
-        LE_ERROR("WifiEventLog: Write operation failed.");
+        LE_ERROR("Write operation failed.");
         return LE_FAULT;
     }
 
@@ -191,16 +191,16 @@ static void StartWebServer
     char tmpString[]   = HTTP_SYS_CMD;
     char str[STR_SIZE];
 
-    LE_INFO("StartWebServer : popen : " HTTP_SYS_CMD);
+    LE_INFO("popen : " HTTP_SYS_CMD);
     HttpdCmdPipePtr = popen(tmpString, "r");
-    LE_INFO("StartWebServer : AFTER (command did not hang) %p", HttpdCmdPipePtr);
+    LE_INFO("AFTER (command did not hang) %p", HttpdCmdPipePtr);
     if (NULL == HttpdCmdPipePtr)
     {
-        LE_ERROR("StartWebServer: Failed to run command:\"%s\" errno:%d %s",
+        LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
             (tmpString),
             errno,
             strerror(errno));
-        LE_ERROR("StartWebServer:  errno:%d %s", errno, strerror(errno));
+        LE_ERROR("errno:%d %s", errno, strerror(errno));
 
         return;
     }
@@ -253,7 +253,7 @@ static void RunSystemCommand
 
     if (NULL == commandStringPtr)
     {
-        LE_ERROR("RunSystemCommand ERROR Parameter is NULL");
+        LE_ERROR("ERROR Parameter is NULL");
         return;
     }
 
@@ -261,11 +261,11 @@ static void RunSystemCommand
     // Return value of -1 means that the fork() has failed (see man system).
     if (0 == WEXITSTATUS(systemResult))
     {
-        LE_INFO("RunSystemCommand Success: %s", commandStringPtr);
+        LE_INFO("Success: %s", commandStringPtr);
     }
     else
     {
-        LE_ERROR("RunSystemCommand Error %s Failed: (%d)", commandStringPtr, systemResult);
+        LE_ERROR("Error %s Failed: (%d)", commandStringPtr, systemResult);
     }
 
 }
@@ -289,10 +289,10 @@ static void StopWebServer
     le_wifiAp_Stop();
 
     // Turn off IP forwarding
-    LE_INFO("StopWebServer - Disabling IP forwarding");
+    LE_INFO("Disabling IP forwarding");
     RunSystemCommand("echo 0 > /proc/sys/net/ipv4/ip_forward");
     // Removing masquerade modules
-    LE_INFO("StopWebServer - Removing the masquerading module...");
+    LE_INFO("Removing the masquerading module...");
     RunSystemCommand("modprobe ipt_MASQUERADE");
 
     // Turn off the iptables

@@ -90,12 +90,12 @@ static void FirstLayerWifiApEventHandler
 
     if (NULL != wifiEventPtr)
     {
-        LE_INFO("FirstLayerWifiApEventHandler event: %d", *wifiEventPtr);
+        LE_INFO("Event: %d", *wifiEventPtr);
         ApHandlerFunc(*wifiEventPtr, le_event_GetContextPtr());
     }
     else
     {
-        LE_ERROR("FirstLayerWifiApEventHandler event is NULL");
+        LE_ERROR("Event is NULL");
     }
 }
 
@@ -114,7 +114,7 @@ static void GenerateApEvent
     le_wifiAp_Event_t event
 )
 {
-    LE_INFO( "GenerateApEvent event: %d ", event);
+    LE_INFO("Event: %d ", event);
     le_event_Report(WifiApPaEvent , (void *)&event, sizeof(le_wifiAp_Event_t));
 }
 
@@ -162,7 +162,7 @@ static void StartConnectSimulation
     le_clk_Time_t interval = { onceEvery, 0 };
     SimuClientConnectTimer = le_timer_Create("WiFi Simu AP Connect Timer");
 
-    LE_INFO("StartApSimulation timer: %p", SimuClientConnectTimer);
+    LE_INFO("Timer: %p", SimuClientConnectTimer);
 
     if (LE_OK != le_timer_SetHandler(SimuClientConnectTimer, SimuClientConnectTimeCallBack))
     {
@@ -202,26 +202,26 @@ static void StartDisconnectSimulation
 
     SimuClientDisconnectTimer = le_timer_Create("WiFi Simu AP DisConnect Timer");
 
-    LE_INFO("StartDisconnectSimulation timer: %p", SimuClientDisconnectTimer);
+    LE_INFO("Timer: %p", SimuClientDisconnectTimer);
 
     if (LE_OK != le_timer_SetHandler(SimuClientDisconnectTimer, SimuClientDisconnectTimeCallBack))
     {
-        LE_ERROR("ERROR: StartDisconnectSimulation le_timer_SetHandler failed.");
+        LE_ERROR("ERROR: le_timer_SetHandler failed.");
     }
     if (LE_OK != le_timer_SetInterval(SimuClientDisconnectTimer, interval))
     {
-        LE_ERROR("ERROR: StartDisconnectSimulation le_timer_SetInterval failed.");
+        LE_ERROR("ERROR: le_timer_SetInterval failed.");
     }
 
     //repeat "repeat" times
     if (LE_OK != le_timer_SetRepeat(SimuClientDisconnectTimer, repeat))
     {
-        LE_ERROR("ERROR: StartDisconnectSimulation le_timer_SetInterval failed.");
+        LE_ERROR("ERROR: le_timer_SetRepeat failed.");
     }
 
     if (LE_OK != le_timer_Start(SimuClientDisconnectTimer))
     {
-        LE_ERROR("ERROR: StartDisconnectSimulation le_timer_SetInterval failed.");
+        LE_ERROR("ERROR: le_timer_Start failed.");
     }
 }
 
@@ -258,7 +258,7 @@ le_result_t pa_wifiAp_Init
     void
 )
 {
-    LE_INFO("pa_wifiAp_Init() called");
+    LE_INFO("AP init called");
     // Create the event for signaling user handlers.
     WifiApPaEvent = le_event_CreateId("WifiApPaEvent", sizeof(le_wifiAp_Event_t));
 
@@ -284,7 +284,7 @@ le_result_t pa_wifiAp_Release
     void
 )
 {
-    LE_INFO("pa_wifiAp_Release() called");
+    LE_INFO("AP release called");
     return LE_OK;
 }
 
@@ -305,7 +305,7 @@ le_result_t pa_wifiAp_Start
 {
     le_result_t result = LE_OK;
 
-    LE_INFO("pa_wifiAp_Start() Simulated SSID: \"%s\"", (char *)SavedSsid);
+    LE_INFO("Simulated SSID: \"%s\"", (char *)SavedSsid);
 
     StartApSimulation();
 
@@ -358,7 +358,7 @@ le_result_t  pa_wifiAp_AddEventHandler
         (le_event_HandlerFunc_t)handlerPtr);
     if (NULL != handlerRef)
     {
-        LE_INFO("pa_wifiAp_AddEventHandler() ERROR: le_event_AddLayeredHandler returned NULL");
+        LE_INFO("ERROR: le_event_AddLayeredHandler returned NULL");
         return LE_BAD_PARAMETER;
     }
 
@@ -389,7 +389,7 @@ le_result_t pa_wifiAp_SetSsid
 {
     le_result_t result = LE_BAD_PARAMETER;
 
-    LE_INFO("pa_wifiAp_SetSsid SSID length %d SSID: \"%.*s\"",
+    LE_INFO("SSID length %d SSID: \"%.*s\"",
         (int)ssidNumElements,
         (int)ssidNumElements,
         (char *)ssidPtr);
@@ -429,7 +429,7 @@ le_result_t pa_wifiAp_SetSecurityProtocol
 {
     le_result_t result;
 
-    LE_INFO("pa_wifiAp_SetSecurityProtocol: %d", securityProtocol);
+    LE_INFO("Security protocol: %d", securityProtocol);
     switch (securityProtocol)
     {
         case LE_WIFIAP_SECURITY_NONE:
@@ -466,7 +466,7 @@ le_result_t pa_wifiAp_SetPassPhrase
 {
     le_result_t result = LE_BAD_PARAMETER;
 
-    LE_INFO("pa_wifiAp_SetPassPhrase");
+    LE_INFO("Set passphrase");
     if (NULL != passphrasePtr)
     {
         uint32_t length = strlen(passphrasePtr);
@@ -505,7 +505,7 @@ le_result_t pa_wifiAp_SetPreSharedKey
 {
     le_result_t result = LE_BAD_PARAMETER;
 
-    LE_INFO("pa_wifiAp_SetPreSharedKey");
+    LE_INFO("Set PSK");
     if (NULL != preSharedKeyPtr)
     {
         uint32_t length = strlen(preSharedKeyPtr);
@@ -540,7 +540,7 @@ le_result_t pa_wifiAp_SetDiscoverable
 )
 {
     // Store Discoverable to be used later during startup procedure
-    LE_INFO("pa_wifiAp_SetDiscoverable");
+    LE_INFO("Set discoverability");
     SavedDiscoverable = isDiscoverable;
     return LE_OK;
 }
@@ -566,7 +566,7 @@ le_result_t pa_wifiAp_SetChannel
     // Store PreSharedKey to be used later during startup procedure
     le_result_t result = LE_OUT_OF_RANGE;
 
-    LE_INFO( "pa_wifiAp_SetChannel");
+    LE_INFO("Set channel");
     if ((channelNumber >= LE_WIFIDEFS_MIN_CHANNEL_VALUE) &&
         (channelNumber <= LE_WIFIDEFS_MAX_CHANNEL_VALUE))
     {
@@ -596,7 +596,7 @@ le_result_t pa_wifiAp_SetMaxNumberClients
 {
     // Store maxNumberClients to be used later during startup procedure
     le_result_t result = LE_OUT_OF_RANGE;
-    LE_INFO("pa_wifiAp_SetMaxNumberClients");
+    LE_INFO("Set maximum clients");
     if ((maxNumberClients >= 1) && (maxNumberClients <= TI_WIFI_MAX_USERS))
     {
        SavedMaxNumClients = maxNumberClients;
@@ -661,7 +661,7 @@ le_result_t pa_wifiAp_SetIpRange
 
     if (NULL != parameterPtr)
     {
-        LE_ERROR("pa_wifiAp_SetIpRange: Invalid %s IP address", parameterPtr);
+        LE_ERROR("Invalid %s IP address", parameterPtr);
         return LE_BAD_PARAMETER;
     }
     else
@@ -670,12 +670,12 @@ le_result_t pa_wifiAp_SetIpRange
         unsigned int start = ntohl(saStartPtr.sin_addr.s_addr);
         unsigned int stop = ntohl(saStopPtr.sin_addr.s_addr);
 
-        LE_INFO("pa_wifiAp_SetIpRange: @AP=%x, @APstart=%x, @APstop=%x",
+        LE_INFO("@AP=%x, @APstart=%x, @APstop=%x",
                 ap, start, stop);
 
         if (start > stop)
         {
-            LE_INFO("pa_wifiAp_SetIpRange: Need to swap start & stop IP addresses.");
+            LE_INFO("Need to swap start & stop IP addresses.");
             start = start ^ stop;
             stop = stop ^ start;
             start = start ^ stop;
@@ -683,7 +683,7 @@ le_result_t pa_wifiAp_SetIpRange
 
         if ((ap >= start) && (ap <= stop))
         {
-            LE_ERROR("pa_wifiAp_SetIpRange: AP IP address is within the range.");
+            LE_ERROR("AP IP address is within the range.");
             return LE_BAD_PARAMETER;
         }
     }
@@ -700,18 +700,18 @@ le_result_t pa_wifiAp_SetIpRange
         systemResult = system(cmd);
         if (0 != WEXITSTATUS (systemResult))
         {
-            LE_ERROR("pa_wifiAp_SetIpRange: Unable to mount the network interface.");
+            LE_ERROR("Unable to mount the network interface.");
             return LE_FAULT;
         }
         else
         {
             FILE *filePtr;
 
-            LE_INFO("pa_wifiAp_SetIpRange: Creation of dnsmasq configuration file (%s)", DNSMASQ_CFG_FILE);
+            LE_INFO("Creation of dnsmasq configuration file (%s)", DNSMASQ_CFG_FILE);
 
             if (symlink(DNSMASQ_CFG_FILE, DNSMASQ_CFG_LINK) && (EEXIST != errno))
             {
-                LE_ERROR("pa_wifiAp_SetIpRange: Unable to create link to dnsmasq configuration file: %m.");
+                LE_ERROR("Unable to create link to dnsmasq configuration file: %m.");
                 return LE_FAULT;
             }
             filePtr = fopen (DNSMASQ_CFG_FILE, "w");
@@ -724,17 +724,16 @@ le_result_t pa_wifiAp_SetIpRange
             }
             else
             {
-                LE_ERROR("pa_wifiAp_SetIpRange: Unable to open the dnsmasq configuration file: %m.");
+                LE_ERROR("Unable to open the dnsmasq configuration file: %m.");
                 return LE_FAULT;
             }
 
-            LE_INFO("pa_wifiAp_SetIpRange: @AP=%s, @APstart=%s, @APstop=%s",
-                    ipApPtr, ipStartPtr, ipStopPtr);
+            LE_INFO("@AP=%s, @APstart=%s, @APstop=%s", ipApPtr, ipStartPtr, ipStopPtr);
 
             systemResult = system("/etc/init.d/dnsmasq stop; /etc/init.d/dnsmasq start");
             if (0 != WEXITSTATUS (systemResult))
             {
-                LE_ERROR("pa_wifiAp_SetIpRange: Unable to restart the DHCP server.");
+                LE_ERROR("Unable to restart the DHCP server.");
                 return LE_FAULT;
             }
         }

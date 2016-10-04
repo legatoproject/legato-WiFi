@@ -63,11 +63,11 @@ static void AskForIpAddress
     // Return value of -1 means that the fork() has failed (see man system).
     if (0 == WEXITSTATUS(systemResult))
     {
-        LE_INFO("le_wifiClient_Connect DHCP client: %s", tmpString);
+        LE_INFO("DHCP client: %s", tmpString);
     }
     else
     {
-        LE_ERROR("le_wifiClient_Connect DHCP client %s Failed: (%d)", tmpString, systemResult);
+        LE_ERROR("DHCP client %s Failed: (%d)", tmpString, systemResult);
     }
 }
 
@@ -93,11 +93,11 @@ static void TestToPingGooglesDNS
     // Return value of -1 means that the fork() has failed (see man system).
     if (0 == WEXITSTATUS(systemResult))
     {
-        LE_INFO("le_wifiClient_Connect Ping: %s", tmpString);
+        LE_INFO("Ping: %s", tmpString);
     }
     else
     {
-        LE_ERROR("le_wifiClient_Connect Ping %s Failed: (%d)", tmpString, systemResult);
+        LE_ERROR("Ping %s Failed: (%d)", tmpString, systemResult);
     }
 }
 //--------------------------------------------------------------------------------------------------
@@ -114,7 +114,7 @@ static void TestReadScanResults
     uint32_t                       countNbrFound  = 0;
 
     //< WiFi Scan result for available access points available
-    LE_DEBUG("TestReadScanResults");
+    LE_DEBUG("Scan results");
     if (NULL != (accessPointRef = le_wifiClient_GetFirstAccessPoint()))
     {
         do
@@ -124,16 +124,16 @@ static void TestReadScanResults
             // SSID length in bytes
             size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_BYTES;
 
-            LE_DEBUG("TestReadScanResults:le_wifiClient_GetSignalStrength %d ",
+            LE_DEBUG("le_wifiClient_GetSignalStrength %d ",
                 le_wifiClient_GetSignalStrength(accessPointRef));
 
             countNbrFound++;
 
-            LE_DEBUG("TestReadScanResults:le_wifiClient_GetFirstAccessPoint OK");
+            LE_DEBUG("le_wifiClient_GetFirstAccessPoint OK");
 
             if (LE_OK == le_wifiClient_GetSsid(accessPointRef, &ssidBytes[0], &ssidNumElements))
             {
-                LE_DEBUG("TestReadScanResults:le_wifiClient_GetSsid OK, ssidLength %d;"
+                LE_DEBUG("le_wifiClient_GetSsid OK, ssidLength %d;"
                     "SSID: \"%.*s\" ",
                     (int)ssidNumElements,
                     (int)ssidNumElements,
@@ -141,10 +141,10 @@ static void TestReadScanResults
             }
             else
             {
-                LE_ERROR("TestReadScanResults:le_wifiClient_GetSsid ERROR");
+                LE_ERROR("le_wifiClient_GetSsid ERROR");
             }
         } while (NULL != (accessPointRef = le_wifiClient_GetNextAccessPoint()));
-        LE_DEBUG("TestReadScanResults::WiFi: TESTRESULT: Found %d of AccessPoints", countNbrFound);
+        LE_DEBUG("WiFi: TESTRESULT: Found %d of AccessPoints", countNbrFound);
     }
     else
     {
@@ -178,11 +178,11 @@ static void TestConnect
 
         if (LE_OK == le_wifiClient_Connect(AccessPointRefToConnectTo))
         {
-            LE_DEBUG("le_wifiClient_Connect OK");
+            LE_DEBUG("Connect OK");
         }
         else
         {
-            LE_ERROR("le_wifiClient_Connect ERROR");
+            LE_ERROR("Connect ERROR");
         }
 
     }
@@ -267,18 +267,18 @@ void Testle_wifiClient
     void
 )
 {
-    LE_DEBUG("Start Test Testle_wifiClient");
+    LE_DEBUG("Start Test");
 
     // Add an handler function to handle message reception
     HdlrRef = le_wifiClient_AddNewEventHandler(WifiClientEventHandler, NULL);
 
     if (LE_OK == le_wifiClient_Start())
     {
-        LE_DEBUG("le_wifiClient_Start OK");
+        LE_DEBUG("Start OK");
     }
     else
     {
-        LE_ERROR("le_wifiClient_Start ERROR");
+        LE_ERROR("Start ERROR");
     }
 
     AccessPointRefToConnectTo = le_wifiClient_Create((const uint8_t *)TEST_SSID,
@@ -289,11 +289,11 @@ void Testle_wifiClient
 
     if (LE_OK == le_wifiClient_Scan())
     {
-        LE_DEBUG("le_wifiClient_Scan OK");
+        LE_DEBUG("Scan OK");
     }
     else
     {
-        LE_ERROR("le_wifiClient_Scan ERROR");
+        LE_ERROR("Scan ERROR");
     }
 }
 

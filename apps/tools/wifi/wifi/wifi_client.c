@@ -471,7 +471,7 @@ void ExecuteWifiClientCommand
 
         if ((1 == rc1) && (LE_OK == le_wifiClient_SetPreSharedKey(apRef, pskPtr)))
         {
-            printf("pskPtr set sucessfully.\n");
+            printf("PSK set successfully.\n");
             exit(EXIT_SUCCESS);
         }
         else

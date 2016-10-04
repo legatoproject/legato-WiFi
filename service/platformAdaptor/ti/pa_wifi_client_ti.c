@@ -33,16 +33,32 @@
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE "wlan0 WIFICLIENT_CONNECT_SECURITY_NONE \"%.*s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP \
     "wlan0 WIFICLIENT_CONNECT_SECURITY_WEP \"%.*s\" \"%s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PASS_PERSONAL \
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PASS_PERSONAL \
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \
-    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\" \"%s\" \"%s\""
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \
-    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\" \"%s\" \"%s\""
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \
     "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \
     "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE \
     "wlan0 WIFICLIENT_CONNECT_WPA_PASSPHRASE \"%.*s\" %s"
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * The current security protocol.
+ */
+//--------------------------------------------------------------------------------------------------
+#define WPA_SUPPLICANT_FILE "/tmp/wpa_supplicant.conf"
+#define WPA_SUPPLICANT_DATA \
+    "network={\n \
+    ssid=\"%.*s\"\n \
+    psk=%s\n \
+    }\n"
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -169,12 +185,12 @@ static void FirstLayerWifiClientEventHandler
 
     if (NULL != wifiEventPtr)
     {
-        LE_INFO("FirstLayerWifiClientEventHandler event: %d", *wifiEventPtr);
+        LE_INFO("Event: %d", *wifiEventPtr);
         clientHandlerFunc(*wifiEventPtr, le_event_GetContextPtr());
     }
     else
     {
-        LE_ERROR("FirstLayerWifiClientEventHandler event is NULL");
+        LE_ERROR("Event is NULL");
     }
 }
 
@@ -192,14 +208,14 @@ static void *WifiClientPaThreadMain
     char tmpString[] = (WIFI_SCRIPT_PATH COMMAND_WIFI_SET_EVENT);
     char path[1024];
 
-    LE_INFO("WifiClientPaThreadMain: Started!");
+    LE_INFO("Started!");
 
     // Open the command "iw events" for reading.
     IwThreadPipePtr = popen(tmpString, "r");
 
     if (NULL == IwThreadPipePtr)
     {
-        LE_ERROR("WifiClientPaThreadMain: Failed to run command:\"%s\" errno:%d %s",
+        LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
             (tmpString),
             errno,
             strerror(errno));
@@ -248,7 +264,7 @@ le_result_t pa_wifiClient_Init
     void
 )
 {
-    LE_INFO("pa_wifiClient_Init() called");
+    LE_INFO("Init called");
     // Create the event for signaling user handlers.
     WifiClientPaEvent = le_event_CreateId("WifiClientPaEvent", sizeof(le_wifiClient_Event_t));
 
@@ -267,7 +283,7 @@ le_result_t pa_wifiClient_Release
     void
 )
 {
-    LE_INFO("pa_wifiClient_Release() called");
+    LE_INFO("Release called");
     return LE_OK;
 }
 
@@ -287,7 +303,7 @@ le_result_t pa_wifiClient_Start
     le_result_t result       = LE_FAULT;
     int         systemResult;
 
-    LE_INFO("pa_wifiClient_Start()");
+    LE_INFO("WiFi client starts");
 
     // Create WiFi Client PA Thread
     WifiClientPaThread = le_thread_Create("WifiClientPaThread", WifiClientPaThreadMain, NULL);
@@ -400,10 +416,10 @@ le_result_t pa_wifiClient_Scan
 {
     le_result_t result = LE_OK;
 
-    LE_INFO("pa_wifiClient_Scan");
+    LE_INFO("Scanning");
     if (IsScanRunning)
     {
-        LE_ERROR("pa_wifi_Scan: Scan is already running");
+        LE_ERROR("Scan is already running");
         return LE_BUSY;
     }
 
@@ -418,7 +434,7 @@ le_result_t pa_wifiClient_Scan
 
     if (NULL == IwScanPipePtr)
     {
-        LE_ERROR("pa_wifi_Scan: Failed to run command: errno:%d: \"%s\" Cmd:"
+        LE_ERROR("Failed to run command: errno:%d: \"%s\" Cmd:"
             COMMAND_WIFICLIENT_START_SCAN,
             errno,
             strerror(errno));
@@ -465,16 +481,16 @@ le_result_t pa_wifiClient_GetScanResult
 {
     char path[1024];
 
-    LE_INFO("pa_wifi_GetScanResult");
+    LE_INFO("Scan results");
 
     if (NULL == IwScanPipePtr)
     {
-       LE_ERROR("le_wifiClient_Scan: ERROR must call pa_wifi_Scan first");
+       LE_ERROR("ERROR must call pa_wifi_Scan first");
        return LE_FAULT;
     }
     if (NULL == accessPointPtr)
     {
-       LE_ERROR("le_wifiClient_Scan: ERROR : accessPoint == NULL");
+       LE_ERROR("ERROR : accessPoint == NULL");
        return LE_BAD_PARAMETER;
     }
 
@@ -547,7 +563,7 @@ le_result_t pa_wifiClient_SetSecurityProtocol
 {
     le_result_t result = LE_OK;
 
-    LE_INFO("pa_wifiClient_SetSecurityProtocol: %d", securityProtocol);
+    LE_INFO("Security protocol: %d", securityProtocol);
     switch (securityProtocol)
     {
         case LE_WIFICLIENT_SECURITY_NONE:
@@ -569,6 +585,154 @@ le_result_t pa_wifiClient_SetSecurityProtocol
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Compute the PSK from the SSID and the passphrase.
+ *
+ * @return LE_BAD_PARAMETER  The function failed due to an invalid parameter.
+ * @return LE_FAIL           The function failed.
+ * @return LE_OK             The function succeeded.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t GeneratePsk
+(
+    char *ssidBytesPtr,
+        ///< [IN]
+        ///< Contains ssidLength number of bytes
+    uint8_t ssidLength,
+        ///< [IN]
+        ///< The number of bytes in the ssidBytesPtr
+    char *passphrasePtr,
+        ///< [IN]
+        ///< The passphrase
+    char *pskPtr
+        ///< [OUT]
+        ///< The generated PSK
+)
+{
+    char        tmpString[255];
+    le_result_t result         = LE_OK;
+
+    if (NULL == pskPtr)
+    {
+        LE_ERROR("Invalid PSK pointer");
+        return LE_BAD_PARAMETER;
+    }
+    if (NULL == passphrasePtr)
+    {
+        LE_ERROR("Invalid passphrase pointer");
+        return LE_BAD_PARAMETER;
+    }
+
+    LE_INFO("Step 1: Generate Passphrase/PSK");
+    snprintf(tmpString,
+        sizeof(tmpString),
+        (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE),
+        ssidLength,
+        (char *)ssidBytesPtr,
+        passphrasePtr);
+
+    LE_INFO("Cmd: %s", tmpString);
+
+    // Open the command for reading.
+    IwConnectPipePtr = popen(tmpString, "r");
+
+    if (NULL == IwConnectPipePtr)
+    {
+        LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
+            (tmpString),
+            errno,
+            strerror(errno));
+        result = LE_FAULT;
+    }
+    else
+    {
+        char path[255];
+
+        LE_INFO("Cmd successful: %s", tmpString);
+        // Read the output a line at a time - output it.
+        while (NULL != fgets(path, sizeof(path) - 1, IwConnectPipePtr))
+        {
+            LE_INFO("PARSING: len=%3d | %s", (int)strnlen(path, sizeof(path) - 1), path);
+            if (0 == strncmp("\tpsk=", path, strlen("\tpsk=")))
+            {
+                char     *p1Ptr = strchr(&path[5], '\n');
+                char     *p2Ptr = &path[5];
+                uint32_t  n     = p1Ptr - p2Ptr;
+
+                LE_INFO("FOUND  :%s", path);
+                memset(pskPtr, 0, LE_WIFIDEFS_MAX_PSK_BYTES);
+                if (n < LE_WIFIDEFS_MAX_PSK_BYTES)
+                {
+                    strncpy(pskPtr, &path[5], n);
+                    LE_INFO("PSK=%s | length: %d", pskPtr, n);
+                    result = LE_OK;
+                    break;
+                }
+                else
+                {
+                    LE_INFO("PSK length > %d", LE_WIFIDEFS_MAX_PSK_LENGTH);
+                    result = LE_FAULT;
+                }
+            }
+        }
+        pclose(IwConnectPipePtr);
+    }
+
+    return result;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function generates the WPA supplicant file.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t GenerateWpaSupplicant
+(
+    char *ssidPtr,
+    const uint32_t ssidLength,
+    char *pskPtr
+)
+{
+    FILE    *filePtr;
+    char     tmpString[255];
+    uint8_t  length;
+
+    LE_INFO("Step 2: SH script");
+
+    // Check parameter
+    if ((ssidPtr == NULL) || (ssidLength == 0) || (ssidLength > LE_WIFIDEFS_MAX_SSID_LENGTH))
+    {
+        LE_ERROR("Invalid parameter(s)");
+        return LE_FAULT;
+    }
+
+    // Create the WPA supplicant file
+    filePtr = fopen(WPA_SUPPLICANT_FILE, "w");
+    if (filePtr == NULL)
+    {
+        LE_ERROR("Unable to create %s file.", WPA_SUPPLICANT_FILE);
+        return LE_FAULT;
+    }
+
+    snprintf(tmpString, sizeof(tmpString), WPA_SUPPLICANT_DATA,
+        strlen(ssidPtr), (char *)ssidPtr, pskPtr);
+
+    length = strlen(tmpString);
+
+    if (fwrite(&tmpString, 1, length, filePtr) != length)
+    {
+        LE_ERROR("Unable to generate the WPA supplicant file (%s).", WPA_SUPPLICANT_FILE);
+        fclose(filePtr);
+        return LE_FAULT;
+    }
+
+    fclose(filePtr);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
  * This function connects a wifiClient.
  *
  * @return LE_FAULT  The function failed.
@@ -587,17 +751,16 @@ le_result_t pa_wifiClient_Connect
 {
     int         systemResult;
     char        tmpString[1024];
-    char        path[4 *1024];
     le_result_t result          = LE_OK;
 
-    LE_INFO("pa_wifiClient_Connect SSID length %d SSID: \"%.*s\"",
+    LE_INFO("SSID length %d SSID: \"%.*s\"",
         ssidLength,
         ssidLength,
         (char *)ssidBytes);
 
     if (0 == ssidLength)
     {
-        LE_ERROR("pa_wifi_Connect: No valid SSID");
+        LE_ERROR("Invalid SSID");
         return LE_FAULT;
     }
 
@@ -606,9 +769,9 @@ le_result_t pa_wifiClient_Connect
     {
         case LE_WIFICLIENT_SECURITY_NONE:
             // Opened WiFi hotspot (SSID with no password)
-            LE_INFO("pa_wifiClient_Connect SwitchCase: LE_WIFICLIENT_SECURITY_NONE");
+            LE_INFO("SwitchCase: LE_WIFICLIENT_SECURITY_NONE");
             // 1. Now WPA_CLI for LE_WIFICLIENT_SECURITY_NONE
-            LE_INFO("pa_wifiClient_Connect Step 2: SH script");
+            LE_INFO("Step 2: SH script");
             snprintf(tmpString,
                 sizeof(tmpString),
                 (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE),
@@ -631,16 +794,16 @@ le_result_t pa_wifiClient_Connect
 
         case LE_WIFICLIENT_SECURITY_WEP:
             // Connect to secured network - WEP
-            LE_INFO("pa_wifiClient_Connect SwitchCase: LE_WIFICLIENT_SECURITY_WEP");
+            LE_INFO("SwitchCase: LE_WIFICLIENT_SECURITY_WEP");
             if (0 == SavedWepKey[0])
             {
-                LE_ERROR("pa_wifi_Connect: No valid WEP key");
+                LE_ERROR("No valid WEP key");
                 return LE_FAULT;
             }
             // 1. WPA_CLI for LE_WIFICLIENT_SECURITY_WEP
             if (LE_OK == result)
             {
-                LE_INFO("pa_wifiClient_Connect Step 2: SH script");
+                LE_INFO("Step 2: SH script");
                 snprintf(tmpString,
                     sizeof(tmpString),
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP),
@@ -665,192 +828,126 @@ le_result_t pa_wifiClient_Connect
 
         case LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL:
             // Connect to secured network - WPA
-            LE_INFO("pa_wifiClient_Connect SwitchCase: LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL");
+            LE_INFO("SwitchCase: LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL");
             if ((0 == SavedPassphrase[0]) && (0 == SavedPreSharedKey[0]))
             {
-                LE_ERROR("pa_wifi_Connect: No valid PassPhrase & PreSharedKey");
+                LE_ERROR("No valid PassPhrase or PreSharedKey");
                 return LE_FAULT;
             }
+            // Passphrase is defined...
             if (0 != SavedPassphrase[0])
             {
-                // 1. Passphrase/PSK. With PassPhrase generate PSK and read it for next command
-                LE_INFO("pa_wifiClient_Connect Step 1: Generate Passphrase/PSK");
-                snprintf(tmpString,
-                    sizeof(tmpString),
-                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE),
+                // ... so the PSK is derived from it.
+                result = GeneratePsk((char *)&ssidBytes[0],
                     ssidLength,
-                    (char *)ssidBytes,
-                    SavedPassphrase);
-
-                LE_INFO("pa_wifiClient_Connect Cmd: %s", tmpString);
-
-                // Open the command for reading.
-                IwConnectPipePtr = popen(tmpString, "r");
-
-                if (NULL == IwConnectPipePtr)
+                    (char *)&SavedPassphrase[0],
+                    (char *)&SavedPreSharedKey[0]);
+                if (LE_OK != result)
                 {
-                    LE_ERROR("pa_wifi_Connect: Failed to run command:\"%s\" errno:%d %s",
-                        (tmpString),
-                        errno,
-                        strerror(errno));
-                    result = LE_FAULT;
+                    LE_ERROR("No valid PassPhrase or PreSharedKey");
+                    return LE_FAULT;
                 }
-                else
-                {
-                    LE_INFO("pa_wifiClient_Connect Cmd successful: %s", tmpString);
-                    // Read the output a line at a time - output it.
-                    while (NULL != fgets(path, sizeof(path)-1, IwConnectPipePtr))
-                    {
-                        LE_INFO("PARSING:%s: len:%d", path, (int) strnlen(path, sizeof(path) - 1));
-                        if (0 == strncmp("\tpsk=", path, strlen("\tpsk=")))
-                        {
-                            char     *p1Ptr = strchr(&path[6], '\n');
-                            char     *p2Ptr = &path[6];
-                            uint32_t  n  = p1Ptr - p2Ptr;
-
-                            LE_INFO("FOUND :%s", path);
-                            memset(SavedPreSharedKey, 0, LE_WIFIDEFS_MAX_PSK_BYTES);
-                            if (n < LE_WIFIDEFS_MAX_PSK_BYTES)
-                            {
-                                strncpy(SavedPreSharedKey, &path[6], n);
-                                LE_INFO("PSK=%s length: %d", SavedPreSharedKey, n);
-                                result = LE_OK;
-                            }
-                            else
-                            {
-                                result = LE_FAULT;
-                            }
-                        }
-                    }
-                }
-                pclose(IwConnectPipePtr);
             }
+
             // 2. Now WPA_CLI for LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL
             if (LE_OK == result)
             {
-                LE_INFO("pa_wifiClient_Connect Step 2: SH script");
-                snprintf(tmpString,
-                    sizeof(tmpString),
-                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL),
+                LE_INFO("Step 2: Generate WPA supplicant file");
+                // Generate the WPA supplicant file
+                if (GenerateWpaSupplicant((char *)&ssidBytes[0],
                     ssidLength,
-                    (char *)ssidBytes,
-                    SavedPreSharedKey,
-                    SavedPassphrase);
+                    (char *)&SavedPreSharedKey) == LE_OK)
+                {
+                    LE_INFO("Step 3: SH script");
 
-                systemResult = system(tmpString);
-                // Return value of -1 means that the fork() has failed (see man system).
-                if (0 == WEXITSTATUS(systemResult))
-                {
-                    LE_INFO("WiFi Client Command OK: %s", tmpString);
-                    result = LE_OK;
-                }
-                else
-                {
-                    LE_ERROR("WiFi Client Command %s Failed: (%d)", tmpString, systemResult);
-                    result = LE_FAULT;
+                    systemResult = system(WIFI_SCRIPT_PATH
+                        COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL);
+
+                    // Return value of -1 means that the fork() has failed (see man system).
+                    if (0 == WEXITSTATUS(systemResult))
+                    {
+                        LE_INFO("WiFi Client Command OK: %s",
+                            WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL);
+                        result = LE_OK;
+                    }
+                    else
+                    {
+                        LE_ERROR("WiFi Client Command %s Failed: (%d)",
+                            WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL,
+                            systemResult);
+                        result = LE_FAULT;
+                    }
                 }
             }
             break;
 
         case LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL:
             // Connect to secured network - WPA2
-            LE_INFO("pa_wifiClient_Connect SwitchCase: LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL");
+            LE_INFO("SwitchCase: LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL");
             if ((0 == SavedPassphrase[0]) && (0 == SavedPreSharedKey[0]))
             {
-                LE_ERROR("pa_wifi_Connect: No valid PassPhrase & PreSharedKey");
+                LE_ERROR("No valid PassPhrase or PreSharedKey");
                 return LE_FAULT;
             }
+            // Passphrase is defined...
             if (0 != SavedPassphrase[0])
             {
-                // 1. Passphrase/PSK. With PassPhrase generate PSK and read it for next command
-                LE_INFO("pa_wifiClient_Connect Step 1: Generate Passphrase/PSK");
-                snprintf(tmpString,
-                    sizeof(tmpString) ,
-                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE),
+                // ... so the PSK is derived from it.
+                result = GeneratePsk((char *)&ssidBytes[0],
                     ssidLength,
-                    (char *)ssidBytes,
-                    SavedPassphrase);
-
-                LE_INFO("pa_wifiClient_Connect Cmd: %s", tmpString);
-
-                // Open the command for reading.
-                IwConnectPipePtr = popen(tmpString, "r");
-
-                if (NULL == IwConnectPipePtr)
+                    (char *)&SavedPassphrase,
+                    (char *)&SavedPreSharedKey);
+                if (LE_OK != result)
                 {
-                    LE_ERROR("pa_wifi_Connect: Failed to run command:\"%s\" errno:%d %s",
-                        (tmpString),
-                        errno,
-                        strerror(errno));
-                    result = LE_FAULT;
-                } else {
-                    LE_INFO("pa_wifiClient_Connect Cmd successful: %s", tmpString);
-                    // Read the output a line at a time - output it.
-                    while (NULL != fgets(path, sizeof(path)-1, IwConnectPipePtr))
-                    {
-                        LE_INFO("PARSING:%s: len:%d", path, (int) strnlen(path, sizeof(path) - 1));
-                        if (0 == strncmp("\tpsk=", path, strlen("\tpsk=")))
-                        {
-                            char *p1Ptr = strchr(&path[6], '\n');
-                            char *p2Ptr = &path[6];
-                            int   n  = p1Ptr - p2Ptr;
-
-                            LE_INFO("FOUND :%s", path);
-                            memset(SavedPreSharedKey, 0, LE_WIFIDEFS_MAX_PSK_BYTES);
-                            if (n < LE_WIFIDEFS_MAX_PSK_BYTES)
-                            {
-                                strncpy(SavedPreSharedKey, &path[6], n);
-                                LE_INFO("PSK=%s length: %d", SavedPreSharedKey, n);
-                                result = LE_OK;
-                            }
-                            else
-                            {
-                                result = LE_FAULT;
-                            }
-                        }
-                    }
+                    LE_ERROR("No valid PassPhrase or PreSharedKey");
+                    return LE_FAULT;
                 }
-                pclose(IwConnectPipePtr);
             }
+
             // 2. Now WPA_CLI for LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL
             if (LE_OK == result)
             {
-                LE_INFO("pa_wifiClient_Connect Step 2: SH script");
-                snprintf(tmpString,
-                    sizeof(tmpString),
-                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL),
+                LE_INFO("Step 2: Generate WPA supplicant file");
+                // Generate the WPA supplicant file
+                if (GenerateWpaSupplicant((char *)&ssidBytes[0],
                     ssidLength,
-                    (char *)ssidBytes,
-                    SavedPreSharedKey,
-                    SavedPassphrase);
+                    (char *)&SavedPreSharedKey) == LE_OK)
+                {
+                    LE_INFO("Step 3: SH script");
 
-                systemResult = system(tmpString);
-                // Return value of -1 means that the fork() has failed (see man system).
-                if (0 == WEXITSTATUS(systemResult))
-                {
-                    LE_INFO("WiFi Client Command OK: %s", tmpString);
-                    result = LE_OK;
-                }
-                else
-                {
-                    LE_ERROR("WiFi Client Command %s Failed: (%d)", tmpString, systemResult);
-                    result = LE_FAULT;
+                    systemResult = system(WIFI_SCRIPT_PATH
+                        COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL);
+
+                    // Return value of -1 means that the fork() has failed (see man system).
+                    if (0 == WEXITSTATUS(systemResult))
+                    {
+                        LE_INFO("WiFi Client Command OK: %s",
+                            WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL);
+                        result = LE_OK;
+                    }
+                    else
+                    {
+                        LE_ERROR("WiFi Client Command %s Failed: (%d)",
+                            WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL,
+                            systemResult);
+                        result = LE_FAULT;
+                    }
                 }
             }
             break;
 
         case LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE:
             // Enterprise environment: connect to WPA EAP PEAP0
-            LE_INFO("pa_wifiClient_Connect SwitchCase: ..._SECURITY_WPA2_EAP_PEAP0_ENTERPRISE");
+            LE_INFO("SwitchCase: ..._SECURITY_WPA2_EAP_PEAP0_ENTERPRISE");
             if ((0 == SavedUsername[0]) && (0 == SavedPassword[0]))
             {
-                LE_ERROR("pa_wifi_Connect: No valid Username & Password");
+                LE_ERROR("No valid Username & Password");
                 return LE_FAULT;
             }
             // 2. Now WPA_CLI for LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE
             if (LE_OK == result)
             {
-                LE_INFO("pa_wifiClient_Connect Step 2: SH script");
+                LE_INFO("Step 2: SH script");
                 snprintf(tmpString,
                     sizeof(tmpString),
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE),
@@ -876,16 +973,16 @@ le_result_t pa_wifiClient_Connect
 
         case LE_WIFICLIENT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE:
             // Enterprise environment: connect to WPA2 EAP PEAP0
-            LE_INFO("pa_wifiClient_Connect SwitchCase: ..._SECURITY_WPA2_EAP_PEAP0_ENTERPRISE");
+            LE_INFO("SwitchCase: ..._SECURITY_WPA2_EAP_PEAP0_ENTERPRISE");
             if ((0 == SavedUsername[0]) && (0 == SavedPassword[0]))
             {
-                LE_ERROR("pa_wifi_Connect: No valid Username & Password");
+                LE_ERROR("No valid Username & Password");
                 return LE_FAULT;
             }
             // 2. Now WPA_CLI for LE_WIFICLIENT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE
             if (LE_OK == result)
             {
-                LE_INFO("pa_wifiClient_Connect Step 2: SH script");
+                LE_INFO("Step 2: SH script");
                 snprintf(tmpString,
                     sizeof(tmpString),
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE),
@@ -991,7 +1088,7 @@ le_result_t pa_wifiClient_SetWepKey
 {
     le_result_t result = LE_BAD_PARAMETER;
 
-    LE_INFO("pa_wifiClient_SetWepKey");
+    LE_INFO("Set WEP key");
     if (NULL != wepKeyPtr)
     {
        strncpy(&SavedWepKey[0], &wepKeyPtr[0], LE_WIFIDEFS_MAX_WEPKEY_LENGTH);
@@ -1021,12 +1118,14 @@ le_result_t pa_wifiClient_SetPreSharedKey
 {
     le_result_t result = LE_BAD_PARAMETER;
 
-    LE_INFO("pa_wifiClient_SetPreSharedKey");
+    LE_INFO("Set PSK");
     if (NULL != preSharedKeyPtr)
     {
        strncpy(&SavedPreSharedKey[0], &preSharedKeyPtr[0], LE_WIFIDEFS_MAX_PSK_LENGTH);
        // Make sure there is a null termination
        SavedPreSharedKey[LE_WIFIDEFS_MAX_PSK_LENGTH] = '\0';
+       // Clear the passphrase because PSK and passphrase are exlusive.
+       SavedPassphrase[0] = '\0';
        result = LE_OK;
     }
     return result;
@@ -1052,12 +1151,14 @@ le_result_t pa_wifiClient_SetPassphrase
     // Store Passphrase to be used later during connection procedure
     le_result_t result = LE_BAD_PARAMETER;
 
-    LE_INFO("pa_wifiClient_SetPassphrase");
+    LE_INFO("Set passphrase");
     if (NULL != passphrasePtr)
     {
        strncpy(&SavedPassphrase[0], &passphrasePtr[0], LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH);
        // Make sure there is a null termination
        SavedPassphrase[LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH] = '\0';
+       // Clear the PSK because PSK and passphrase are exlusive.
+       SavedPreSharedKey[0] = '\0';
        result = LE_OK;
     }
     return result;
@@ -1084,7 +1185,7 @@ le_result_t pa_wifiClient_SetUserCredentials
     // Store User Credentials to be used later during connection procedure
     le_result_t result = LE_BAD_PARAMETER;
 
-    LE_INFO("pa_wifiClient_SetUserCredentials");
+    LE_INFO("Set user credentials");
     if (NULL != usernamePtr)
     {
        strncpy(&SavedUsername[0], &usernamePtr[0], LE_WIFIDEFS_MAX_USERNAME_LENGTH);
@@ -1140,7 +1241,7 @@ le_result_t pa_wifiClient_AddEventHandler
         (le_event_HandlerFunc_t)handlerPtr);
     if (NULL == handlerRef)
     {
-        LE_INFO("pa_wifiClient_AddEventHandler() ERROR: le_event_AddLayeredHandler returned NULL");
+        LE_INFO("ERROR: le_event_AddLayeredHandler returned NULL");
         return LE_BAD_PARAMETER;
     }
     le_event_SetContextPtr(handlerRef, contextPtr);

@@ -76,12 +76,12 @@ static void RunSystemCommand
 
     if (NULL == commandStringPtr)
     {
-        LE_ERROR("RunSystemCommand ERROR Parameter is NULL.");
+        LE_ERROR("ERROR Parameter is NULL.");
         return;
     }
     if ('\0' == *commandStringPtr)
     {
-        LE_INFO("RunSystemCommand INFO Nothing to execute.");
+        LE_INFO("INFO Nothing to execute.");
         return;
     }
 
@@ -89,11 +89,11 @@ static void RunSystemCommand
     // Return value of -1 means that the fork() has failed (see man system).
     if (0 == WEXITSTATUS(systemResult))
     {
-        LE_INFO("RunSystemCommand Success: %s", commandStringPtr);
+        LE_INFO("Success: %s", commandStringPtr);
     }
     else
     {
-        LE_ERROR("RunSystemCommand Error %s Failed: (%d)", commandStringPtr, systemResult);
+        LE_ERROR("Error %s Failed: (%d)", commandStringPtr, systemResult);
     }
 }
 
@@ -209,13 +209,13 @@ void Testle_wifiApStart
 
     if (LE_OK == le_wifiAp_Start())
     {
-        LE_INFO("le_wifiAp_Start OK");
+        LE_INFO("Start OK");
 
         Testle_startDhcpServerAndbridgeConnection();
     }
     else
     {
-        LE_ERROR("le_wifiAp_Start ERROR");
+        LE_ERROR("Start ERROR");
     }
 
     LE_ASSERT(LE_OK == le_wifiAp_SetIpRange(HOST_IP, IP_RANGE_START, IP_RANGE_END));

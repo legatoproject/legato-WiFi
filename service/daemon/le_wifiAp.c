@@ -34,7 +34,7 @@ static void PaEventApHandler
 )
 {
 
-    LE_DEBUG("PaEventApHandler event: %d", event);
+    LE_DEBUG("Event: %d", event);
 
     le_event_Report(NewWifiApEventId, (void *)&event, sizeof(le_wifiAp_Event_t));
 }
@@ -57,12 +57,12 @@ static void FirstLayerWifiApEventHandler
 
     if (NULL != wifiEventPtr)
     {
-        LE_DEBUG("FirstLayerWifiApEventHandler event: %d", *wifiEventPtr);
+        LE_DEBUG("Event: %d", *wifiEventPtr);
         clientHandlerFunc(*wifiEventPtr, le_event_GetContextPtr());
     }
     else
     {
-        LE_ERROR("FirstLayerWifiApEventHandler event is NULL");
+        LE_ERROR("Event is NULL");
     }
 }
 
@@ -86,7 +86,7 @@ le_wifiAp_NewEventHandlerRef_t le_wifiAp_AddNewEventHandler
 {
     le_event_HandlerRef_t handlerRef;
 
-    LE_DEBUG("le_wifiAp_AddNewEventHandler");
+    LE_DEBUG("Add new event handler");
     if (handlerFuncPtr == NULL)
     {
         LE_KILL_CLIENT("handlerFuncPtr is NULL !");

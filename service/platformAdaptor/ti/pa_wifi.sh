@@ -24,8 +24,6 @@ fi
 IFACE=$1
 CMD=$2
 SSID=$3
-ID=$4
-PASSWD=$5
 
 # PATH
 export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
@@ -98,8 +96,9 @@ case ${CMD} in
     exit 0 ;;
 
   WIFICLIENT_CONNECT_WPA_PASSPHRASE)
+    PASSPHRASE=$4
     echo "WIFICLIENT_CONNECT_WPA_PASSPHRASE"
-    /sbin/wpa_passphrase "${SSID}" ${ID} || exit 98
+    /sbin/wpa_passphrase "${SSID}" ${PASSPHRASE} || exit 98
     echo "ctrl_interface=DIR=/var/run/wpa_supplicant" | tee -a /tmp/wpa_supplicant.conf
     exit 0 ;;
 
@@ -126,6 +125,7 @@ case ${CMD} in
 
   WIFICLIENT_CONNECT_SECURITY_WEP)
     echo "WIFICLIENT_CONNECT_SECURITY_WEP mode"
+    WEPKEY=$4
     # Run wpa_supplicant daemon
     /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i${IFACE} -B || exit 99
 
@@ -135,7 +135,7 @@ case ${CMD} in
     done
     (/sbin/wpa_cli -i${IFACE} add_network | grep 0) || exit 1
     (/sbin/wpa_cli -i${IFACE} set_network 0 auth_alg OPEN | grep OK) || exit 2
-    (/sbin/wpa_cli -i${IFACE} set_network 0 wep_key0 \"${ID}\" | grep OK) || exit 3
+    (/sbin/wpa_cli -i${IFACE} set_network 0 wep_key0 \"${WEPKEY}\" | grep OK) || exit 3
     (/sbin/wpa_cli -i${IFACE} set_network 0 key_mgmt NONE | grep OK) || exit 4
     (/sbin/wpa_cli -i${IFACE} set_network 0 mode 0 | grep OK) || exit 5
     (/sbin/wpa_cli -i${IFACE} set_network 0 ssid \"${SSID}\" | grep OK) || exit 6
@@ -148,7 +148,7 @@ case ${CMD} in
 
   WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL)
     echo "WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL mode"
-    (/sbin/wpa_passphrase ${SSID} ${PASSWD} > /tmp/wpa_supplicant.conf) || exit 1
+    [ -f /tmp/wpa_supplicant.conf ] || exit 1
 
     # Run wpa_supplicant daemon
     (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i${IFACE} -B) || exit 99
@@ -157,7 +157,7 @@ case ${CMD} in
 
   WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL)
     echo "WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL mode"
-    (/sbin/wpa_passphrase ${SSID} ${PASSWD} > /tmp/wpa_supplicant.conf) || exit 1
+    [ -f /tmp/wpa_supplicant.conf ] || exit 1
 
     # Run wpa_supplicant daemon
     (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i${IFACE} -B) || exit 99
@@ -167,6 +167,8 @@ case ${CMD} in
     CheckConnection ${IFACE} ;;
 
   WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE)
+    ID=$4
+    PASSWD=$5
     echo "WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE mode"
     # Run wpa_supplicant daemon
     /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i${IFACE} -B || exit 99
@@ -185,7 +187,7 @@ case ${CMD} in
     (/sbin/wpa_cli -i${IFACE} set_network 0 identity \"${ID}\" | grep OK) || exit 8
     (/sbin/wpa_cli -i${IFACE} set_network 0 password \"${PASSWD}\" | grep OK) || exit 9
     (/sbin/wpa_cli -i${IFACE} set_network 0 phase1 \"peapver=0\" | grep OK) || exit 10
-    (/sbin/wpa_cli -i${IFACE} set_network 0 phase2 \"MSCHAPV2\" | grep OK) || exit 11
+    (/sbin/wpa_cli -i${IFACE} set_network 0 phase2 \"auth=MSCHAPV2\" | grep OK) || exit 11
     (/sbin/wpa_cli -i${IFACE} set_network 0 mode 0 | grep OK) || exit 12
     (/sbin/wpa_cli -i${IFACE} set_network 0 ssid \"${SSID}\" | grep OK) || exit 13
     (/sbin/wpa_cli -i${IFACE} select_network 0 | grep OK) || exit 14
@@ -196,6 +198,8 @@ case ${CMD} in
     CheckConnection ${IFACE} ;;
 
   WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE)
+    ID=$4
+    PASSWD=$5
     echo "WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE mode"
     # Run wpa_supplicant daemon
     /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i${IFACE} -B || exit 99
@@ -214,7 +218,7 @@ case ${CMD} in
     (/sbin/wpa_cli -i${IFACE} set_network 0 identity \"${ID}\" | grep OK) || exit 8
     (/sbin/wpa_cli -i${IFACE} set_network 0 password \"${PASSWD}\" | grep OK) || exit 9
     (/sbin/wpa_cli -i${IFACE} set_network 0 phase1 \"peapver=0\" | grep OK) || exit 10
-    (/sbin/wpa_cli -i${IFACE} set_network 0 phase2 \"MSCHAPV2\" | grep OK) || exit 11
+    (/sbin/wpa_cli -i${IFACE} set_network 0 phase2 \"auth=MSCHAPV2\" | grep OK) || exit 11
     (/sbin/wpa_cli -i${IFACE} set_network 0 mode 0 | grep OK) || exit 12
     (/sbin/wpa_cli -i${IFACE} set_network 0 ssid \"${SSID}\" | grep OK) || exit 13
     (/sbin/wpa_cli -i${IFACE} select_network 0 | grep OK) || exit 14
