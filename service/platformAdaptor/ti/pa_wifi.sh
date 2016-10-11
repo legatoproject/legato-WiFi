@@ -25,6 +25,9 @@ IFACE=$1
 CMD=$2
 SSID=$3
 
+# Configuration file
+WPA_CFG=wpa_supplicant.conf
+
 # PATH
 export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
@@ -93,19 +96,20 @@ case ${CMD} in
   WIFICLIENT_DISCONNECT)
     echo "WIFICLIENT_DISCONNECT"
     /sbin/wpa_cli -i${IFACE} terminate || exit 97
+    echo "WiFi client disconnected."
     exit 0 ;;
 
   WIFICLIENT_CONNECT_WPA_PASSPHRASE)
     PASSPHRASE=$4
     echo "WIFICLIENT_CONNECT_WPA_PASSPHRASE"
     /sbin/wpa_passphrase "${SSID}" ${PASSPHRASE} || exit 98
-    echo "ctrl_interface=DIR=/var/run/wpa_supplicant" | tee -a /tmp/wpa_supplicant.conf
+    echo "ctrl_interface=DIR=/var/run/wpa_supplicant" | tee -a /tmp/${WPA_CFG}
     exit 0 ;;
 
   WIFICLIENT_CONNECT_SECURITY_NONE)
     echo "WIFICLIENT_CONNECT_SECURITY_NONE mode"
     # Run wpa_supplicant daemon
-    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i${IFACE} -B || exit 99
+    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
 
     /sbin/wpa_cli -i${IFACE} disconnect
     for i in `/sbin/wpa_cli -i${IFACE} list_networks | grep ^[0-9] | cut -f1`; do
@@ -127,7 +131,7 @@ case ${CMD} in
     echo "WIFICLIENT_CONNECT_SECURITY_WEP mode"
     WEPKEY=$4
     # Run wpa_supplicant daemon
-    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i${IFACE} -B || exit 99
+    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
 
     /sbin/wpa_cli -i${IFACE} disconnect
     for i in `/sbin/wpa_cli -i${IFACE} list_networks | grep ^[0-9] | cut -f1`; do
@@ -148,19 +152,27 @@ case ${CMD} in
 
   WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL)
     echo "WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL mode"
-    [ -f /tmp/wpa_supplicant.conf ] || exit 1
+    [ -f /tmp/${WPA_CFG} ] || exit 1
+
+    mv /tmp/${WPA_CFG} /tmp/${WPA_CFG}.tmp || exit 1
+    cp /etc/${WPA_CFG} /tmp/${WPA_CFG} || exit 1
+    cat /tmp/${WPA_CFG}.tmp >> /tmp/${WPA_CFG} || exit 1
 
     # Run wpa_supplicant daemon
-    (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i${IFACE} -B) || exit 99
+    (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/${WPA_CFG} -i${IFACE} -B) || exit 99
 
     CheckConnection ${IFACE} ;;
 
   WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL)
     echo "WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL mode"
-    [ -f /tmp/wpa_supplicant.conf ] || exit 1
+    [ -f /tmp/${WPA_CFG} ] || exit 1
+
+    mv /tmp/${WPA_CFG} /tmp/${WPA_CFG}.tmp || exit 1
+    cp /etc/${WPA_CFG} /tmp/${WPA_CFG} || exit 1
+    cat /tmp/${WPA_CFG}.tmp >> /tmp/${WPA_CFG} || exit 1
 
     # Run wpa_supplicant daemon
-    (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/wpa_supplicant.conf -i${IFACE} -B) || exit 99
+    (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/${WPA_CFG} -i${IFACE} -B) || exit 99
 
     /sbin/wpa_cli -i${IFACE} status
 
@@ -171,7 +183,7 @@ case ${CMD} in
     PASSWD=$5
     echo "WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE mode"
     # Run wpa_supplicant daemon
-    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i${IFACE} -B || exit 99
+    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
 
     /sbin/wpa_cli -i${IFACE} disconnect
     for i in `/sbin/wpa_cli -i${IFACE} list_networks | grep ^[0-9] | cut -f1`; do
@@ -202,7 +214,7 @@ case ${CMD} in
     PASSWD=$5
     echo "WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE mode"
     # Run wpa_supplicant daemon
-    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/wpa_supplicant.conf -i${IFACE} -B || exit 99
+    /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
 
     /sbin/wpa_cli -i${IFACE} disconnect
     for i in `/sbin/wpa_cli -i${IFACE} list_networks | grep ^[0-9] | cut -f1`; do

@@ -383,6 +383,20 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
     }
+    else if (strcmp(commandPtr, "disconnect") == 0)
+    {
+        // wifi client disconnect
+        if (LE_OK == (result = le_wifiClient_Disconnect()))
+        {
+            printf("WiFi client disconnected.\n");
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("ERROR: le_wifiClient_Disconnect returns error code %d.\n", result);
+            exit(EXIT_FAILURE);
+        }
+    }
     else if (strcmp(commandPtr, "setsecurityproto") == 0)
     {
         // wifi client setsecurityproto [REF] [Security Protocol]
