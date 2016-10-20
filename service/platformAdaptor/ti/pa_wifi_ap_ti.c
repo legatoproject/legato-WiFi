@@ -835,6 +835,13 @@ le_result_t pa_wifiAp_SetPassPhrase
             SavedPassphrase[length] = '\0';
             result = LE_OK;
         }
+        else
+        {
+            LE_ERROR("Invalid passphrase length (%d) [%d..%d]",
+                    length,
+                    LE_WIFIDEFS_MIN_PASSPHRASE_LENGTH,
+                    LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH);
+        }
     }
     return result;
 }
