@@ -43,6 +43,7 @@ commands:
     pmtool = tools:/bin/pmtool
     gnss = tools:/bin/gnss
     wifi = wifi:/bin/wifi
+    uartMode = tools:/bin/uartMode
 }
 
 bindings:
