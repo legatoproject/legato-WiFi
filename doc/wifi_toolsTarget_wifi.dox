@@ -214,6 +214,6 @@ This example shows how to setup a open access point WPA2 security.<BR>
 > /usr/sbin/iptables -A INPUT -s ${SUBNET} --jump ACCEPT
 @endverbatim
 
-Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+Copyright (C) Sierra Wireless Inc.
 
 **/

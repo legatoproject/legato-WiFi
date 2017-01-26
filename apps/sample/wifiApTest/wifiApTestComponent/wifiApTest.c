@@ -1,7 +1,7 @@
  /**
   * This module implements a test for WiFi access point
   *
-  * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+  * Copyright (C) Sierra Wireless Inc.
   *
   */
 

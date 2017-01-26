@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+# Copyright (C) Sierra Wireless Inc.
 #
 # ($1:) -d Debug logs
 # $1: wlan interface (ex: wlan0)

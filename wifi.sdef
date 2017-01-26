@@ -2,7 +2,7 @@
 // Sample system definition that includes essential services and WiFi-related services and sample
 // applications.
 //
-// Copyright (C) Sierra Wireless Inc.  Use of this work is subject to license.
+// Copyright (C) Sierra Wireless Inc.
 //--------------------------------------------------------------------------------------------------
 
 apps:

@@ -7,7 +7,7 @@
  * Note that since the command is run in new context each time,
  * nothing can be saved between runs.
  *
- * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+ * Copyright (C) Sierra Wireless Inc.
  */
 //-------------------------------------------------------------------------------------------------
 

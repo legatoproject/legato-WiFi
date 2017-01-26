@@ -1,7 +1,7 @@
  /**
   * This module implements a Web interface for setting up the WiFi access point
   *
-  * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+  * Copyright (C) Sierra Wireless Inc.
   *
   * It starts the webserver and
   * it subscribes to the WiFi access point events and logs them to a logfile.

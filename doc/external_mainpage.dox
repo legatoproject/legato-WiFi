@@ -15,6 +15,6 @@ These WiFi Service sample apps are available:
 | @subpage wifi_wifiap_testapp  | how to use Wifi Access Point API |
 | @subpage wifi_wifiwebAp_sample  | setup the Access Point using a webpage|
 
-Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+Copyright (C) Sierra Wireless Inc.
 
 **/

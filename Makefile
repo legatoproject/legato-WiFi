@@ -4,7 +4,7 @@
 # Currenly only builds for wp85
 #
 #
-# Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
+# Copyright (C) Sierra Wireless Inc.
 # --------------------------------------------------------------------------------------------------
 
 ifndef YOUR_TARGETS_IP
