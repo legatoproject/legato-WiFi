@@ -5,53 +5,25 @@
 // Copyright (C) Sierra Wireless Inc.
 //--------------------------------------------------------------------------------------------------
 
+#include default.sdef
+
+buildVars:
+{
+    LEGATO_WIFI_ROOT=${CURDIR}
+    LEGATO_WIFI_PA=ti
+}
+
 apps:
 {
-    // Platform services.
-    $LEGATO_SERVICE_AVC_APP
-    $LEGATO_SERVICE_AVC_COMPAT
-    $LEGATO_ROOT/apps/platformServices/audioService
-    $LEGATO_ROOT/apps/platformServices/cellNetService
-    $LEGATO_ROOT/apps/platformServices/dataConnectionService
-    $LEGATO_ROOT/apps/platformServices/fwupdateService
-    $LEGATO_ROOT/apps/platformServices/modemService
-    $LEGATO_ROOT/apps/platformServices/positioningService
-    $LEGATO_ROOT/apps/platformServices/powerMgr
-    $LEGATO_ROOT/apps/platformServices/secStore
-    $LEGATO_ROOT/apps/platformServices/smsInboxService
-    $LEGATO_ROOT/apps/platformServices/voiceCallService
-    $LEGATO_ROOT/apps/platformServices/gpioService
-    $LEGATO_ROOT/apps/platformServices/atService
-    $LEGATO_ROOT/apps/platformServices/spiService
-
+    // WiFi services
     $LEGATO_WIFI_ROOT/service/wifiService.adef
     $LEGATO_WIFI_ROOT/apps/sample/wifiClientTest/wifiClientTest.adef
     $LEGATO_WIFI_ROOT/apps/sample/wifiApTest/wifiApTest.adef
     $LEGATO_WIFI_ROOT/apps/sample/wifiWebAp/wifiWebAp.adef
     $LEGATO_WIFI_ROOT/apps/tools/wifi/wifi.adef
-
-    // Command-line tools.
-    $LEGATO_ROOT/apps/tools/tools
 }
 
 commands:
 {
-    cm = tools:/scripts/cm
-    fwupdate = tools:/bin/fwupdate
-    secstore = tools:/bin/secstore
-    pmtool = tools:/bin/pmtool
-    gnss = tools:/bin/gnss
     wifi = wifi:/bin/wifi
-    uartMode = tools:/bin/uartMode
-}
-
-bindings:
-{
-    <root>.le_fwupdate -> fwupdateService.le_fwupdate
-}
-
-interfaceSearch:
-{
-    interfaces/modemServices
-    interfaces/positioning
 }
