@@ -5,11 +5,11 @@
 // Copyright (C) Sierra Wireless Inc.
 //--------------------------------------------------------------------------------------------------
 
-#include default.sdef
+#include "$LEGATO_ROOT/default.sdef"
 
 buildVars:
 {
-    LEGATO_WIFI_ROOT=${CURDIR}
+    LEGATO_WIFI_ROOT=${LEGATO_ROOT}/modules/WiFi
     LEGATO_WIFI_PA=ti
 }
 
