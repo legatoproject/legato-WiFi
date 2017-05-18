@@ -51,7 +51,9 @@ ifeq ($(LEGATO_WIFI_BUILD),1)
   $(info Legato WiFi version: $(LEGATO_WIFI_VERSION))
   $(info **************************************************)
 
-  # Override the default sdef file to use the MangOH one
-  export SDEF_TO_USE = $(LEGATO_WIFI_ROOT)/wifi.sdef
+  ifndef SDEF_TO_USE
+    # Override the default sdef file to use the MangOH one
+    export SDEF_TO_USE = $(LEGATO_WIFI_ROOT)/wifi.sdef
+  endif
 endif
 
