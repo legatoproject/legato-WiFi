@@ -44,6 +44,9 @@ ifndef LEGATO_WIFI_BUILD
   ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp85)
     LEGATO_WIFI_BUILD = 1
   endif
+  ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp76xx)
+    LEGATO_WIFI_BUILD = 1
+  endif
 endif
 
 ifeq ($(LEGATO_WIFI_BUILD),1)
