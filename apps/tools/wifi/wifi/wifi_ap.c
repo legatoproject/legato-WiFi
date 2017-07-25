@@ -343,7 +343,7 @@ void ExecuteWifiApCommand
         const char *ipStop  = le_arg_GetArg(4);
 
         if ((NULL == ipAp) || (NULL == ipStart) || (NULL == ipStop) ||
-             ('\0' == ipAp) || ('\0' == ipStart) || ('\0' == ipStop))
+            ('\0' == ipAp[0]) || ('\0' == ipStart[0]) || ('\0' == ipStop[0]))
         {
             printf("ERROR: Missing or bad argument(s).\n");
             exit(EXIT_FAILURE);

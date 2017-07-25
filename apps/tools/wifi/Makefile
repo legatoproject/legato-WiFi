@@ -1,20 +1,12 @@
-ifndef LEGATO_WIFI_ROOT
-LEGATO_WIFI_ROOT = $(PWD)/../../..
-export LEGATO_WIFI_ROOT
-endif
+TARGETS := $(MAKECMDGOALS)
 
-localhost: app.localhost
+.PHONY: all $(TARGETS)
+all: $(TARGETS)
 
-ar7: app.ar7
-
-wp7: app.wp7
-
-ar86: app.ar86
-
-wp85: app.wp85
-
-app.%:
-	mkapp wifi.adef -t $* -v -i $(LEGATO_WIFI_ROOT)
+$(TARGETS):
+	mkapp -v -t $@ \
+		wifi.adef
 
 clean:
-	rm -rf _build_* *.localhost *.ar7 *.wp7 *.ar8 *.wp85 *.update
+	rm -rf _build_* *.update
+

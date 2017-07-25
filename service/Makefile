@@ -1,15 +1,16 @@
-localhost: app.localhost
+TARGETS := $(MAKECMDGOALS)
 
-ar7: app.ar7
+export LEGATO_WIFI_ROOT ?= $(PWD)/..
+export LEGATO_WIFI_PA ?= ti
 
-wp7: app.wp7
+.PHONY: all $(TARGETS)
+all: $(TARGETS)
 
-ar86: app.ar86
-
-wp85: app.wp85
-
-app.%:
-	mkapp wifiService.adef -i ./../ -i platformAdaptor/inc/ -t $* -v
+$(TARGETS):
+	mkapp -v -t $@ \
+		-i $(PWD)/platformAdaptor/inc/ \
+		wifiService.adef
 
 clean:
-	rm -rf _build_* *.localhost *.ar7 *.wp7 *.ar8 *.wp85 *.update
+	rm -rf _build_* *.update
+
