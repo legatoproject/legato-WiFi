@@ -412,7 +412,7 @@ void ExecuteWifiClientCommand
         }
 
         rc1 = sscanf(refPtr, "%x", (unsigned int *)&apRef);
-        rc2 = sscanf(securityProtocolPtr, "%u", &securityProtocol);
+        rc2 = sscanf(securityProtocolPtr, "%u", (unsigned int *) &securityProtocol);
         result = le_wifiClient_SetSecurityProtocol(apRef, securityProtocol);
 
         if ((1 == rc1) && (1 == rc2) && (LE_OK == result))
