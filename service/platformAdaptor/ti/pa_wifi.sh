@@ -53,6 +53,12 @@ CheckConnection()
 case ${CMD} in
   WIFI_START)
     echo "WIFI_START"
+    /etc/init.d/tiwifi start
+    if [ $? -ne 0 ]; then
+        /etc/init.d/tiwifi stop
+        sleep 1
+        /etc/init.d/tiwifi start
+    fi
     # Mount the WiFi network interface
     /sbin/ifup ${IFACE} || exit 91
     exit 0 ;;
@@ -60,7 +66,10 @@ case ${CMD} in
   WIFI_STOP)
     echo "WIFI_STOP"
     # Unmount the WiFi network interface
-    /sbin/ifdown ${IFACE} || exit 92
+    /sbin/ifdown ${IFACE}
+    ret=$?
+    /etc/init.d/tiwifi stop
+    [ $ret -ne 0 ] && exit 92
     exit 0 ;;
 
   WIFI_WLAN_UP)
