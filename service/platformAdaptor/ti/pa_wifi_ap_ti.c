@@ -26,6 +26,10 @@
 #define COMMAND_WIFIAP_HOSTAPD_START "wlan0 WIFIAP_HOSTAPD_START"
 #define COMMAND_WIFIAP_HOSTAPD_STOP  "wlan0 WIFIAP_HOSTAPD_STOP"
 
+// iptables rule to allow/disallow the DHCP port on wlan0
+#define COMMAND_IPTABLE_DHCP_WLAN0   "INPUT -i wlan0 -p udp -m udp " \
+                                     "--sport 67:68 --dport 67:68 -j ACCEPT"
+
 //--------------------------------------------------------------------------------------------------
 /**
  * WiFi platform adaptor shell script
@@ -636,6 +640,14 @@ le_result_t pa_wifiAp_Stop
     int         systemResult;
 
     LE_INFO("Stop Access Point Cmd: kill hostap");
+
+    // Try to delete the rule allowing the DHCP ports on wlan0. Ignore if it fails
+    systemResult = system("iptables -D " COMMAND_IPTABLE_DHCP_WLAN0);
+    if (0 != WEXITSTATUS(systemResult))
+    {
+        LE_WARN("Deleting rule for DHCP port fails");
+    }
+
     systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_STOP);
     if (0 != WEXITSTATUS(systemResult))
     {
@@ -1088,7 +1100,17 @@ le_result_t pa_wifiAp_SetIpRange
 
             LE_INFO("@AP=%s, @APstart=%s, @APstop=%s", ipApPtr, ipStartPtr, ipStopPtr);
 
-            systemResult = system("/etc/init.d/dnsmasq stop; /etc/init.d/dnsmasq start");
+            // Insert the rule allowing the DHCP ports on wlan0
+            systemResult = system("iptables -I " COMMAND_IPTABLE_DHCP_WLAN0);
+            if (0 != WEXITSTATUS (systemResult))
+            {
+                LE_ERROR("Unable to allow DHCP ports.");
+                return LE_FAULT;
+            }
+
+            systemResult = system("/etc/init.d/dnsmasq stop; "
+                                  "pkill -9 dnsmasq; "
+                                  "/etc/init.d/dnsmasq start");
             if (0 != WEXITSTATUS (systemResult))
             {
                 LE_ERROR("Unable to restart the DHCP server.");
