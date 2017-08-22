@@ -98,6 +98,7 @@ static void WifiEventHandler
     char   str[BUF_SIZE];
     char   buffer[BUF_SIZE];
     time_t timestamp        = time(NULL);
+    struct tm tmp = {0};
 
     LE_INFO("WiFi Ap event received");
 
@@ -109,7 +110,12 @@ static void WifiEventHandler
         return;
     }
 
-    strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&timestamp));
+    if (localtime_r(&timestamp, &tmp) == NULL)
+    {
+        LE_ERROR("Cannot convert Absolute time into local time.");
+    }
+
+    strftime(buffer, sizeof(buffer), "%H:%M:%S", &tmp);
 
     switch (event)
     {
@@ -190,6 +196,7 @@ static void StartWebServer
 {
     char tmpString[]   = HTTP_SYS_CMD;
     char str[STR_SIZE];
+    struct tm tmp = {0};
 
     LE_INFO("popen : " HTTP_SYS_CMD);
     HttpdCmdPipePtr = popen(tmpString, "r");
@@ -225,7 +232,13 @@ static void StartWebServer
         time_t timestamp        = time(NULL);
 
         LE_INFO("STARTING WIFI HTTP INTERFACE");
-        strftime(buffer, sizeof(buffer), "%H:%M:%S", localtime(&timestamp));
+
+        if (localtime_r(&timestamp, &tmp) == NULL)
+        {
+            LE_ERROR("Cannot convert Absolute time into local time.");
+        }
+
+        strftime(buffer, sizeof(buffer), "%H:%M:%S", &tmp);
         snprintf(str,
             BUF_SIZE,
             "<font color=\"black\" >%s:</font> Starting WiFi HTTP interface...</br>\r\n",
@@ -315,6 +328,8 @@ COMPONENT_INIT
     // Set the environment
     putenv("PATH=/legato/systems/current/bin:"
         "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
+
+    tzset();
 
     // subscribes to access points events and logs them.
     SubscribeApEvents();
