@@ -323,6 +323,8 @@ static void StopWebServer
 //--------------------------------------------------------------------------------------------------
 COMPONENT_INIT
 {
+    int rc;
+
     LE_INFO("======== WiFi Web Ap ======== on port " HTTP_PORT_NUMBER);
 
     // Set the environment
@@ -336,6 +338,29 @@ COMPONENT_INIT
 
     signal(SIGINT, StopWebServer);
     signal(SIGTERM, StopWebServer);
+
+    rc = system("/usr/sbin/iptables -A INPUT -m udp -p udp --dport 8080:8080 -j ACCEPT");
+    if (WEXITSTATUS(rc))
+    {
+        LE_ERROR("iptables fails: %x", rc);
+    }
+    rc = system("/usr/sbin/iptables -A INPUT -p tcp --sport 1024:65535"
+                " --dport 8080:8080 -j ACCEPT");
+    if (WEXITSTATUS(rc))
+    {
+        LE_ERROR("iptables fails: %x", rc);
+    }
+    rc = system("/usr/sbin/iptables -A OUTPUT -p tcp --sport 8080:8080"
+                " --dport 1024:65535 -j ACCEPT");
+    if (WEXITSTATUS(rc))
+    {
+        LE_ERROR("iptables fails: %x", rc);
+    }
+    rc = system("/usr/sbin/iptables -A INPUT -m udp -p udp --sport 67:68 --dport 67:68 -j ACCEPT");
+    if (WEXITSTATUS(rc))
+    {
+        LE_ERROR("iptables fails: %x", rc);
+    }
 
     // Config interface is handled in CGI webscript.
     StartWebServer();
