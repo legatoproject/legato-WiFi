@@ -116,12 +116,14 @@ static void Testle_startDhcpServerAndbridgeConnection
     // Load masquerade module
     RunSystemCommand("modprobe ipt_MASQUERADE");
 
-    RunSystemCommand("iptables -A POSTROUTING -t nat -o " ITF_WAN " -j MASQUERADE");
-    RunSystemCommand("iptables -A FORWARD --match state "
+    RunSystemCommand("iptables -I POSTROUTING -t nat -o " ITF_WAN " -j MASQUERADE");
+    RunSystemCommand("iptables -I FORWARD --match state "
         "--state RELATED,ESTABLISHED --jump ACCEPT");
-    RunSystemCommand("iptables -A FORWARD -i " ITF_LAN " --destination " SUBNET
+    RunSystemCommand("iptables -I FORWARD -i " ITF_LAN " --destination " SUBNET
         " --match state --state NEW --jump ACCEPT");
-    RunSystemCommand("iptables -A INPUT -s " SUBNET " --jump ACCEPT");
+    RunSystemCommand("iptables -I INPUT -s " SUBNET " --jump ACCEPT");
+    RunSystemCommand("iptables -I FORWARD -i " ITF_WAN " --jump ACCEPT");
+    RunSystemCommand("iptables -I FORWARD -o " ITF_WAN " --jump ACCEPT");
 }
 
 //! [SetCred]

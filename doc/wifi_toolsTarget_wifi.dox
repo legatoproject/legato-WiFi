@@ -208,11 +208,19 @@ This example shows how to setup a open access point WPA2 security.<BR>
 > echo 1 > /proc/sys/net/ipv4/ip_forward
 // load masquerade module
 > /proc/sys/kernel/modprobe ipt_MASQUERADE
-> /usr/sbin/iptables -A POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
-> /usr/sbin/iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
-> /usr/sbin/iptables -A FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
-> /usr/sbin/iptables -A INPUT -s ${SUBNET} --jump ACCEPT
+// Configure the iptables
+> /usr/sbin/iptables -I POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
+> /usr/sbin/iptables -I FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+> /usr/sbin/iptables -I FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
+> /usr/sbin/iptables -I INPUT -s ${SUBNET} --jump ACCEPT
+> /usr/sbin/iptables -I FORWARD -i ${ITF_WAN} --jump ACCEPT
+> /usr/sbin/iptables -I FORWARD -o ${ITF_WAN} --jump ACCEPT
 @endverbatim
+
+@note: If a DROP policy is set on FORWARD chain, it is mandatory to use the option @b -I to insert the rules
+at the beginning of the table.
+
+@note: On wp76xx, the @b ITF_WAN variable should be set to @b rmnet_data0.
 
 Copyright (C) Sierra Wireless Inc.
 

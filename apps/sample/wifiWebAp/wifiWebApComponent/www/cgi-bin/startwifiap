@@ -151,10 +151,32 @@ echo 1 > /proc/sys/net/ipv4/ip_forward
 ### Configure the NAT
 echo -ne "<font color=\"black\" >$(date "+%T"):</font> Configuring the NAT...<br>\r\n" >> ${LOG_MSG_FILE}
 modprobe ipt_MASQUERADE
-iptables -A POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
-iptables -A FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
-iptables -A FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
-iptables -A INPUT -s ${SUBNET} --jump ACCEPT
+
+SUBNET=`ifconfig wlan0 | grep "inet addr:" | cut -d ':' -f 2 | sed 's/  *.*$//' | cut -d '.' -f -3`".0/24"
+
+iptables -I POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -I POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -I FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -I FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -I FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -I FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -I INPUT -s ${SUBNET} --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -I INPUT -s ${SUBNET} --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -I FORWARD -i ${ITF_WAN} --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -I FORWARD -i ${ITF_WAN} --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -I FORWARD -o ${ITF_WAN} --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -I FORWARD -o ${ITF_WAN} --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
 
 ### Stop the DHCP server
 echo -ne "<font color=\"black\" >$(date "+%T"):</font> Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
