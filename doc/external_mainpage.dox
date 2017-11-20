@@ -5,15 +5,15 @@ The WiFi Service plugin provides both Client and Access Point APIs:
 @subpage c_le_wifi_client <br>
 @subpage c_le_wifi_ap <br>
 
-You can use the @subpage wifi_toolsTarget_wifi  to control the client or access point from the
+You can use the @ref wifi_toolsTarget_wifi tool to control the client or access point from the
 command line.
 
 These WiFi Service sample apps are available:
 | Section                            | Description                                        |
 | ---------------------------------- | -------------------------------------------------- |
-| @subpage wifi_wificlient_testapp  | how to use Wifi Client API |
-| @subpage wifi_wifiap_testapp  | how to use Wifi Access Point API |
-| @subpage wifi_wifiwebAp_sample  | setup the Access Point using a webpage|
+| @subpage wifi_wificlient_testapp   | how to use WiFi Client API                         |
+| @subpage wifi_wifiap_testapp       | how to use WiFi Access Point API                   |
+| @subpage wifi_wifiwebAp_sample     | setup the Access Point using a webpage             |
 
 Copyright (C) Sierra Wireless Inc.
 

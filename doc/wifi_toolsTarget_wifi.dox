@@ -1,10 +1,10 @@
-/** @page wifi_toolsTarget_wifi WiFi Command Line Tool
+/** @page wifi_toolsTarget_wifi wifi
 
 This topic provides details on using the @c wifi command line tool to control the WiFi service.
 
-The <b><c> wifi </c></b> command line tool supports both client and access point options.
+The @c wifi command line tool supports both client and access point options.
 
-Also see the @c wifi command line help:
+<h1>Usage</h1>
 
 @verbatim
 # wifi help
@@ -17,10 +17,9 @@ To run Wifi Access Point:
 	wifi ap help
 @endverbatim
 
-
 @section wifi_toolsTarget_cl_client WiFi Client
 
-The wifi client command line has the following options:
+The WiFi client command line has the following options:
 @verbatim
 # wifi client help
 wifi command line usage
@@ -63,14 +62,14 @@ To set WEP Key:
 
 This example shows how a client connects to an open access point with no security<BR>
 
-//Start the wifi client
+Start the WiFi client:
 @verbatim
->wifi client start
+# wifi client start
 @endverbatim
 
-//Scan for available access points. Note the references in the response.
+Scan for available access points. Note the references in the response.
 @verbatim
->wifi client scan
+# wifi client scan
 starting scan
 Found:	SSID:	"GustavNet"	Strength:-49	Ref:0x10000003
 Found:	SSID:	"hotspot"	Strength:-54	Ref:0x10000001
@@ -79,20 +78,20 @@ Found:	SSID:	"SFR WiFi FON"	Strength:-71	Ref:0x10000007
 Found:	SSID:	"SFR WiFi Mobile"	Strength:-71	Ref:0x10000005
 @endverbatim
 
-//Set security preference for accesspoint "hotspot"
+Set security preference for accesspoint "hotspot":
 @verbatim
->  wifi client setsecurityproto 10000001 0
+# wifi client setsecurityproto 10000001 0
 @endverbatim
 
-//Connect to hotspot with reference 10000001
+Connect to hotspot with reference 10000001:
 @verbatim
->  wifi client connect 10000001
+# wifi client connect 10000001
 @endverbatim
 
-//note that IP handling is not handled by the wifi command line tool
-//but here is how it can be done
+@note IP handling is not handled by the @c wifi command line tool
+but can be done using the following commands:
 @verbatim
-> /sbin/udhcpc -R -b -i wlan0
+# /sbin/udhcpc -R -b -i wlan0
 udhcpc (v1.22.1) started
 Sending discover...
 Sending select for 192.168.43.25...
@@ -100,15 +99,14 @@ Lease of 192.168.43.25 obtained, lease time 3600
 /etc/udhcpc.d/50default: Adding DNS 192.168.43.1
 @endverbatim
 
-// now try your IP connection towards the internet by pinging Google's DNS
+Now try your IP connection towards the internet by pinging Google's DNS
 @verbatim
-> ping 8.8.8.8
+# ping 8.8.8.8
 @endverbatim
-
 
 @section toolsTarget_wifi_ap WiFi access point
 
-The wifi access point command line has the following options:
+The WiFi access point command line has the following options:
 
 @verbatim
 # wifi ap help
@@ -155,72 +153,93 @@ WARNING: Only IPv4 addresses are supported.
 
 This example shows how to setup a open access point WPA2 security.<BR>
 
-// set the security to none.
+@subsubsection wifi_toolsTarget_wifi_ap_bringup Bring up the access point
+
+Set the security to WPA2:
 @verbatim
-> wifi ap setsecurityproto 1
+# wifi ap setsecurityproto 1
 @endverbatim
 
-// set the pass phrase
+Set the passphrase:
 @verbatim
-> wifi ap setpassphrase secret123
+# wifi ap setpassphrase secret123
 @endverbatim
 
-// set the name of the access point
+Set the name of the access point:
 @verbatim
-> wifi ap setssid EXAMPLESSID
+# wifi ap setssid EXAMPLESSID
 @endverbatim
 
-// start the AP
+Start the access point:
 @verbatim
-> wifi ap start
+# wifi ap start
 @endverbatim
 
-// DHCP IP handling
-// the wifi service does not handle the DHCP IP handling.
-// To bridge the DHCP server and the modem the following can be done.
+@warning The WiFi service does not take care of the IP management,
+so the WiFi network interface would not have any IP at this point.<br>
+To associate an IP, you can do the following:
 @verbatim
-> /sbin/ifconfig wlan0 192.168.10.1 up
-
-
-// Configure the interfaces
-// interface of the WiFi access point (LAN - Local Area Network)
-> export ITF_LAN="wlan0"
-// interface WAN: "rmnet0" or "eth0" (WAN - Wide Area Network)
-> export ITF_WAN="rmnet0"
-
-//IP & mask for subnet
-> export SUBNET="192.168.10.0/24"
-> export IP="192.168.10.1"
-> export IP_RANGE_START="192.168.10.10"
-> export IP_RANGE_END="192.168.10.20"
-
-// Start rmnet0 with pin 3699
-> /mnt/legato/system/bin/cm sim enterpin 3699
-> /mnt/legato/system/bin/cm data connect &
-
-// bring up the interface
->/sbin/ifconfig wlan0 $IP up
-
-// DNSMASQ Startup
-> /usr/bin/dnsmasq --interface=${ITF_LAN} --dhcp-range=$IP_RANGE_START,$IP_RANGE_END,12h -d --bogus-priv&
-
-// Turn on IP forwarding
-> echo 1 > /proc/sys/net/ipv4/ip_forward
-// load masquerade module
-> /proc/sys/kernel/modprobe ipt_MASQUERADE
-// Configure the iptables
-> /usr/sbin/iptables -I POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
-> /usr/sbin/iptables -I FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
-> /usr/sbin/iptables -I FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
-> /usr/sbin/iptables -I INPUT -s ${SUBNET} --jump ACCEPT
-> /usr/sbin/iptables -I FORWARD -i ${ITF_WAN} --jump ACCEPT
-> /usr/sbin/iptables -I FORWARD -o ${ITF_WAN} --jump ACCEPT
+# /sbin/ifconfig wlan0 192.168.10.1
 @endverbatim
 
-@note: If a DROP policy is set on FORWARD chain, it is mandatory to use the option @b -I to insert the rules
+@subsubsection wifi_toolsTarget_wifi_ap_dhcpserver Provide a DHCP server
+
+Configure the interfaces:
+- interface of the WiFi access point (LAN - Local Area Network)
+- interface WAN: "rmnet0" or "eth0" (WAN - Wide Area Network)
+@verbatim
+# export ITF_LAN="wlan0"
+# export ITF_WAN="rmnet0"
+@endverbatim
+
+@note On wp76xx, the @c ITF_WAN variable should be set to @c "rmnet_data0".
+
+Select IP & mask for subnet:
+@verbatim
+# export SUBNET="192.168.10.0/24"
+# export IP="192.168.10.1"
+# export IP_RANGE_START="192.168.10.10"
+# export IP_RANGE_END="192.168.10.20"
+@endverbatim
+
+Unlock the SIM and start the data connection:
+@verbatim
+# /mnt/legato/system/bin/cm sim enterpin 3699
+# /mnt/legato/system/bin/cm data connect &
+@endverbatim
+
+Bring up the WiFi interface:
+@verbatim
+# /sbin/ifconfig $ITF_LAN $IP up
+@endverbatim
+
+Start dnsmasq as a DHCP server:
+@verbatim
+# /usr/bin/dnsmasq --interface=${ITF_LAN} --dhcp-range=$IP_RANGE_START,$IP_RANGE_END,12h -d --bogus-priv&
+@endverbatim
+
+Turn on IP forwarding:
+@verbatim
+# echo 1 > /proc/sys/net/ipv4/ip_forward
+@endverbatim
+
+Load the iptables masquerade module that will take care of the network address translation (NAT):
+@verbatim
+# /sbin/modprobe ipt_MASQUERADE
+@endverbatim
+
+Configure the iptables to let your LAN (WiFi) access your WAN (cellular):
+@verbatim
+# /usr/sbin/iptables -I POSTROUTING -t nat -o ${ITF_WAN} -j MASQUERADE
+# /usr/sbin/iptables -I FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+# /usr/sbin/iptables -I FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
+# /usr/sbin/iptables -I INPUT -s ${SUBNET} --jump ACCEPT
+# /usr/sbin/iptables -I FORWARD -i ${ITF_WAN} --jump ACCEPT
+# /usr/sbin/iptables -I FORWARD -o ${ITF_WAN} --jump ACCEPT
+@endverbatim
+
+@note If a DROP policy is set on FORWARD chain, it is mandatory to use the option @b -I to insert the rules
 at the beginning of the table.
-
-@note: On wp76xx, the @b ITF_WAN variable should be set to @b rmnet_data0.
 
 Copyright (C) Sierra Wireless Inc.
 
