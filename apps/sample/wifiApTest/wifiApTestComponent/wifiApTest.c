@@ -33,7 +33,7 @@
 //--------------------------------------------------------------------------------------------------
 
 // IP & mask of subnet created on the wlan
-#define SUBNET         "192.168.0.0/24"
+#define SUBNET         "192.168.10.0/24"
 #define HOST_IP        "192.168.10.1"
 // IP range allotted to clients
 #define IP_RANGE_START "192.168.10.10"
