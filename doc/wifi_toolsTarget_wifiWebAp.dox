@@ -17,13 +17,17 @@ This is one way to enable the sample web interface:
 
 1. Connect your target via USB.
 2. Check your targets IP on the USB interface with <i>ifconfig</i>.
-3. Start the application wifiWebAp
-4. Open a webbrowser with the IP of your module http://NNN.NNN.NNN.NNN:8080
-5. Set the desired parameters on the webpage and click the "Start WiFi AP" button.
-6. Wait while result page is generated (this will take 15-20 seconds).
-7. You can monitor the progression of the connection by looking at the logs.
-8. Once the message "Waiting for connections..." is displayed, you can try to connect to your WiFi AP.
-9. Connections/Disconnections are visible in the logs as well.
+3. Run <code>cm data connect</code> to check that the right interface is configured for your target.
+4. Start the application wifiWebAp
+5. Open a web browser with the IP of your module http://NNN.NNN.NNN.NNN:8080
+6. Set the desired parameters on the webpage and click the "Start WiFi AP" button.
+7. Wait while result page is generated (this will take 15-20 seconds).
+8. You can monitor the progression of the connection by looking at the logs.
+9. Once the message "Waiting for connections..." is displayed, you can try to connect to your WiFi AP.
+10. Connections/Disconnections are visible in the logs as well.
+
+@note Check with your module vendor to verify interface names before starting the app. (e.g.; wp85
+      interface is rmnet0 and wp76 interface is rmnet_data0)
 
 
 Copyright (C) Sierra Wireless Inc.
