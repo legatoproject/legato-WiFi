@@ -2,7 +2,8 @@
 
 This sample provides a webpage to configure the WiFi Access Point.
 
-This sample app isn't started by default; it needs to be started manually.
+This sample app may be included in the default legato build on your target but it is not started by
+default; it needs to be started manually.
 
 Starting the application will start the webserver on port 8080. <br>
 Go to the IP of your module NNN.NNN.NNN.NNN:8080. <br>
@@ -10,6 +11,17 @@ The default address of your module should be 192.168.2.2:8080. <br>
 The port number of the webserver is set in the application. <br>
 
 @warning  Only use a SIM card without PIN code.
+
+View the
+[app code](https://github.com/legatoproject/legato-WiFi/tree/master/apps/sample/wifiWebAp)
+
+Run this to install the sample app:
+@verbatim
+$ bin/legs
+$ cd $LEGATO_ROOT/modules/WiFi/apps/sample/wifiWebAp
+$ make wp85
+$ update wifiWebAp.wp85.update <ip address>
+@endverbatim
 
 @section wifi_wifiwebAp_sample_StepByStep Use Web App
 

@@ -2,9 +2,24 @@
 
 The sample shows how to use the @ref c_le_wifi_ap.
 
+This sample app may be included in the default legato build on your target but it is not started by
+default; it needs to be started manually.
+
+View the
+[app code](https://github.com/legatoproject/legato-WiFi/tree/master/apps/sample/wifiApTest)
+
+Run this to install the sample app:
+@verbatim
+$ bin/legs
+$ cd $LEGATO_ROOT/modules/WiFi/apps/sample/wifiApTest
+$ make wp85
+$ update wifiApTest.wp85.update <ip address>
+@endverbatim
+
 @section wifi_wifiap_testapp_usage Usage
+
 Starts a WiFi access point named <i>"wifiApSSID"</i>, <br>
-with WPA2 passphrase: <i>"passphrase"</i>.
+with WPA2 pass-phrase: <i>"passphrase"</i>.
 
 @note It will also provide IP addresses.
 This is not a part of the WiFi service, but is provided as one of the sample applications.
@@ -13,12 +28,12 @@ This is not a part of the WiFi service, but is provided as one of the sample app
 
 This is how to use a one way WiFi Access Point:
 
-1. Connect your ethernet to your target.
-The sample will bridge the ethernet and the WiFi APs IP.
+1. Connect your Ethernet to your target.
+The sample will bridge the Ethernet and the WiFi APs IP.
 2. Start the application wifiApTest
-3. With your WiFi client (smartphone/PC) do a scan.
+3. With your WiFi client (smart phone/PC) do a scan.
 4. You should now see a SSID with the name "wifiApSSID".
-5. Connect to with the passphrase "passphrase".
+5. Connect to with the pass-phrase "passphrase".
 6. You should now have gotten an IP.
 
 Look at the sample code for an example of how to bridge the modem and the IP.
