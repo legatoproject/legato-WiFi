@@ -35,7 +35,7 @@ export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/
 # Exit with 0 if connected otherwise exit with 30 (number of retries)
 CheckConnection()
 {
-    retries=30
+    retries=25
     echo "Checking connection..."
     # Verify connection status
     for i in $(seq 1 ${retries})
@@ -253,3 +253,4 @@ case ${CMD} in
     echo "Parameter not valid"
     exit 99 ;;
 esac
+
