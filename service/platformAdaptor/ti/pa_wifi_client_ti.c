@@ -505,7 +505,7 @@ le_result_t pa_wifiClient_GetScanResult
 
         if (0 == strncmp("\tSSID: ", path, 7))
         {
-            accessPointPtr->ssidLength = strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES) - 7 - 1;
+            accessPointPtr->ssidLength = strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES + 7) - 7 - 1;
             LE_INFO("FOUND SSID:%s  %c%c.. ", path, path[7], path[8]);
             memset(&accessPointPtr->ssidBytes, 0, LE_WIFIDEFS_MAX_SSID_BYTES);
             memcpy (&accessPointPtr->ssidBytes, &path[7], accessPointPtr->ssidLength);
