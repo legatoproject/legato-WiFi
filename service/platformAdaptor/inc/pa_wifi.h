@@ -22,6 +22,7 @@ typedef struct
     int16_t  signalStrength;                        ///< 0xffff means value was not found.
     uint8_t  ssidLength;                            ///< The number of bytes in the ssidBytes.
     uint8_t  ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES]; ///< Contains ssidLength number of bytes.
+    char     bssid[LE_WIFIDEFS_MAX_BSSID_BYTES];    ///< Contains the bssid.
 } pa_wifiClient_AccessPoint_t;
 
 //--------------------------------------------------------------------------------------------------

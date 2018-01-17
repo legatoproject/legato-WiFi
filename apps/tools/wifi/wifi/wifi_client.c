@@ -96,27 +96,32 @@ static void WifiReadScanResults
     {
         do
         {
+            char bssid[LE_WIFIDEFS_MAX_BSSID_BYTES];
             uint8_t ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES];
             // Contains ssidNumElements number of bytes
             size_t ssidNumElements = LE_WIFIDEFS_MAX_SSID_LENGTH;
 
-            if (LE_OK == (result = le_wifiClient_GetSsid(apRef,
-                &ssidBytes[0],
-                &ssidNumElements)))
-            {
-                printf("Found:\tSSID:\t\"%.*s\"\tStrength:%d\tRef:%p\n",
-                    (int)ssidNumElements,
-                    (char *)&ssidBytes[0],
-                    le_wifiClient_GetSignalStrength(apRef),
-                    apRef);
-            }
-            else
+            result = le_wifiClient_GetSsid(apRef, ssidBytes, &ssidNumElements);
+            if (result != LE_OK)
             {
                 printf("ERROR::le_wifiClient_GetSsid failed: %d", result);
                 exit(EXIT_FAILURE);
             }
-        }
-        while (NULL != (apRef = le_wifiClient_GetNextAccessPoint()));
+
+            result = le_wifiClient_GetBssid(apRef, bssid, sizeof(bssid) - 1);
+            if (result != LE_OK)
+            {
+                printf("ERROR::le_wifiClient_GetBssid failed: %d", result);
+                exit(EXIT_FAILURE);
+            }
+
+            printf("Found:\tSSID:\t\"%.*s\"\tBSSID:\t\"%s\"\tStrength:%d\tRef:%p\n",
+                   (int)ssidNumElements,
+                   (char *)&ssidBytes[0],
+                   (char *)&bssid[0],
+                   le_wifiClient_GetSignalStrength(apRef),
+                   apRef);
+        } while (NULL != (apRef = le_wifiClient_GetNextAccessPoint()));
     }
     else
     {

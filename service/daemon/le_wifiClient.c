@@ -120,6 +120,46 @@ static void PaEventHandler
     le_event_Report(NewWifiEventId, (void *)&event, sizeof(le_wifiClient_Event_t));
 }
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * Local function to find an access point reference based on BSSID among the AP found in scan.
+ * If not found will return NULL.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_wifiClient_AccessPointRef_t FindAccessPointRefFromBssid
+(
+    const char* bssidPtr
+        ///< [OUT]
+        ///< The BSSID returned as a byte array.
+)
+{
+    le_wifiClient_AccessPointRef_t apRef = NULL;
+    le_ref_IterRef_t               iter  = le_ref_GetIterator(ScanApRefMap);
+
+    LE_DEBUG("Find AP from BSSID");
+
+    while (le_ref_NextNode(iter) == LE_OK)
+    {
+        apRef = (le_wifiClient_AccessPointRef_t)le_ref_GetSafeRef(iter);
+        if (NULL != apRef)
+        {
+            FoundAccessPoint_t *apPtr = (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, apRef);
+            if (NULL != apPtr)
+            {
+                if (0 == strncmp(apPtr->accessPoint.bssid, bssidPtr, LE_WIFIDEFS_MAX_BSSID_BYTES))
+                {
+                    LE_DEBUG("Found apRef %p", apRef);
+                    return apRef;
+                }
+            }
+        }
+        else
+        {
+            LE_ERROR("ERROR le_ref_GetSafeRef returned NULL iter:%p", iter);
+        }
+    }
+    return NULL;
+}
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -182,9 +222,7 @@ static le_wifiClient_AccessPointRef_t AddAccessPointToApRefMap
 )
 {
     // first see if it alreay exists in our list of reference.
-    le_wifiClient_AccessPointRef_t returnedRef = FindAccessPointRefFromSsid(
-        apPtr->ssidBytes,
-        apPtr->ssidLength);
+    le_wifiClient_AccessPointRef_t returnedRef = FindAccessPointRefFromBssid(apPtr->bssid);
 
     if (NULL != returnedRef)
     {
@@ -788,6 +826,52 @@ int16_t le_wifiClient_GetSignalStrength
     return apPtr->accessPoint.signalStrength;
 }
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * Get the BSSID of the AccessPoint
+ *
+ * @return LE_FAULT         Function failed.
+ * @return LE_BAD_PARAMETER Some parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_GetBssid
+(
+    le_wifiClient_AccessPointRef_t apRef,
+        ///< [IN]
+        ///< WiFi Access Point reference.
+
+    char *bssidPtr,
+        ///< [OUT]
+        ///< The BSSID
+
+    size_t bssidSize
+        ///< [IN]
+)
+{
+    FoundAccessPoint_t *apPtr = le_ref_Lookup(ScanApRefMap, apRef);
+
+    LE_DEBUG("AP ref %p", apRef);
+    if (NULL == apPtr)
+    {
+        LE_ERROR("Invalid access point reference.");
+        return LE_BAD_PARAMETER;
+    }
+
+    if (NULL == bssidPtr)
+    {
+        LE_ERROR("Invalid parameter BSSID = %p", bssidPtr);
+        return LE_BAD_PARAMETER;
+    }
+
+    if (strnlen(apPtr->accessPoint.bssid, LE_WIFIDEFS_MAX_BSSID_BYTES) > bssidSize)
+    {
+        return LE_OVERFLOW;
+    }
+    strncpy(bssidPtr, apPtr->accessPoint.bssid, LE_WIFIDEFS_MAX_BSSID_BYTES);
+
+    return LE_OK;
+}
 
 //--------------------------------------------------------------------------------------------------
 /**

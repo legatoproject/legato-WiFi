@@ -497,27 +497,42 @@ le_result_t pa_wifiClient_GetScanResult
     /* Default values */
     accessPointPtr->signalStrength = 0xffff;
     accessPointPtr->ssidLength = 0;
+    memset(&accessPointPtr->ssidBytes, 0, LE_WIFIDEFS_MAX_SSID_BYTES);
+    memset(&accessPointPtr->bssid, 0, LE_WIFIDEFS_MAX_BSSID_BYTES);
 
     /* Read the output a line at a time - output it. */
     while (NULL != fgets(path, sizeof(path) - 1, IwScanPipePtr))
     {
+        const char *ssidPrefix = "\tSSID: ";
+        const size_t ssidPrefixLen = strlen(ssidPrefix);
+        const char *signalPrefix = "\tsignal: ";
+        const size_t signalPrefixLen = strlen(signalPrefix);
+        const char *bssidPrefix = "BSS ";
+        const size_t bssidPrefixLen = strlen(bssidPrefix);
         LE_INFO("PARSING:%s: len:%zd", path, strnlen(path, sizeof(path) - 1));
 
-        if (0 == strncmp("\tSSID: ", path, 7))
+        if (0 == strncmp(ssidPrefix, path, ssidPrefixLen))
         {
-            accessPointPtr->ssidLength = strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES + 7) - 7 - 1;
-            LE_INFO("FOUND SSID:%s  %c%c.. ", path, path[7], path[8]);
-            memset(&accessPointPtr->ssidBytes, 0, LE_WIFIDEFS_MAX_SSID_BYTES);
-            memcpy (&accessPointPtr->ssidBytes, &path[7], accessPointPtr->ssidLength);
-            LE_INFO("FOUND SSID: Parsed:\"%s\"", &accessPointPtr->ssidBytes[0]);
+            // +1 and -1 are to allow for a newline which should be excluded from the SSID
+            accessPointPtr->ssidLength =
+                strnlen(&path[ssidPrefixLen], LE_WIFIDEFS_MAX_SSID_LENGTH + 1) - 1;
+            LE_INFO("FOUND SSID:%s  %c%c.. ", path, path[ssidPrefixLen], path[ssidPrefixLen + 1]);
+            memcpy(&accessPointPtr->ssidBytes, &path[ssidPrefixLen], accessPointPtr->ssidLength);
+            LE_INFO("SSID: '%s'", accessPointPtr->ssidBytes);
             return LE_OK;
         }
-        else if (0 == strncmp("\tsignal: ", path, 9))
+        else if (0 == strncmp(signalPrefix, path, signalPrefixLen))
         {
-            LE_INFO("FOUND SIGNAL STRENGTH:%s  %c %c ", path, path[10], path[11]);
-            accessPointPtr->signalStrength = atoi(&path[9]);
-            LE_INFO("FOUND SIGNAL STRENGTH: signalStrength:%d ",
-            accessPointPtr->signalStrength);
+            LE_INFO("FOUND SIGNAL STRENGTH:%s  %c %c ", path, path[signalPrefixLen + 1],
+                    path[signalPrefixLen + 2]);
+            accessPointPtr->signalStrength = atoi(&path[signalPrefixLen]);
+            LE_INFO("FOUND SIGNAL STRENGTH: signalStrength:%d ", accessPointPtr->signalStrength);
+        }
+        else if (0 == strncmp(bssidPrefix, path, bssidPrefixLen))
+        {
+            LE_INFO("FOUND BSSID: '%s'", &path[bssidPrefixLen]);
+            strncpy(accessPointPtr->bssid, &path[bssidPrefixLen], LE_WIFIDEFS_MAX_BSSID_LENGTH);
+            LE_INFO("BSSID: '%s'", accessPointPtr->bssid);
         }
     }
 
