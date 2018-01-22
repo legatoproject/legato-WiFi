@@ -874,6 +874,7 @@ int16_t le_wifiClient_GetSignalStrength
  *
  * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
+ * @return LE_OVERFLOW      bssid buffer is too small to contain the BSSID
  * @return LE_OK            Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
@@ -922,6 +923,7 @@ le_result_t le_wifiClient_GetBssid
  *
  * @return LE_FAULT         Function failed.
  * @return LE_BAD_PARAMETER Some parameter is invalid.
+ * @return LE_OVERFLOW      ssid buffer is too small to contain the SSID
  * @return LE_OK            Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
@@ -953,6 +955,12 @@ le_result_t le_wifiClient_GetSsid
     {
         LE_ERROR("Invalid parameter SSID = %p, SSID length = %p", ssidPtr, ssidNumElementsPtr);
         return LE_BAD_PARAMETER;
+    }
+
+    if (*ssidNumElementsPtr < apPtr->accessPoint.ssidLength) {
+        LE_ERROR("SSID buffer length (%d) is too small to contain SSID of length (%d)",
+                 *ssidNumElementsPtr, apPtr->accessPoint.ssidLength);
+        return LE_OVERFLOW;
     }
 
     *ssidNumElementsPtr = apPtr->accessPoint.ssidLength;
