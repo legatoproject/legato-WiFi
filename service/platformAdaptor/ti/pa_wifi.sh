@@ -103,7 +103,7 @@ case ${CMD} in
 
   WIFICLIENT_START_SCAN)
     echo "WIFICLIENT_START_SCAN"
-    (/usr/sbin/iw dev wlan0 scan | grep 'SSID\|signal') || exit 96
+    (/usr/sbin/iw dev wlan0 scan | grep 'BSS\|SSID\|signal') || exit 96
     exit 0 ;;
 
   WIFICLIENT_DISCONNECT)
