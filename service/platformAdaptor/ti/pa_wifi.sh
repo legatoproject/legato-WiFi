@@ -93,8 +93,12 @@ case ${CMD} in
   WIFIAP_HOSTAPD_STOP)
     echo "WIFIAP_HOSTAPD_STOP"
     rm -f /tmp/dnsmasq.wlan.conf; touch /tmp/dnsmasq.wlan.conf
-    (/etc/init.d/dnsmasq stop; /etc/init.d/dnsmasq start) || exit 100
-    (killall hostapd) || exit 100
+    /etc/init.d/dnsmasq stop
+    killall hostapd
+    sleep 1;
+    pidof hostapd && (kill -9 `pidof hostapd` || exit 100)
+    pidof dnsmasq && (kill -9 `pidof dnsmasq` || exit 100)
+    /etc/init.d/dnsmasq start || exit 100
     exit 0 ;;
 
   WIFICLIENT_START_SCAN)
