@@ -1006,6 +1006,42 @@ le_result_t le_wifiClient_SetPreSharedKey
     return result;
 }
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function specifies whether the target Access Point is hiding its presence from clients or
+ * not. When an Access Point is hidden, it cannot be discovered by a scan process.
+ *
+ * @note By default, this attribute is not set which means that the client is unable to connect to
+ * a hidden access point. When enabled, the client will be able to connect to the access point
+ * whether it is hidden or not.
+ *
+ * @return LE_BAD_PARAMETER Parameter is invalid.
+ * @return LE_OK            Function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_SetHiddenNetworkAttribute
+(
+    le_wifiClient_AccessPointRef_t apRef,
+        ///< [IN]
+        ///< WiFi Access Point reference.
+
+    bool hidden
+        ///< [IN]
+        ///< If TRUE, the WIFI client will be able to connect to a hidden access point.
+)
+{
+    LE_DEBUG("Set whether access point is hidden or not: %d", hidden);
+    if (NULL == le_ref_Lookup(ScanApRefMap, apRef))
+    {
+        LE_ERROR("Invalid access point reference.");
+        return LE_BAD_PARAMETER;
+    }
+
+    pa_wifiClient_SetHiddenNetworkAttribute(hidden);
+    return LE_OK;
+}
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -1122,11 +1158,13 @@ le_result_t le_wifiClient_SetSecurityProtocol
 
 //--------------------------------------------------------------------------------------------------
 /**
- * If an Access Point is not announcing it's presence, it will not show up in the scan.
- * But if the SSID is known, a connection can be tried using this create function.
- * First create the Access Point, then le_wifiClient_Connect() to connect to it.
+ * This function creates a reference to an Access Point given its SSID.
+ * If an Access Point is hidden, it will not show up in the scan. So, its SSID must be known
+ * in advance in order to create a reference.
  *
- * @return AccessPoint reference to the current
+ * @note This function fails if called while scan is running.
+ *
+ * @return Access Point reference to the current
  */
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_AccessPointRef_t le_wifiClient_Create

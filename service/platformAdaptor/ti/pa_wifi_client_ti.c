@@ -57,6 +57,7 @@
 #define WPA_SUPPLICANT_DATA \
     "network={\n \
     ssid=\"%.*s\"\n \
+    scan_ssid=%d\n \
     psk=%s\n \
     }\n"
 
@@ -103,7 +104,12 @@ static char SavedUsername[LE_WIFIDEFS_MAX_USERNAME_BYTES];
 //--------------------------------------------------------------------------------------------------
 static char SavedPassword[LE_WIFIDEFS_MAX_PASSWORD_BYTES];
 
-
+//--------------------------------------------------------------------------------------------------
+/**
+ * Indicates if the Access Point SSID is hidden from scan or not
+ */
+//--------------------------------------------------------------------------------------------------
+static bool HiddenAccessPoint = false;
 //--------------------------------------------------------------------------------------------------
 /**
  * The handle of the input pipe used to be notified of the WiFi events during the scan.
@@ -730,7 +736,7 @@ static le_result_t GenerateWpaSupplicant
     }
 
     snprintf(tmpString, sizeof(tmpString), WPA_SUPPLICANT_DATA,
-        strlen(ssidPtr), (char *)ssidPtr, pskPtr);
+        strlen(ssidPtr), (char *)ssidPtr, HiddenAccessPoint, pskPtr);
 
     length = strlen(tmpString);
 
@@ -1144,6 +1150,27 @@ le_result_t pa_wifiClient_SetPreSharedKey
        result = LE_OK;
     }
     return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function specifies whether the target Access Point is hiding its presence from clients or
+ * not. When an Access Point is hidden, it cannot be discovered by a scan process.
+ *
+ * @note By default, this attribute is not set which means that the client is unable to connect to
+ * a hidden access point. When enabled, the client will be able to connect to the access point
+ * whether it is hidden or not.
+ */
+//--------------------------------------------------------------------------------------------------
+void pa_wifiClient_SetHiddenNetworkAttribute
+(
+    bool hidden
+        ///< [IN]
+        ///< If TRUE, the WIFI client will be able to connect to a hidden access point.
+)
+{
+    LE_INFO("Set whether Access Point is hidden or not: %d", hidden);
+    HiddenAccessPoint = hidden;
 }
 
 //--------------------------------------------------------------------------------------------------

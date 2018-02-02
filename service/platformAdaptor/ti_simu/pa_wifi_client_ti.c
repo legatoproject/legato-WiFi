@@ -1031,6 +1031,27 @@ le_result_t pa_wifiClient_SetPreSharedKey
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * This function specifies whether the target Access Point is hiding its presence from clients or
+ * not. When an Access Point is hidden, it cannot be discovered by a scan process.
+ *
+ * @note By default, this attribute is not set which means that the client is unable to connect to
+ * a hidden access point. When enabled, the client will be able to connect to the access point
+ * whether it is hidden or not.
+ */
+//--------------------------------------------------------------------------------------------------
+void pa_wifiClient_SetHiddenNetworkAttribute
+(
+    bool hidden
+        ///< [IN]
+        ///< If TRUE, the WIFI client will be able to connect to a hidden access point.
+)
+{
+    LE_INFO("Set whether Access Point is hidden or not: %d", hidden);
+    (void)hidden;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
  * Set the PassPhrase used to create PSK (WPA-Personal).
  *
  * @see  pa_wifiClient_SetPreSharedKey

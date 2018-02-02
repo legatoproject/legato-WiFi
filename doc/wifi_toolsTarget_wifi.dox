@@ -44,6 +44,11 @@ Values for SecuProto;
 	3: Using WPA2
 	4: Using WPA Enterprise
 	5 :Using WPA2 Enterprise
+To set whether the access point is hidden or not:
+	wifi client hiddenap [REF] [state]
+Values for state;
+	0: SSID of AP is discoverable
+	1: SSID of AP is hidden
 To disconnect from an access point:
 	wifi client disconnect
 To delete the access point set in 'create':

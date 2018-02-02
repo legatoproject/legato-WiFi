@@ -41,7 +41,7 @@ static void WifiClientConnectEventHandler
     le_wifiClient_Event_t event,
         ///< [IN]
         ///< WiFi event to process
-    void *contextPtr
+    void* contextPtr
         ///< [IN]
         ///< Associated event context
 )
@@ -117,8 +117,8 @@ static void WifiReadScanResults
 
             printf("Found:\tSSID:\t\"%.*s\"\tBSSID:\t\"%s\"\tStrength:%d\tRef:%p\n",
                    (int)ssidNumElements,
-                   (char *)&ssidBytes[0],
-                   (char *)&bssid[0],
+                   (char* )&ssidBytes[0],
+                   (char* )&bssid[0],
                    le_wifiClient_GetSignalStrength(apRef),
                    apRef);
         } while (NULL != (apRef = le_wifiClient_GetNextAccessPoint()));
@@ -142,7 +142,7 @@ static void WifiClientScanEventHandler
     le_wifiClient_Event_t event,
         ///< [IN]
         ///< WiFi event to process
-    void *contextPtr
+    void* contextPtr
         ///< [IN]
         ///< Associated event context
 )
@@ -211,6 +211,13 @@ void PrintClientHelp(void)
            "\t4: Using WPA Enterprise\n"
            "\t5 :Using WPA2 Enterprise\n"
 
+           "To set whether the access point is hidden or not:\n"
+           "\twifi client hiddenap [REF] [state]\n"
+
+           "Values for state;\n"
+           "\t0: SSID of AP is discoverable\n"
+           "\t1: SSID of AP is hidden\n"
+
            "To disconnect from an access point:\n"
            "\twifi client disconnect\n"
 
@@ -240,12 +247,12 @@ void PrintClientHelp(void)
 //--------------------------------------------------------------------------------------------------
 void ExecuteWifiClientCommand
 (
-    const char *commandPtr, ///< [IN] Command to execute (NULL = run default command)
+    const char* commandPtr, ///< [IN] Command to execute (NULL = run default command)
     size_t numArgs          ///< [IN] Number of arguments
 )
 {
-    int         rc1;            // sscanf() results
-    int         rc2;            // sscanf() results
+    int         rc1;            // Used as return value of sscanf()
+    int         rc2;            // Used as return value of sscanf()
     uint32_t    length;
     le_result_t result = LE_OK;
 
@@ -283,7 +290,7 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "scan") == 0)
     {
-        // wifi client scan
+        // Command: wifi client scan
         printf("starting scan.\n");
 
         // Add a handler function to handle message reception
@@ -298,8 +305,8 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "create") == 0)
     {
-        // wifi client create "SSID"
-        const char                     *ssidPtr            = le_arg_GetArg(2);
+        // Command: wifi client create "SSID"
+        const char*                     ssidPtr            = le_arg_GetArg(2);
         uint32_t                        length;
         le_wifiClient_AccessPointRef_t  createdAccessPoint;
 
@@ -338,8 +345,8 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "delete") == 0)
     {
-        // wifi client delete [REF]
-        const char                     *refPtr = le_arg_GetArg(2);
+        // Command: wifi client delete [REF]
+        const char*                     refPtr = le_arg_GetArg(2);
         le_wifiClient_AccessPointRef_t  apRef  = NULL;
 
         if (NULL == refPtr)
@@ -363,8 +370,8 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "connect") == 0)
     {
-        // wifi client connect [REF]
-        const char                     *refPtr = le_arg_GetArg(2);
+        // Command: wifi client connect [REF]
+        const char*                     refPtr = le_arg_GetArg(2);
         le_wifiClient_AccessPointRef_t  apRef  = NULL;
 
         if (NULL == refPtr)
@@ -390,7 +397,7 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "disconnect") == 0)
     {
-        // wifi client disconnect
+        // Command: wifi client disconnect
         if (LE_OK == (result = le_wifiClient_Disconnect()))
         {
             printf("WiFi client disconnected.\n");
@@ -404,9 +411,9 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "setsecurityproto") == 0)
     {
-        // wifi client setsecurityproto [REF] [Security Protocol]
-        const char                       *refPtr              = le_arg_GetArg(2);
-        const char                       *securityProtocolPtr = le_arg_GetArg(3);
+        // Command: wifi client setsecurityproto [REF] [Security Protocol]
+        const char*                       refPtr              = le_arg_GetArg(2);
+        const char*                       securityProtocolPtr = le_arg_GetArg(3);
         le_wifiClient_AccessPointRef_t    apRef               = NULL;
         le_wifiClient_SecurityProtocol_t  securityProtocol    = 0;
 
@@ -431,11 +438,40 @@ void ExecuteWifiClientCommand
             exit(EXIT_FAILURE);
         }
     }
+    else if (strcmp(commandPtr, "hiddenap") == 0)
+    {
+        // Command: wifi client hiddenap [REF] [value]
+        const char*                       refPtr    = le_arg_GetArg(2);
+        const char*                       hiddenPtr = le_arg_GetArg(3);
+        le_wifiClient_AccessPointRef_t    apRef     = NULL;
+        bool hidden                                 = false;
+
+        if ((NULL == refPtr) || (NULL == hiddenPtr))
+        {
+            printf("ERROR. Missing argument.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        rc1 = sscanf(refPtr, "%x", (unsigned int *)&apRef);
+        rc2 = sscanf(hiddenPtr, "%u", (unsigned int *) &hidden);
+        result = le_wifiClient_SetHiddenNetworkAttribute(apRef, hidden);
+
+        if ((1 == rc1) && (1 == rc2) && (LE_OK == result))
+        {
+            printf("Access point hide status: %d\n", hidden);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("ERROR: le_wifiClient_SetHiddenAccessPoint returns %d.\n", result);
+            exit(EXIT_FAILURE);
+        }
+    }
     else if (strcmp(commandPtr, "setpassphrase") == 0)
     {
-        // wifi client setpassphrase [REF] [passPhrasePtr]
-        const char                     *refPtr        = le_arg_GetArg(2);
-        const char                     *passPhrasePtr = le_arg_GetArg(3);
+        // Command: wifi client setpassphrase [REF] [passPhrasePtr]
+        const char*                     refPtr        = le_arg_GetArg(2);
+        const char*                     passPhrasePtr = le_arg_GetArg(3);
         le_wifiClient_AccessPointRef_t  apRef         = NULL;
 
         if ((NULL == refPtr) || (NULL == passPhrasePtr))
@@ -470,9 +506,9 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "setpsk") == 0)
     {
-        // wifi client setpsk [REF] [PSK]
-        const char                     *refPtr = le_arg_GetArg(2);
-        const char                     *pskPtr = le_arg_GetArg(3);
+        // Command: wifi client setpsk [REF] [PSK]
+        const char*                     refPtr = le_arg_GetArg(2);
+        const char*                     pskPtr = le_arg_GetArg(3);
         le_wifiClient_AccessPointRef_t  apRef  = NULL;
 
         if ((NULL == refPtr) || (NULL == pskPtr))
@@ -501,10 +537,10 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "setusercred") == 0)
     {
-        // wifi client setusercred [REF] [username] [password]
-        const char                     *refPtr      = le_arg_GetArg(2);
-        const char                     *usernamePtr = le_arg_GetArg(3);
-        const char                     *passwordPtr = le_arg_GetArg(4);
+        // Command: wifi client setusercred [REF] [username] [password]
+        const char*                     refPtr      = le_arg_GetArg(2);
+        const char*                     usernamePtr = le_arg_GetArg(3);
+        const char*                     passwordPtr = le_arg_GetArg(4);
         le_wifiClient_AccessPointRef_t  apRef       = NULL;
 
         if ((NULL == refPtr) || (NULL == usernamePtr) || (NULL == passwordPtr))
@@ -529,9 +565,9 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "setwepkey") == 0)
     {
-        // wifi client setwepKeyPtr [REF] [WEPKEY]
-        const char                     *refPtr    = le_arg_GetArg(2);
-        const char                     *wepKeyPtr = le_arg_GetArg(3);
+        // Command: wifi client setwepKeyPtr [REF] [WEPKEY]
+        const char*                     refPtr    = le_arg_GetArg(2);
+        const char*                     wepKeyPtr = le_arg_GetArg(3);
         le_wifiClient_AccessPointRef_t  apRef     = NULL;
 
         if ((NULL == refPtr) || (NULL == wepKeyPtr))
