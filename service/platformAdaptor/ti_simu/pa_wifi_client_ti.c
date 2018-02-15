@@ -30,17 +30,18 @@
 #define COMMAND_WIFI_SET_EVENT "wlan0 WIFI_SET_EVENT"
 #define COMMAND_WIFICLIENT_START_SCAN "wlan0 WIFICLIENT_START_SCAN"
 #define COMMAND_WIFICLIENT_DISCONNECT "wlan0 WIFICLIENT_DISCONNECT"
-#define COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE "wlan0 WIFICLIENT_CONNECT_SECURITY_NONE \"%.*s\""
+#define COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_NONE \"%.*s\" \"%d\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP \
-    "wlan0 WIFICLIENT_CONNECT_SECURITY_WEP \"%.*s\" \"%s\""
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_WEP \"%.*s\" \"%d\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \
     "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL \"%.*s\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \
     "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL \"%.*s\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \
-    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%d\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \
-    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%s\" \"%s\""
+    "wlan0 WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE \"%.*s\" \"%d\" \"%s\" \"%s\""
 #define COMMAND_WIFICLIENT_CONNECT_WPA_PASSPHRASE \
     "wlan0 WIFICLIENT_CONNECT_WPA_PASSPHRASE \"%.*s\" %s"
 
@@ -81,6 +82,12 @@ static char SavedUsername[LE_WIFIDEFS_MAX_USERNAME_BYTES];
 //--------------------------------------------------------------------------------------------------
 static char SavedPassword[LE_WIFIDEFS_MAX_PASSWORD_BYTES];
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * Indicates if the Access Point SSID is hidden from scan or not
+ */
+//--------------------------------------------------------------------------------------------------
+static bool HiddenAccessPoint = false;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -610,7 +617,8 @@ le_result_t pa_wifiClient_Connect
                 sizeof(tmpString),
                 (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_NONE),
                 ssidLength,
-                (char *)ssidBytes);
+                (char *)ssidBytes,
+                HiddenAccessPoint);
 
             systemResult = system(tmpString);
             // Return value of -1 means that the fork() has failed (see man system).
@@ -643,6 +651,7 @@ le_result_t pa_wifiClient_Connect
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WEP),
                     ssidLength,
                     (char *)ssidBytes,
+                    HiddenAccessPoint,
                     SavedWepKey);
 
                 systemResult = system(tmpString);
@@ -853,6 +862,7 @@ le_result_t pa_wifiClient_Connect
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE),
                     ssidLength,
                     (char *)ssidBytes,
+                    HiddenAccessPoint,
                     SavedUsername,
                     SavedPassword);
 
@@ -888,6 +898,7 @@ le_result_t pa_wifiClient_Connect
                     (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE),
                     ssidLength,
                     (char *)ssidBytes,
+                    HiddenAccessPoint,
                     SavedUsername,
                     SavedPassword);
 

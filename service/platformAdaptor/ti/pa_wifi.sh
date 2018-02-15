@@ -12,8 +12,9 @@
 #           WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE
 #           WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE
 # $3: SSID
-# $4: WEP key or WPAx_EAP_PEAP0_ENTERPRISE identity
-# $5: WPAx_EAP_PEAP0_ENTERPRISE password
+# $4: HiddenAP (this parameter should be set when the AP is hidden from scan)
+# $5: WEP key or WPAx_EAP_PEAP0_ENTERPRISE identity
+# $6: WPAx_EAP_PEAP0_ENTERPRISE password
 
 if [ "$1" = "-d" ]; then
     shift
@@ -121,6 +122,7 @@ case ${CMD} in
 
   WIFICLIENT_CONNECT_SECURITY_NONE)
     echo "WIFICLIENT_CONNECT_SECURITY_NONE mode"
+    HIDDENAP=$4
     # Run wpa_supplicant daemon
     /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
 
@@ -133,6 +135,7 @@ case ${CMD} in
     (/sbin/wpa_cli -i${IFACE} set_network 0 key_mgmt NONE | grep OK) || exit 3
     (/sbin/wpa_cli -i${IFACE} set_network 0 mode 0 | grep OK) || exit 4
     (/sbin/wpa_cli -i${IFACE} set_network 0 ssid \"${SSID}\" | grep OK) || exit 5
+    (/sbin/wpa_cli -i${IFACE} set_network 0 scan_ssid $HIDDENAP | grep OK) || exit 9
     (/sbin/wpa_cli -i${IFACE} select_network 0 | grep OK) || exit 6
     (/sbin/wpa_cli -i${IFACE} enable_network 0 | grep OK) || exit 7
     (/sbin/wpa_cli -i${IFACE} reassociate | grep OK) || exit 8
@@ -142,7 +145,8 @@ case ${CMD} in
 
   WIFICLIENT_CONNECT_SECURITY_WEP)
     echo "WIFICLIENT_CONNECT_SECURITY_WEP mode"
-    WEPKEY=$4
+    HIDDENAP=$4
+    WEPKEY=$5
     # Run wpa_supplicant daemon
     /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
 
@@ -156,6 +160,7 @@ case ${CMD} in
     (/sbin/wpa_cli -i${IFACE} set_network 0 key_mgmt NONE | grep OK) || exit 4
     (/sbin/wpa_cli -i${IFACE} set_network 0 mode 0 | grep OK) || exit 5
     (/sbin/wpa_cli -i${IFACE} set_network 0 ssid \"${SSID}\" | grep OK) || exit 6
+    (/sbin/wpa_cli -i${IFACE} set_network 0 scan_ssid $HIDDENAP | grep OK) || exit 10
     (/sbin/wpa_cli -i${IFACE} select_network 0 | grep OK) || exit 7
     (/sbin/wpa_cli -i${IFACE} enable_network 0 | grep OK) || exit 8
     (/sbin/wpa_cli -i${IFACE} reassociate | grep OK) || exit 9
@@ -192,8 +197,9 @@ case ${CMD} in
     CheckConnection ${IFACE} ;;
 
   WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE)
-    ID=$4
-    PASSWD=$5
+    HIDDENAP=$4
+    ID=$5
+    PASSWD=$6
     echo "WIFICLIENT_CONNECT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE mode"
     # Run wpa_supplicant daemon
     /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
@@ -211,6 +217,7 @@ case ${CMD} in
     (/sbin/wpa_cli -i${IFACE} set_network 0 eap PEAP | grep OK) || exit 7
     (/sbin/wpa_cli -i${IFACE} set_network 0 identity \"${ID}\" | grep OK) || exit 8
     (/sbin/wpa_cli -i${IFACE} set_network 0 password \"${PASSWD}\" | grep OK) || exit 9
+    (/sbin/wpa_cli -i${IFACE} set_network 0 scan_ssid $HIDDENAP | grep OK) || exit 17
     (/sbin/wpa_cli -i${IFACE} set_network 0 phase1 \"peapver=0\" | grep OK) || exit 10
     (/sbin/wpa_cli -i${IFACE} set_network 0 phase2 \"auth=MSCHAPV2\" | grep OK) || exit 11
     (/sbin/wpa_cli -i${IFACE} set_network 0 mode 0 | grep OK) || exit 12
@@ -223,8 +230,9 @@ case ${CMD} in
     CheckConnection ${IFACE} ;;
 
   WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE)
-    ID=$4
-    PASSWD=$5
+    HIDDENAP=$4
+    ID=$5
+    PASSWD=$6
     echo "WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE mode"
     # Run wpa_supplicant daemon
     /sbin/wpa_supplicant -d -Dnl80211 -c /etc/${WPA_CFG} -i${IFACE} -B || exit 99
@@ -246,6 +254,7 @@ case ${CMD} in
     (/sbin/wpa_cli -i${IFACE} set_network 0 phase2 \"auth=MSCHAPV2\" | grep OK) || exit 11
     (/sbin/wpa_cli -i${IFACE} set_network 0 mode 0 | grep OK) || exit 12
     (/sbin/wpa_cli -i${IFACE} set_network 0 ssid \"${SSID}\" | grep OK) || exit 13
+    (/sbin/wpa_cli -i${IFACE} set_network 0 scan_ssid $HIDDENAP | grep OK) || exit 17
     (/sbin/wpa_cli -i${IFACE} select_network 0 | grep OK) || exit 14
     (/sbin/wpa_cli -i${IFACE} enable_network 0 | grep OK) || exit 15
     (/sbin/wpa_cli -i${IFACE} reassociate | grep OK) || exit 16
