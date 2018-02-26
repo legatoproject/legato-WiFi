@@ -580,10 +580,9 @@ void le_wifiClient_RemoveNewEventHandler
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function starts the WiFi device.
+ * Start the WIFI device.
  *
- * @return LE_FAULT         The function failed.
- * @return LE_BUSY          If the WiFi device is already started.
+ * @return LE_FAULT         The function failed to start the WIFI module.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -593,34 +592,40 @@ le_result_t le_wifiClient_Start
     void
 )
 {
-    le_result_t pa_result = LE_OK;
+    le_result_t result = LE_OK;
 
-    LE_DEBUG("Client starts");
-
-    // Count the number of Clients calling start.
-    ClientStartCount++;
-
-    // first client starts the hardware
-    if (1 == ClientStartCount)
+    // Only the first client starts the WIFI module
+    if (!ClientStartCount)
     {
-        pa_result = pa_wifiClient_Start();
+        result = pa_wifiClient_Start();
+        if (LE_OK == result)
+        {
+            LE_DEBUG("WIFI client started successfully");
+        }
+        else
+        {
+            LE_ERROR("Unable to start WIFI client. Err: %d", result);
+        }
+    }
+    else
+    {
+        LE_INFO("WIFI client already started");
     }
 
-    if (LE_OK != pa_result)
+    // Increment the number of clients calling this start function
+    if (LE_OK == result)
     {
-        LE_ERROR("ERROR: pa_wifiClient_Start returns %d", pa_result);
+        ClientStartCount++;
     }
 
-    return pa_result;
+    return result;
 }
-
 
 //--------------------------------------------------------------------------------------------------
 /**
- * This function stops the WiFi device.
+ * Stop the WIFI device.
  *
- * @return LE_FAULT         The function failed.
- * @return LE_DUPLICATE     If the WiFi device is already stopped.
+ * @return LE_FAULT         The function failed to stop the WIFI module.
  * @return LE_OK            The function succeeded.
  *
  */
@@ -630,33 +635,31 @@ le_result_t le_wifiClient_Stop
     void
 )
 {
-    if (ClientStartCount)
+    le_result_t result = LE_OK;
+
+    // Only the last client closes the WIFI module
+    if (1 == ClientStartCount)
+    {
+        pa_wifiClient_ClearAllCredentials();
+
+        result = pa_wifiClient_Stop();
+        if (LE_OK != result)
+        {
+            LE_ERROR("Unable to stop WIFI client. Err: %d", result);
+        }
+
+        ReleaseAllAccessPoints();
+        LE_DEBUG("WIFI client stopped successfully");
+    }
+
+    // Decrement the number of clients calling this stop function
+    if ((LE_OK == result) && (ClientStartCount))
     {
         ClientStartCount--;
-
-        LE_DEBUG("ClientStartCount %d", ClientStartCount);
-
-        // last client closes the hardware
-        if (0 == ClientStartCount)
-        {
-            LE_INFO("Clearing credentials...");
-            pa_wifiClient_ClearAllCredentials();
-            LE_INFO("Stopping client...");
-            pa_wifiClient_Stop();
-            LE_INFO("Releasing all APs.");
-            ReleaseAllAccessPoints();
-            LE_DEBUG("Last client pa_wifiClient_Release.");
-            LE_INFO("Last client pa_wifiClient_Release.");
-        }
-    }
-    else
-    {
-        LE_INFO("WiFi is already stopped.");
     }
 
-    return LE_OK;
+    return result;
 }
-
 
 //--------------------------------------------------------------------------------------------------
 /**
