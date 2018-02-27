@@ -56,10 +56,23 @@
 //--------------------------------------------------------------------------------------------------
 #define WPA_SUPPLICANT_FILE "/tmp/wpa_supplicant.conf"
 #define WPA_SUPPLICANT_DATA \
-    "network={\n \
+    "ctrl_interface=/var/run/wpa_supplicant\n \
+    ctrl_interface_group=0\n \
+    update_config=1\n \
+    network={\n \
     ssid=\"%.*s\"\n \
     scan_ssid=%d\n \
     psk=%s\n \
+    }\n"
+
+#define WPA_SUPPLICANT_DATA_NO_SECURITY \
+    "ctrl_interface=/var/run/wpa_supplicant\n \
+    ctrl_interface_group=0\n \
+    update_config=1\n \
+    network={\n \
+    ssid=\"%.*s\"\n \
+    scan_ssid=%d\n \
+    key_mgmt=NONE\n \
     }\n"
 
 //--------------------------------------------------------------------------------------------------
@@ -713,8 +726,16 @@ static le_result_t GenerateWpaSupplicant
         return LE_FAULT;
     }
 
-    snprintf(tmpString, sizeof(tmpString), WPA_SUPPLICANT_DATA,
-        strlen(ssidPtr), (char *)ssidPtr, HiddenAccessPoint, pskPtr);
+    if (pskPtr)
+    {
+        snprintf(tmpString, sizeof(tmpString), WPA_SUPPLICANT_DATA,
+                 strlen(ssidPtr), (char *)ssidPtr, HiddenAccessPoint, pskPtr);
+    }
+    else
+    {
+        snprintf(tmpString, sizeof(tmpString), WPA_SUPPLICANT_DATA_NO_SECURITY,
+                 strlen(ssidPtr), (char *)ssidPtr, HiddenAccessPoint);
+    }
 
     length = strlen(tmpString);
 
@@ -850,7 +871,6 @@ le_result_t pa_wifiClient_Connect
                 }
             }
 
-            // 2. Now WPA_CLI for LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL
             if (LE_OK == result)
             {
                 LE_INFO("Step 2: Generate WPA supplicant file");
@@ -905,7 +925,6 @@ le_result_t pa_wifiClient_Connect
                 }
             }
 
-            // 2. Now WPA_CLI for LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL
             if (LE_OK == result)
             {
                 LE_INFO("Step 2: Generate WPA supplicant file");

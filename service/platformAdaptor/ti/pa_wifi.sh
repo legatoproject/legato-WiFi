@@ -54,12 +54,6 @@ CheckConnection()
 case ${CMD} in
   WIFI_START)
     echo "WIFI_START"
-    /etc/init.d/tiwifi start
-    if [ $? -ne 0 ]; then
-        /etc/init.d/tiwifi stop
-        sleep 1
-        /etc/init.d/tiwifi start
-    fi
     # Mount the WiFi network interface
     /sbin/ifup ${IFACE} || exit 91
     exit 0 ;;
@@ -68,9 +62,7 @@ case ${CMD} in
     echo "WIFI_STOP"
     # Unmount the WiFi network interface
     /sbin/ifdown ${IFACE}
-    ret=$?
-    /etc/init.d/tiwifi stop
-    [ $ret -ne 0 ] && exit 92
+    [ $? -ne 0 ] && exit 92
     exit 0 ;;
 
   WIFI_WLAN_UP)
@@ -172,10 +164,6 @@ case ${CMD} in
     echo "WIFICLIENT_CONNECT_SECURITY_WPA_PSK_PERSONAL mode"
     [ -f /tmp/${WPA_CFG} ] || exit 1
 
-    mv /tmp/${WPA_CFG} /tmp/${WPA_CFG}.tmp || exit 1
-    cp /etc/${WPA_CFG} /tmp/${WPA_CFG} || exit 1
-    cat /tmp/${WPA_CFG}.tmp >> /tmp/${WPA_CFG} || exit 1
-
     # Run wpa_supplicant daemon
     (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/${WPA_CFG} -i${IFACE} -B) || exit 99
 
@@ -184,10 +172,6 @@ case ${CMD} in
   WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL)
     echo "WIFICLIENT_CONNECT_SECURITY_WPA2_PSK_PERSONAL mode"
     [ -f /tmp/${WPA_CFG} ] || exit 1
-
-    mv /tmp/${WPA_CFG} /tmp/${WPA_CFG}.tmp || exit 1
-    cp /etc/${WPA_CFG} /tmp/${WPA_CFG} || exit 1
-    cat /tmp/${WPA_CFG}.tmp >> /tmp/${WPA_CFG} || exit 1
 
     # Run wpa_supplicant daemon
     (/sbin/wpa_supplicant -d -Dnl80211 -c /tmp/${WPA_CFG} -i${IFACE} -B) || exit 99
