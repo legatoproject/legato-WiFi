@@ -295,15 +295,16 @@ static void StopWebServer
 )
 {
     LE_INFO("StopWebServer : Received signal %d", signalId);
+    le_sig_DeleteAll();
+
+    // Kill httpd
     LE_INFO("StopWebServer : Killing of instance of httpd server");
     RunSystemCommand("killall httpd");
-
-    // Stop the AP
-    le_wifiAp_Stop();
 
     // Turn off IP forwarding
     LE_INFO("Disabling IP forwarding");
     RunSystemCommand("echo 0 > /proc/sys/net/ipv4/ip_forward");
+
     // Removing masquerade modules
     LE_INFO("Removing the masquerading module...");
     RunSystemCommand("modprobe ipt_MASQUERADE");
@@ -311,8 +312,12 @@ static void StopWebServer
     // Turn off the iptables
     RunSystemCommand("iptables -t nat -f");
     RunSystemCommand("iptables -t mangle -F");
-    RunSystemCommand("iptables -F");
-    RunSystemCommand("iptables -X");
+
+    // Restore the old iptables configuration
+    RunSystemCommand("(/usr/sbin/iptables-restore < /tmp/iptables.tmp) && (rm /tmp/iptables.tmp)");
+
+    // Stop the AP
+    le_wifiAp_Stop();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -333,12 +338,21 @@ COMPONENT_INIT
 
     tzset();
 
-    // subscribes to access points events and logs them.
+    // Subscribes to access points events and logs them.
     SubscribeApEvents();
 
-    signal(SIGINT, StopWebServer);
-    signal(SIGTERM, StopWebServer);
+    // Register a signal event handler for SIGTERM when the app stops
+    le_sig_Block(SIGTERM);
+    le_sig_SetEventHandler(SIGTERM, StopWebServer);
 
+    // Save the current iptables configuration. It will be restaured when the app stops.
+    rc = system("/usr/sbin/iptables-save > /tmp/iptables.tmp");
+    if (WEXITSTATUS(rc))
+    {
+        LE_ERROR("Unable to save the current iptables configuration: %x", rc);
+    }
+
+    // Add iptables rules to allow HTTP ports
     rc = system("/usr/sbin/iptables -A INPUT -m udp -p udp --dport 8080:8080 -j ACCEPT");
     if (WEXITSTATUS(rc))
     {

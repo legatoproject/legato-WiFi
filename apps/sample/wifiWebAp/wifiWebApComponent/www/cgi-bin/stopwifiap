@@ -4,6 +4,8 @@ source wifiexport
 
 #LOG_FILE=/tmp/wifi_http.log
 
+SUBNET=`ifconfig wlan0 | grep "inet addr:" | cut -d ':' -f 2 | sed 's/  *.*$//' | cut -d '.' -f -3`".0/24"
+
 echo -en "<font color=\"black\" >$(date "+%T"):</font> Stopping Wifi Access Point...<br>\r\n" >> ${LOG_MSG_FILE}
 ##############################
 ${WIFITOOL} ap stop >> ${LOG_CMD_FILE}
@@ -27,8 +29,27 @@ echo -ne "<font color=\"black\" >$(date "+%T"):</font> Deleting the NAT...<br>\r
 rmmod ipt_MASQUERADE
 iptables -t nat -F
 iptables -t mangle -F
-iptables -F
-iptables -X
+
+iptables -D FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -D FORWARD --match state --state RELATED,ESTABLISHED --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -D FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -D FORWARD -i ${ITF_LAN} --destination ${SUBNET} --match state --state NEW --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -D INPUT -s ${SUBNET} --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -D INPUT -s ${SUBNET} --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -D FORWARD -i ${ITF_WAN} --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -D FORWARD -i ${ITF_WAN} --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
+iptables -D FORWARD -o ${ITF_WAN} --jump ACCEPT
+[ $? -ne 0 ] && \
+    echo -ne "<font color=\"red\" >$(date "+%T"): FAILED ! iptables -D FORWARD -o ${ITF_WAN} --jump ACCEPT</font><br>\r\n" >> ${LOG_MSG_FILE}
+
 route del default gw ${ITF_WAN_ADDR} ${ITF_WAN}
 
 ### Shutdown the WLAN interface
