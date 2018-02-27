@@ -180,7 +180,10 @@ iptables -I FORWARD -o ${ITF_WAN} --jump ACCEPT
 
 ### Stop the DHCP server
 echo -ne "<font color=\"black\" >$(date "+%T"):</font> Reconfiguring the DHCP server...<br>\r\n" >> ${LOG_MSG_FILE}
-/etc/init.d/dnsmasq stop || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO STOP THE DHCP server\n" >> ${LOG_CMD_FILE}
+/etc/init.d/dnsmasq stop
+sleep 1
+pidof dnsmasq && (kill -9 `pidof dnsmasq` || echo -ne ">>>>>>>>>>>>>>>>>>> UNABLE TO STOP THE DHCP server\n" >> ${LOG_CMD_FILE})
+
 ### Configure the IP addresses range for DHCP (dnsmasq)
 test -L /etc/dnsmasq.d/${DHCP_CFG_FILE} || ln -s /tmp/${DHCP_CFG_FILE} /etc/dnsmasq.d/${DHCP_CFG_FILE}
 
