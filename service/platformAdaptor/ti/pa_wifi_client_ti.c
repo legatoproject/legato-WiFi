@@ -476,7 +476,18 @@ le_result_t pa_wifiClient_GetScanResult
     ///< Results filled out if result was LE_OK.
 )
 {
+    const char bssidPrefix[] = "BSS ";
+    const char ssidPrefix[] = "\tSSID: ";
+    const char signalPrefix[] = "\tsignal: ";
+    const unsigned int bssidPrefixLen = NUM_ARRAY_MEMBERS(bssidPrefix) - 1;
+    const unsigned int ssidPrefixLen = NUM_ARRAY_MEMBERS(ssidPrefix) - 1;
+    const unsigned int signalPrefixLen = NUM_ARRAY_MEMBERS(signalPrefix) - 1;
     char path[1024];
+    struct timeval tv;
+    fd_set fds;
+    time_t start = time(NULL);
+    le_result_t ret = LE_NOT_FOUND;
+    int err;
 
     LE_INFO("Scan results");
 
@@ -498,42 +509,71 @@ le_result_t pa_wifiClient_GetScanResult
     memset(&accessPointPtr->bssid, 0, LE_WIFIDEFS_MAX_BSSID_BYTES);
 
     /* Read the output a line at a time - output it. */
-    while (NULL != fgets(path, sizeof(path) - 1, IwScanPipePtr))
+    while (IwScanPipePtr)
     {
-        const char *ssidPrefix = "\tSSID: ";
-        const size_t ssidPrefixLen = strlen(ssidPrefix);
-        const char *signalPrefix = "\tsignal: ";
-        const size_t signalPrefixLen = strlen(signalPrefix);
-        const char *bssidPrefix = "BSS ";
-        const size_t bssidPrefixLen = strlen(bssidPrefix);
-        LE_INFO("PARSING:%s: len:%zd", path, strnlen(path, sizeof(path) - 1));
+        // Set up the timeout.  here we can wait for 1 second
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
 
-        if (0 == strncmp(ssidPrefix, path, ssidPrefixLen))
+        FD_ZERO(&fds);
+        FD_SET(fileno(IwScanPipePtr), &fds);
+        err = select(fileno(IwScanPipePtr) + 1, &fds, NULL, NULL, &tv);
+        if (!err)
         {
-            // +1 and -1 are to allow for a newline which should be excluded from the SSID
-            accessPointPtr->ssidLength =
-                strnlen(&path[ssidPrefixLen], LE_WIFIDEFS_MAX_SSID_LENGTH + 1) - 1;
-            LE_INFO("FOUND SSID:%s  %c%c.. ", path, path[ssidPrefixLen], path[ssidPrefixLen + 1]);
-            memcpy(&accessPointPtr->ssidBytes, &path[ssidPrefixLen], accessPointPtr->ssidLength);
-            LE_INFO("SSID: '%s'", accessPointPtr->ssidBytes);
-            return LE_OK;
+            LE_DEBUG("loop=%lu", time(NULL) - start);
+            if ((time(NULL) - start) >= 5)
+            {
+                LE_WARN("Scan timeout");
+                goto cleanup;
+            }
+
+            continue;
         }
-        else if (0 == strncmp(signalPrefix, path, signalPrefixLen))
+        else if (err < 0)
         {
-            LE_INFO("FOUND SIGNAL STRENGTH:%s  %c %c ", path, path[signalPrefixLen + 1],
-                    path[signalPrefixLen + 2]);
-            accessPointPtr->signalStrength = atoi(&path[signalPrefixLen]);
-            LE_INFO("FOUND SIGNAL STRENGTH: signalStrength:%d ", accessPointPtr->signalStrength);
+            LE_ERROR("select() failed(%d)", errno);
+            goto cleanup;
         }
-        else if (0 == strncmp(bssidPrefix, path, bssidPrefixLen))
+        else if (FD_ISSET(fileno(IwScanPipePtr), &fds))
         {
-            LE_INFO("FOUND BSSID: '%s'", &path[bssidPrefixLen]);
-            strncpy(accessPointPtr->bssid, &path[bssidPrefixLen], LE_WIFIDEFS_MAX_BSSID_LENGTH);
-            LE_INFO("BSSID: '%s'", accessPointPtr->bssid);
+            LE_DEBUG("Read next scan result");
+            if (NULL != fgets(path, sizeof(path), IwScanPipePtr))
+            {
+                LE_INFO("PARSING: '%s'", path);
+
+                if (0 == strncmp(ssidPrefix, path, ssidPrefixLen))
+                {
+                    accessPointPtr->ssidLength = strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES + ssidPrefixLen) - ssidPrefixLen - 1;
+                    LE_INFO("FOUND SSID: '%s'", &path[ssidPrefixLen]);
+                    memcpy(&accessPointPtr->ssidBytes, &path[ssidPrefixLen], accessPointPtr->ssidLength);
+                    LE_INFO("SSID: '%s'", &accessPointPtr->ssidBytes[0]);
+                    ret = LE_OK;
+                    goto cleanup;
+                }
+                else if (0 == strncmp(signalPrefix, path, signalPrefixLen))
+                {
+                    LE_INFO("FOUND SIGNAL STRENGTH: '%s'", &path[signalPrefixLen]);
+                    accessPointPtr->signalStrength = atoi(&path[signalPrefixLen]);
+                    LE_INFO("signal(%d)",
+                    accessPointPtr->signalStrength);
+                }
+                else if (0 == strncmp(bssidPrefix, path, bssidPrefixLen))
+                {
+                    LE_INFO("FOUND BSSID: '%s'", &path[bssidPrefixLen]);
+                    memcpy(&accessPointPtr->bssid, &path[bssidPrefixLen], LE_WIFIDEFS_MAX_BSSID_LENGTH);
+                    LE_INFO("BSSID: '%s'", &accessPointPtr->bssid[0]);
+                }
+            }
+            else
+            {
+                LE_DEBUG("End of scan results");
+                goto cleanup;
+            }
         }
     }
 
-    return LE_NOT_FOUND;
+cleanup:
+    return ret;
 }
 
 //--------------------------------------------------------------------------------------------------
