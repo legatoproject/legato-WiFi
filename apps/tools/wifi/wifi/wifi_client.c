@@ -71,6 +71,14 @@ static void WifiClientConnectEventHandler
             LE_DEBUG("FYI: Got EVENT SCAN, while waiting for CONNECT.");
         }
         break;
+
+        case LE_WIFICLIENT_EVENT_SCAN_FAILED:
+        {
+            // This could happen. Not an error. Do nothing.
+            LE_WARN("Got EVENT SCAN FAILED, while waiting for CONNECT.");
+        }
+        break;
+
         default:
             LE_ERROR("ERROR Unknown event %d", event);
         break;

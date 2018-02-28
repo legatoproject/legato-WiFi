@@ -89,6 +89,13 @@ static le_thread_Ref_t ScanThreadRef = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Result of completed scan
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t ScanResult = LE_OK;
+
+//--------------------------------------------------------------------------------------------------
+/**
  * Event ID for WiFi Event message notification.
  *
  */
@@ -388,7 +395,8 @@ static void MarkAllAccessPointsOld
 //--------------------------------------------------------------------------------------------------
 /**
  * Start Scanning for WiFi Access points
- * Will result in event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available.
+ * Will result in an event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available or
+ * an event LE_WIFICLIENT_EVENT_SCAN_FAILED if there was an error while scanning.
  *
  * @return LE_FAULT         Function failed.
  * @return LE_OK            Function succeeded.
@@ -400,11 +408,13 @@ static void *ScanThread
 )
 {
     pa_wifiClient_AccessPoint_t accessPoint;
+    le_result_t                 *scanResultPtr = contextPtr;
     le_result_t                 paResult    = pa_wifiClient_Scan();
 
     if (LE_OK != paResult)
     {
         LE_ERROR("Scan failed (%d)", paResult);
+        *scanResultPtr = LE_FAULT;
         return NULL;
     }
 
@@ -414,10 +424,23 @@ static void *ScanThread
 
     while (LE_OK == (paResult = pa_wifiClient_GetScanResult(&accessPoint)))
     {
-        AddAccessPointToApRefMap(&accessPoint);
+        if (AddAccessPointToApRefMap(&accessPoint) == NULL)
+        {
+            LE_ERROR("pa_wifiClient_ScanDone() failed");
+            paResult = LE_FAULT;
+            break;
+        }
     }
 
-    pa_wifiClient_ScanDone();
+    *scanResultPtr = ((paResult == LE_OK) || (paResult == LE_NOT_FOUND)) ? LE_OK : paResult;
+
+    paResult = pa_wifiClient_ScanDone();
+    if (LE_OK != paResult)
+    {
+        LE_ERROR("pa_wifiClient_ScanDone() failed (%d)", paResult);
+        *scanResultPtr = paResult;
+        return NULL;
+    }
 
     return NULL;
 }
@@ -428,12 +451,26 @@ static void *ScanThread
  * Thread Destructor for scan
  */
 //--------------------------------------------------------------------------------------------------
-static void ScanThreadDestructor(void *context)
+static void ScanThreadDestructor
+(
+    void *context
+)
 {
+    le_result_t scanResult = *((le_result_t*)context);
+
     LE_DEBUG("Scan thread exited.");
     ScanThreadRef = NULL;
-    // use the PA callback to generate the event.
-    PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_DONE, NULL);
+
+    if (scanResult == LE_OK)
+    {
+        // use the PA callback to generate the event.
+        PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_DONE, NULL);
+    }
+    else
+    {
+        LE_WARN("Scan failed");
+        PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_FAILED, NULL);
+    }
 }
 
 
@@ -664,7 +701,8 @@ le_result_t le_wifiClient_Stop
 //--------------------------------------------------------------------------------------------------
 /**
  * Start scanning for WiFi access points
- * Will result in event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available.
+ * Will result in event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available or
+ * event EVENT_SCAN_FAILED if there was an error while scanning.
  *
  * @return LE_FAULT         Function failed.
  * @return LE_OK            Function succeeded.
@@ -680,8 +718,9 @@ le_result_t le_wifiClient_Scan
         LE_DEBUG("Scan started");
 
         // Start the thread
-        ScanThreadRef = le_thread_Create("WiFi Client Scan Thread", ScanThread, NULL);
-        le_thread_AddChildDestructor(ScanThreadRef, ScanThreadDestructor, NULL);
+        ScanResult = LE_OK;
+        ScanThreadRef = le_thread_Create("WiFi Client Scan Thread", ScanThread, &ScanResult);
+        le_thread_AddChildDestructor(ScanThreadRef, ScanThreadDestructor, &ScanResult);
 
         le_thread_Start(ScanThreadRef);
         return LE_OK;

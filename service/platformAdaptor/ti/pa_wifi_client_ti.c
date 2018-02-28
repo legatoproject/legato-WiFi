@@ -582,6 +582,7 @@ cleanup:
  * It signals that the scan results are no longer needed and frees some internal resources.
  *
  * @return LE_OK     The function succeeded.
+ * @return LE_FAULT  The scan failed.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiClient_ScanDone
@@ -589,13 +590,27 @@ le_result_t pa_wifiClient_ScanDone
     void
 )
 {
+    le_result_t res = LE_OK;
+
     if (NULL != IwScanPipePtr)
     {
-        pclose(IwScanPipePtr);
+        int st = pclose(IwScanPipePtr);
+        if (WIFEXITED(st))
+        {
+            LE_DEBUG("Scan exit status(%d)", WEXITSTATUS(st));
+            res = WEXITSTATUS(st) ? LE_FAULT:LE_OK;
+            if (res != LE_OK)
+            {
+                LE_ERROR("Scan failed(%d)", WEXITSTATUS(st));
+                res = LE_FAULT;
+            }
+        }
+
         IwScanPipePtr = NULL;
         IsScanRunning = false;
     }
-    return LE_OK;
+
+    return res;
 }
 
 //--------------------------------------------------------------------------------------------------

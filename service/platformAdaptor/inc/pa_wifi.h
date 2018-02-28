@@ -138,6 +138,7 @@ LE_SHARED le_result_t pa_wifiClient_GetScanResult
  * It signals that the scan results are no longer needed and frees some internal resourses.
  *
  * @return LE_OK     The function succeeded.
+ * @return LE_FAULT  The scan failed
  */
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t pa_wifiClient_ScanDone
