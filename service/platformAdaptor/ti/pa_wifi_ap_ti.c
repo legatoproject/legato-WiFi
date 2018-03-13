@@ -183,6 +183,15 @@ static void ThreadDestructor
     void *contextPtr
 )
 {
+    int status;
+
+    // Kill the script launched by popen() in PA thread
+    status = system("pid=`pgrep -f \""COMMAND_WIFI_SET_EVENT"\"`; [ -n \"$pid\" ] && kill -9 $pid");
+    if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    {
+        LE_ERROR("Unable to kill the WIFI events script");
+    }
+
     if (IwThreadPipePtr)
     {
         // And close the communication pipe used in created thread.
@@ -447,179 +456,127 @@ le_result_t pa_wifiAp_Start
 {
     le_result_t  result         = LE_FAULT;
     char         tmpString[256];
-    int          systemResult;
+    int          status;
     FILE        *configFilePtr  = NULL;
 
-    LE_INFO("AP starts");
+    // Check than an SSID is provided before starting
+    if ('\0' == SavedSsid[0])
+    {
+        LE_ERROR("Unable to start AP because no valid SSID provided");
+        return LE_FAULT;
+    }
+
+    LE_DEBUG("Starting AP, SSID: %s", SavedSsid);
 
     // Create WiFi AP PA Thread
     WifiApPaThread = le_thread_Create("WifiApPaThread", WifiApPaThreadMain, NULL);
     le_thread_SetJoinable(WifiApPaThread);
-    le_thread_AddDestructor(ThreadDestructor, NULL);
+    le_thread_AddChildDestructor(WifiApPaThread, ThreadDestructor, NULL);
     le_thread_Start(WifiApPaThread);
 
-    // Check parameters before start
-    if ('\0' == SavedSsid[0])
+    // Mount WiFi network interface. Returned values:
+    //  0: if the interface is correctly mounted
+    // -1: if the fork() has failed (see man system)
+    // 91: if module is not loaded or interface not seen
+    status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
+    if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
     {
-        LE_ERROR("No valid SSID");
-        return LE_FAULT;
-    } else {
-        LE_INFO("SSID = %s", SavedSsid);
-        result = LE_OK;
+        LE_ERROR("WiFi AP Command Failed: (%d)" COMMAND_WIFI_HW_START, status);
+        goto error;
     }
 
-    if (LE_OK == result)
+    // Create hostapd.conf file in /tmp
+    configFilePtr = fopen(WIFI_HOSTAPD_FILE, "w");
+    if (NULL ==  configFilePtr)
     {
-        systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
-        /**
-         * Return value of -1 means that the fork() has failed (see man system).
-         * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
-         * and the wlan0 interface is seen,
-         * 127 if modules not loaded or interface not seen,
-         * 1 if the option passed if unknown (start stop and restart).
-        */
-        if (0 == WEXITSTATUS (systemResult))
-        {
-            LE_INFO("WiFi Access Point Command OK:" COMMAND_WIFI_HW_START);
-            result = LE_OK;
-        }
-        else
-        {
-            LE_ERROR("WiFi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_START, systemResult);
-            result = LE_FAULT;
-        }
+        LE_ERROR("Unable to create hostapd.conf file.");
+        goto error;
     }
 
-    if (LE_OK == result)
+    // Write default configuration in hostapd.conf
+    if (LE_OK != WriteApCfgFile(WIFI_AP_CONFIG_HOSTAPD, configFilePtr))
     {
-        // COMMAND_WIFI_WLAN_UP
-        systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_WLAN_UP);
-        if (0 == WEXITSTATUS(systemResult))
-        {
-            LE_INFO("WiFi Access Point Command OK:" COMMAND_WIFI_WLAN_UP);
-            result = LE_OK;
-        }
-        else
-        {
-            LE_ERROR("WiFi Access Point Command Failed: (%d)" COMMAND_WIFI_WLAN_UP, systemResult);
-            result = LE_FAULT;
-        }
+        LE_ERROR("Unable to set default configuration in hostapd.conf");
+        goto error;
     }
 
-    if (LE_OK == result)
+    snprintf(tmpString, sizeof(tmpString), "ssid=%s\nchannel=%d\nmax_num_sta=%d\n",
+             (char *)SavedSsid,
+             SavedChannelNumber,
+             SavedMaxNumClients);
+
+    // Write SSID, channel and maximum number of clients in hostapd.conf
+    if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
     {
-        // Create /etc/hostapd.conf
-        configFilePtr = fopen(WIFI_HOSTAPD_FILE, "w");
-        if (configFilePtr == NULL)
-        {
-            LE_ERROR("WiFi Access Point Command Failed: Unable to create hostapd.conf file.");
-            result = LE_FAULT;
-        }
-        else
-        {
-            result = WriteApCfgFile(WIFI_AP_CONFIG_HOSTAPD, configFilePtr);
-        }
+        LE_ERROR("Unable to set SSID, channel and maximum number of clients in hostapd.conf");
+        goto error;
+    }
 
-        if (result == LE_OK)
-        {
-            snprintf(tmpString, sizeof(tmpString), "ssid=%s\nchannel=%d\nmax_num_sta=%d\n",
-                (char *)SavedSsid,
-                SavedChannelNumber,
-                SavedMaxNumClients);
-            result = WriteApCfgFile(tmpString, configFilePtr);
-        }
+    // Write security parameters in hostapd.conf
+    switch (SavedSecurityProtocol)
+    {
+        case LE_WIFIAP_SECURITY_NONE:
+            LE_DEBUG("LE_WIFIAP_SECURITY_NONE");
+            result = WriteApCfgFile(WIFI_AP_CONFIG_SECURITY_NONE, configFilePtr);
+            break;
 
-        if (result == LE_OK)
-        {
-            LE_INFO("hostapd.conf: %s", tmpString);
-            // Security Protocol
-            switch (SavedSecurityProtocol)
+        case LE_WIFIAP_SECURITY_WPA2:
+            LE_DEBUG("LE_WIFIAP_SECURITY_WPA2");
+            result = WriteApCfgFile(WIFI_AP_CONFIG_SECURITY_WPA2, configFilePtr);
+            if ('\0' != SavedPassphrase[0])
             {
-                case LE_WIFIAP_SECURITY_NONE:
-                    LE_INFO("LE_WIFIAP_SECURITY_NONE");
-                    result = WriteApCfgFile(WIFI_AP_CONFIG_SECURITY_NONE, configFilePtr);
-                    break;
-
-                case LE_WIFIAP_SECURITY_WPA2:
-                    LE_INFO("LE_WIFIAP_SECURITY_WPA2");
-                    result = WriteApCfgFile(WIFI_AP_CONFIG_SECURITY_WPA2, configFilePtr);
-                    if ('\0' != SavedPassphrase[0])
-                    {
-                        snprintf(tmpString, sizeof(tmpString), "wpa_passphrase=%s\n", SavedPassphrase);
-                        LE_INFO("hostapd.conf: %s", tmpString);
-                        result = WriteApCfgFile(tmpString, configFilePtr);
-                    }
-                    else if ('\0' != SavedPreSharedKey[0])
-                    {
-                        snprintf(tmpString, sizeof(tmpString), "wpa_psk=%s\n", SavedPreSharedKey);
-                        LE_INFO("hostapd.conf: %s", tmpString);
-                        result = WriteApCfgFile(tmpString, configFilePtr);
-                    }
-                    else
-                    {
-                        LE_ERROR("Security protocol is missing!");
-                        result = LE_FAULT;
-                    }
-                    break;
-
-                default:
-                    result = LE_FAULT;
-                    break;
+                snprintf(tmpString, sizeof(tmpString), "wpa_passphrase=%s\n", SavedPassphrase);
+                result = WriteApCfgFile(tmpString, configFilePtr);
             }
-        }
-    }
-
-    if (LE_OK == result)
-    {
-        if (true == SavedDiscoverable)
-        {
-            // Announce SSID
-            snprintf(tmpString, sizeof(tmpString), "ignore_broadcast_ssid=0\n");
-            LE_INFO("hostapd.conf: %s", tmpString);
-            result = WriteApCfgFile(tmpString, configFilePtr);
-        }
-        else
-        {
-            // Do not announce SSID
-            snprintf(tmpString, sizeof(tmpString), "ignore_broadcast_ssid=1\n");
-            LE_INFO("hostapd.conf: %s", tmpString);
-            result = WriteApCfgFile(tmpString, configFilePtr);
-        }
-    }
-
-    // Close file
-    if (configFilePtr)
-        fclose(configFilePtr);
-
-    if (LE_OK == result)
-    {
-        LE_INFO("Waiting 15s for WiFi driver availability ...");
-        sleep(15);   // Sleep 15s
-        // Start Access Point cmd: /bin/hostapd /etc/hostapd.conf
-        if (LE_OK == result)
-        {
-            LE_INFO("Start Access Point Cmd: /bin/hostapd /tmp/hostapd.conf");
-            systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_START);
-            if (0 != WEXITSTATUS(systemResult))
+            else if ('\0' != SavedPreSharedKey[0])
             {
-                LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_START, systemResult);
-                result = LE_FAULT;
+                snprintf(tmpString, sizeof(tmpString), "wpa_psk=%s\n", SavedPreSharedKey);
+                result = WriteApCfgFile(tmpString, configFilePtr);
             }
             else
             {
-                LE_INFO("WiFi Access Point Command OK:" COMMAND_WIFIAP_HOSTAPD_START);
-                result = LE_OK;
+                LE_ERROR("Security protocol is missing!");
+                result = LE_FAULT;
             }
-        }
-    }
-    else
-    {
-        // Config file is incomplete, so it is removed.
-        LE_ERROR("WiFi Client Command Failed: As a result, configuration file (%s) is removed.", WIFI_HOSTAPD_FILE);
-        remove(WIFI_HOSTAPD_FILE);
+            break;
+
+        default:
+            result = LE_FAULT;
+            break;
     }
 
-    return result;
+    if (LE_OK != result)
+    {
+        LE_ERROR("Unable to set security parameters in hostapd.conf");
+        goto error;
+    }
+
+    // Set whether SSID should be announced or not
+    snprintf(tmpString, sizeof(tmpString), "ignore_broadcast_ssid=%d\n", !SavedDiscoverable);
+    if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
+    {
+        LE_ERROR("Unable to set broadcast paramater in hostapd.conf");
+    }
+
+    fclose(configFilePtr);
+
+    // Start Access Point cmd: /bin/hostapd /etc/hostapd.conf
+    status = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_START);
+     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    {
+        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_START, status);
+        goto error;
+    }
+
+    LE_INFO("WiFi AP started correclty");
+    return LE_OK;
+
+error:
+    if (configFilePtr) fclose(configFilePtr);
+    remove(WIFI_HOSTAPD_FILE);
+    le_thread_Cancel(WifiApPaThread);
+    le_thread_Join(WifiApPaThread, NULL);
+    return LE_FAULT;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -636,64 +593,41 @@ le_result_t pa_wifiAp_Stop
     void
 )
 {
-    le_result_t result       = LE_FAULT;
-    int         systemResult;
-
-    LE_INFO("Stop Access Point Cmd: kill hostap");
+    int status;
 
     // Try to delete the rule allowing the DHCP ports on wlan0. Ignore if it fails
-    systemResult = system("iptables -D " COMMAND_IPTABLE_DHCP_WLAN0);
-    if (0 != WEXITSTATUS(systemResult))
+    status = system("iptables -D " COMMAND_IPTABLE_DHCP_WLAN0);
+     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
     {
         LE_WARN("Deleting rule for DHCP port fails");
     }
 
-    systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_STOP);
-    if (0 != WEXITSTATUS(systemResult))
+    status = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_STOP);
+     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
     {
-        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_STOP, systemResult);
-        result = LE_FAULT;
-    }
-    else
-    {
-        LE_INFO("WiFi Access Point Command OK:" COMMAND_WIFIAP_HOSTAPD_STOP);
-        result = LE_OK;
+        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_STOP, status);
+        return LE_FAULT;
     }
 
-    systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP);
-    /**
-     * Return value of -1 means that the fork() has failed (see man system).
-     * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
-     * WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi.sh "
-     * and the wlan0 interface is seen,
-     * 127 if modules not loaded or interface not seen,
-     * 1 if the option passed if unknown (start stop and restart).
-    */
-    if (0 == WEXITSTATUS(systemResult))
+    status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP);
+     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
     {
-        LE_INFO("WiFi Access Point Command OK:" COMMAND_WIFI_HW_STOP);
-        result = LE_OK;
-    }
-    else
-    {
-        LE_ERROR("WiFi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_STOP, systemResult);
-        result = LE_FAULT;
+        LE_ERROR("WiFi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_STOP, status);
+        return LE_FAULT;
     }
 
-    if (LE_OK == result)
+    // Cancel the previously created thread
+    le_thread_Cancel(WifiApPaThread);
+    if (LE_OK != le_thread_Join(WifiApPaThread, NULL))
     {
-        // Must terminate created thread
-        le_thread_Cancel(WifiApPaThread);
-        if (LE_OK == le_thread_Join(WifiApPaThread, NULL))
-        {
-            result = LE_OK;
-        }
-        else
-        {
-            result = LE_FAULT;
-        }
+        return LE_FAULT;
     }
-    return result;
+
+    // Remove the previously created hostapd.conf file in /tmp
+    remove(WIFI_HOSTAPD_FILE);
+
+    LE_INFO("WiFi AP stopped correclty");
+    return LE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------

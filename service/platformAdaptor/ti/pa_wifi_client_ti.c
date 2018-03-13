@@ -167,6 +167,15 @@ static void ThreadDestructor
     void *contextPtr
 )
 {
+    int status;
+
+    // Kill the script launched by popen() in Client thread
+    status = system("pid=`pgrep -f \""COMMAND_WIFI_SET_EVENT"\"`; [ -n \"$pid\" ] && kill -9 $pid");
+    if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    {
+        LE_ERROR("Unable to kill the WIFI events script");
+    }
+
     if (IwThreadPipePtr)
     {
         // And close FP used in created thread
@@ -307,50 +316,32 @@ le_result_t pa_wifiClient_Start
     void
 )
 {
-    le_result_t result       = LE_FAULT;
-    int         systemResult;
+    int status;
 
-    LE_INFO("WiFi client starts");
-
-    // Create WiFi Client PA Thread
+    /* Create WiFi Client PA Thread */
     WifiClientPaThread = le_thread_Create("WifiClientPaThread", WifiClientPaThreadMain, NULL);
     le_thread_SetJoinable(WifiClientPaThread);
-    le_thread_AddDestructor(ThreadDestructor, NULL);
+    le_thread_AddChildDestructor(WifiClientPaThread, ThreadDestructor, NULL);
     le_thread_Start(WifiClientPaThread);
 
-    systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
+    status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
     /**
-     * Return value of -1 means that the fork() has failed (see man system).
-     * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
-     * and the wlan0 interface is seen,
-     * 127 if modules not loaded or interface not seen,
-     * 1 if the option passed if unknown (start stop and restart).
+     * Returned values:
+     *  0: if the interface is correctly moutned
+     * -1: if the fork() has failed (see man system)
+     * 91: if module is not loaded or interface not seen
      */
-    if (0 == WEXITSTATUS(systemResult))
+    if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
     {
-        LE_INFO("WiFi Client Command OK:" COMMAND_WIFI_HW_START);
-        result = LE_OK;
+        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFI_HW_START, status);
+        le_thread_Cancel(WifiClientPaThread);
+        le_thread_Join(WifiClientPaThread, NULL);
+        return LE_FAULT;
     }
-    else
-    {
-        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFI_HW_START, systemResult);
-        result = LE_FAULT;
-    }
-    if (LE_OK == result)
-    {
-        systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_WLAN_UP);
-        if (0 == WEXITSTATUS(systemResult))
-        {
-            LE_INFO("WiFi Client Command OK:" COMMAND_WIFI_WLAN_UP);
-            result = LE_OK;
-        }
-        else
-        {
-            LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFI_WLAN_UP, systemResult);
-            result = LE_FAULT;
-        }
-    }
-    return result;
+
+
+    LE_INFO("WiFi client stopped correclty");
+    return LE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -366,42 +357,28 @@ le_result_t pa_wifiClient_Stop
     void
 )
 {
-    le_result_t result       = LE_FAULT;
-    int         systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP);
-
+    int status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP);
     /**
-     * Return value of -1 means that the fork() has failed (see man system).
-     * The script /etc/init.d/tiwifi returns 0 if the kernel modules are loaded correctly
-     * and the wlan0 interface is seen,
-     * 127 if modules not loaded or interface not seen,
-     * 1 if the option passed if unknown (start stop and restart).
-    */
-    if (0 == WEXITSTATUS(systemResult))
+     * Returned values:
+     *  0: if the interface is correctly unmounted
+     * -1: if the fork() has failed (see man system)
+     * 92: if unable to stop the interface
+     */
+    if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
     {
-        LE_INFO("WiFi Client Command OK:" COMMAND_WIFI_HW_STOP);
-        result = LE_OK;
-    }
-    else
-    {
-        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFI_HW_STOP, systemResult);
-        result = LE_FAULT;
+        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFI_HW_STOP, status);
+        return LE_FAULT;
     }
 
-    if (LE_OK == result)
+    /* Terminate the created thread */
+    le_thread_Cancel(WifiClientPaThread);
+    if (LE_OK != le_thread_Join(WifiClientPaThread, NULL))
     {
-        // Must terminate created thread
-        le_thread_Cancel(WifiClientPaThread);
-        if (LE_OK == le_thread_Join(WifiClientPaThread, NULL))
-        {
-            // IwThreadPipePtr is released in the ThreadDestructor function.
-            result = LE_OK;
-        }
-        else
-        {
-            result= LE_FAULT;
-        }
+        return LE_FAULT;
     }
-    return result;
+
+    LE_INFO("WiFi client stopped correclty");
+    return LE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------
