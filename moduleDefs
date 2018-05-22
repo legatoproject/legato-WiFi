@@ -38,16 +38,16 @@ endif
 # Only use WiFi module on WP750x/WP85
 ifndef LEGATO_WIFI_BUILD
   LEGATO_WIFI_BUILD = 0
-  ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp750x)
+  ifeq ($(TARGET),wp750x)
     LEGATO_WIFI_BUILD = 1
   endif
-  ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp85)
+  ifeq ($(TARGET),wp85)
     LEGATO_WIFI_BUILD = 1
   endif
-  ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp76xx)
+  ifeq ($(TARGET),wp76xx)
     LEGATO_WIFI_BUILD = 1
   endif
-  ifeq ($(subst tests_,,$(MAKECMDGOALS)),wp77xx)
+  ifeq ($(TARGET),wp77xx)
     LEGATO_WIFI_BUILD = 1
   endif
 endif
