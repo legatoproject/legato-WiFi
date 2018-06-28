@@ -22,13 +22,6 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Value of signal strength that indicates that no value was found.
- */
-//-------------------------------------------------------------------------------------------------
-#define SIGNAL_STRENGTH_DEFAULT  (0xfff)
-
-//--------------------------------------------------------------------------------------------------
-/**
  * Struct to hold the AccessPoint from the Scan's data.
  *
  */
@@ -370,7 +363,7 @@ static void MarkAllAccessPointsOld
 
             if (apPtr != NULL)
             {
-                apPtr->accessPoint.signalStrength = SIGNAL_STRENGTH_DEFAULT;
+                apPtr->accessPoint.signalStrength = LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
                 apPtr->foundInLatestScan = false;
                 LE_DEBUG("Marking %p as old", apRef);
                 counter++;
@@ -846,7 +839,7 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetNextAccessPoint
  *
  * @return
  *  - signal strength in dBm. Example -30 = -30dBm
- *  - if no signal available it will return OxFFFF
+ *  - if no signal available it will return LE_WIFICLIENT_NO_SIGNAL_STRENGTH
  */
 //--------------------------------------------------------------------------------------------------
 int16_t le_wifiClient_GetSignalStrength
@@ -862,7 +855,7 @@ int16_t le_wifiClient_GetSignalStrength
     if (NULL == apPtr)
     {
         LE_ERROR("Invalid access point reference.");
-        return SIGNAL_STRENGTH_DEFAULT;
+        return LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
     }
 
     return apPtr->accessPoint.signalStrength;
@@ -977,8 +970,8 @@ le_result_t le_wifiClient_GetSsid
  * Set the passphrase used to generate the PSK.
  *
  * @note This is one way to authenticate against the access point. The other one is provided by the
- * le_wifiClient_SetPreSharedKey() function. Both ways are exclusive and are effective only when used
- * with WPA-personal authentication.
+ * le_wifiClient_SetPreSharedKey() function. Both ways are exclusive and are effective only when
+ * used with WPA-personal authentication.
  *
  * @return LE_BAD_PARAMETER Parameter is invalid.
  * @return LE_OK            Function succeeded.
@@ -1253,7 +1246,7 @@ le_wifiClient_AccessPointRef_t le_wifiClient_Create
         {
             createdAccessPointPtr->foundInLatestScan = false;
 
-            createdAccessPointPtr->accessPoint.signalStrength = SIGNAL_STRENGTH_DEFAULT;
+            createdAccessPointPtr->accessPoint.signalStrength = LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
             createdAccessPointPtr->accessPoint.ssidLength = ssidNumElements;
             memcpy(&createdAccessPointPtr->accessPoint.ssidBytes[0],
                 ssidPtr,

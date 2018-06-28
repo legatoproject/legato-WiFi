@@ -131,7 +131,8 @@ static le_thread_Ref_t WifiClientPaThread = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
- * WifiClient state event ID used to report WifiClient state events to the registered event handlers.
+ * WifiClient state event ID used to report WifiClient state events to the registered event
+ * handlers.
  */
 //--------------------------------------------------------------------------------------------------
 static le_event_Id_t WifiClientPaEvent;
@@ -486,7 +487,7 @@ le_result_t pa_wifiClient_GetScanResult
     }
 
     /* Default values */
-    accessPointPtr->signalStrength = 0xffff;
+    accessPointPtr->signalStrength = LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
     accessPointPtr->ssidLength = 0;
 
     /* Read the output a line at a time - output it. */
@@ -894,13 +895,13 @@ le_result_t pa_wifiClient_Connect
             {
                 LE_INFO("Step 2: SH script");
                 snprintf(tmpString,
-                    sizeof(tmpString),
-                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE),
-                    ssidLength,
-                    (char *)ssidBytes,
-                    HiddenAccessPoint,
-                    SavedUsername,
-                    SavedPassword);
+                   sizeof(tmpString),
+                   (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE),
+                   ssidLength,
+                   (char *)ssidBytes,
+                   HiddenAccessPoint,
+                   SavedUsername,
+                   SavedPassword);
 
                 systemResult = system(tmpString);
                 // Return value of -1 means that the fork() has failed (see man system).

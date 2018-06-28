@@ -503,7 +503,7 @@ le_result_t pa_wifiClient_GetScanResult
     }
 
     /* Default values */
-    accessPointPtr->signalStrength = 0xffff;
+    accessPointPtr->signalStrength = LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
     accessPointPtr->ssidLength = 0;
     memset(&accessPointPtr->ssidBytes, 0, LE_WIFIDEFS_MAX_SSID_BYTES);
     memset(&accessPointPtr->bssid, 0, LE_WIFIDEFS_MAX_BSSID_BYTES);
@@ -543,9 +543,13 @@ le_result_t pa_wifiClient_GetScanResult
 
                 if (0 == strncmp(ssidPrefix, path, ssidPrefixLen))
                 {
-                    accessPointPtr->ssidLength = strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES + ssidPrefixLen) - ssidPrefixLen - 1;
+                    accessPointPtr->ssidLength =
+                    strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES + ssidPrefixLen) - ssidPrefixLen - 1;
+
                     LE_INFO("FOUND SSID: '%s'", &path[ssidPrefixLen]);
-                    memcpy(&accessPointPtr->ssidBytes, &path[ssidPrefixLen], accessPointPtr->ssidLength);
+
+                    memcpy(&accessPointPtr->ssidBytes, &path[ssidPrefixLen],
+                           accessPointPtr->ssidLength);
                     LE_INFO("SSID: '%s'", &accessPointPtr->ssidBytes[0]);
                     ret = LE_OK;
                     goto cleanup;
@@ -554,13 +558,13 @@ le_result_t pa_wifiClient_GetScanResult
                 {
                     LE_INFO("FOUND SIGNAL STRENGTH: '%s'", &path[signalPrefixLen]);
                     accessPointPtr->signalStrength = atoi(&path[signalPrefixLen]);
-                    LE_INFO("signal(%d)",
-                    accessPointPtr->signalStrength);
+                    LE_INFO("signal(%d)", accessPointPtr->signalStrength);
                 }
                 else if (0 == strncmp(bssidPrefix, path, bssidPrefixLen))
                 {
                     LE_INFO("FOUND BSSID: '%s'", &path[bssidPrefixLen]);
-                    memcpy(&accessPointPtr->bssid, &path[bssidPrefixLen], LE_WIFIDEFS_MAX_BSSID_LENGTH);
+                    memcpy(&accessPointPtr->bssid, &path[bssidPrefixLen],
+                           LE_WIFIDEFS_MAX_BSSID_LENGTH);
                     LE_INFO("BSSID: '%s'", &accessPointPtr->bssid[0]);
                 }
             }
@@ -1060,13 +1064,13 @@ le_result_t pa_wifiClient_Connect
             {
                 LE_INFO("Step 2: SH script");
                 snprintf(tmpString,
-                    sizeof(tmpString),
-                    (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE),
-                    ssidLength,
-                    (char *)ssidBytes,
-                    HiddenAccessPoint,
-                    SavedUsername,
-                    SavedPassword);
+                   sizeof(tmpString),
+                   (WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_CONNECT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE),
+                   ssidLength,
+                   (char *)ssidBytes,
+                   HiddenAccessPoint,
+                   SavedUsername,
+                   SavedPassword);
 
                 systemResult = system(tmpString);
                 // Return value of -1 means that the fork() has failed (see man system).
