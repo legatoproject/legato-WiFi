@@ -1,0 +1,35 @@
+#
+# Configuration for Legato WiFi module.
+#
+# Copyright (C) Sierra Wireless Inc.
+#
+
+### Options ###
+
+config ENABLE_WIFI
+  bool "Enable WiFi"
+  default y if TARGET_WP750X
+  default y if TARGET_WP85
+  default y if TARGET_WP76XX
+  default y if TARGET_WP77XX
+  default n
+  ---help---
+  Enable Legato WiFi support.
+
+choice
+  prompt "Wifi Platform Adaptor"
+  depends on ENABLE_WIFI
+  default WIFI_PA_TI
+
+config WIFI_PA_TI
+  bool "TI"
+  ---help---
+  Platform adaptor for TI wireless module, such as that on the MangOH WiFi IoT
+  card.
+
+config WIFI_PA_TI_SIMU
+  bool "TI simulator"
+  ---help---
+  Platform adaptor running a simulated TI Access Point.
+
+endchoice # end "WiFi Platform Adaptor"

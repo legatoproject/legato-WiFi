@@ -1,9 +1,7 @@
-$(info Module: WiFi)
-
 export LEGATO_WIFI_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
-# Check wether the version is already defined.
-ifeq ($(origin LEGATO_WIFI_VERSION), undefined)
+# Check whether the version is already defined.
+ifeq ($(origin LEGATO_WIFI_VERSION),undefined)
   # If not, try to define it through Git information
   LEGATO_WIFI_VERSION := $(shell (git --git-dir=$(LEGATO_WIFI_ROOT)/.git describe --tags || git rev-parse HEAD) 2> /dev/null)
 
@@ -17,49 +15,3 @@ ifeq ($(origin LEGATO_WIFI_VERSION), undefined)
   # And finally, export it.
   export LEGATO_WIFI_VERSION
 endif
-
-# this variable goes from environment -> cmake -> Doxygen.
-# It can be used in Legato Doxygen code to conditionally add MangOH links etc.
-# \if EXTERNAL_DOXYGEN_DEFINE
-# ....
-# \endif
-export EXTERNAL_DOXYGEN_DEFINE = EXTERNAL_DOXYGEN_DEFINE
-export EXTERNAL_DOXYGEN_ROOT = $(LEGATO_WIFI_ROOT)
-
-######### Platform Adaptor values
-# values are the names of the subdirectories in /WiFi/service/platformAdaptor/$(LEGATO_WIFI_PA)
-# currently available :
-# ti - running hardware
-# ti_simu - running a simulated Access Point.  (Wifi Client to remains to be simulated)
-ifndef LEGATO_WIFI_PA
-  export LEGATO_WIFI_PA = ti
-endif
-
-# Only use WiFi module on WP750x/WP85
-ifndef LEGATO_WIFI_BUILD
-  LEGATO_WIFI_BUILD = 0
-  ifeq ($(TARGET),wp750x)
-    LEGATO_WIFI_BUILD = 1
-  endif
-  ifeq ($(TARGET),wp85)
-    LEGATO_WIFI_BUILD = 1
-  endif
-  ifeq ($(TARGET),wp76xx)
-    LEGATO_WIFI_BUILD = 1
-  endif
-  ifeq ($(TARGET),wp77xx)
-    LEGATO_WIFI_BUILD = 1
-  endif
-endif
-
-ifeq ($(LEGATO_WIFI_BUILD),1)
-  $(info ********************* VERSION ********************)
-  $(info Legato WiFi version: $(LEGATO_WIFI_VERSION))
-  $(info **************************************************)
-
-  ifndef SDEF_TO_USE
-    # Override the default sdef file to use the MangOH one
-    export SDEF_TO_USE = $(LEGATO_WIFI_ROOT)/wifi.sdef
-  endif
-endif
-
