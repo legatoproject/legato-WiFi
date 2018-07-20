@@ -585,7 +585,7 @@ void ExecuteWifiClientCommand
         }
 
         rc1 = sscanf(refPtr, "%x", (unsigned int *)&apRef);
-        result = le_wifiClient_SetPreSharedKey(apRef, wepKeyPtr);
+        result = le_wifiClient_SetWepKey(apRef, wepKeyPtr);
 
         if ((1 == rc1) && (LE_OK == result))
         {
@@ -594,7 +594,7 @@ void ExecuteWifiClientCommand
         }
         else
         {
-            printf("ERROR: le_wifiClient_SetPreSharedKey returns %d.\n", result);
+            printf("ERROR: le_wifiClient_SetWepKey returns %d.\n", result);
             exit(EXIT_FAILURE);
         }
     }
