@@ -178,6 +178,15 @@ static void WifiClientScanEventHandler
             exit(EXIT_SUCCESS);
         }
         break;
+
+        case LE_WIFICLIENT_EVENT_SCAN_FAILED:
+        {
+            printf("ERROR: Scan failed.\n");
+            le_wifiClient_RemoveNewEventHandler(ScanHdlrRef);
+            exit(EXIT_FAILURE);
+        }
+        break;
+
         default:
             LE_ERROR("ERROR Unknown event %d", event);
         break;
@@ -207,6 +216,9 @@ void PrintClientHelp(void)
 
            "To connect to an access point set in 'create':\n"
            "\twifi client connect [REF]\n"
+
+           "To get the signal strength of the AccessPoint:\n"
+           "\twifi client signal [REF]\n"
 
            "To set security protocol\n"
            "\twifi client setsecurityproto [REF] [SecuProto]\n"
@@ -303,7 +315,6 @@ void ExecuteWifiClientCommand
 
         // Add a handler function to handle message reception
         ScanHdlrRef=le_wifiClient_AddNewEventHandler(WifiClientScanEventHandler, NULL);
-
 
         if (LE_OK != (result= le_wifiClient_Scan()))
         {
@@ -414,6 +425,31 @@ void ExecuteWifiClientCommand
         else
         {
             printf("ERROR: le_wifiClient_Disconnect returns error code %d.\n", result);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (strcmp(commandPtr, "signal") == 0)
+    {
+        // Command: wifi client get the signal strength of the Access Point
+        const char*                     refPtr = le_arg_GetArg(2);
+        le_wifiClient_AccessPointRef_t  apRef  = NULL;
+
+        if (NULL == refPtr)
+        {
+            printf("ERROR. Missing argument.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        rc1 = sscanf(refPtr, "%x", (unsigned int *)&apRef);
+
+        if (1 == rc1)
+        {
+            printf("SignalStrength %d\n", le_wifiClient_GetSignalStrength(apRef));
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("ERROR: wrong acess point.\n");
             exit(EXIT_FAILURE);
         }
     }

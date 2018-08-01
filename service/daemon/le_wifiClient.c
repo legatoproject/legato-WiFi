@@ -22,6 +22,30 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Generic timeout for waiting for a scan
+ */
+//--------------------------------------------------------------------------------------------------
+#define TIMEOUT_SEC         10
+#define TIMEOUT_USEC        0
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Semaphore to synchronize a scan.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_sem_Ref_t  ScanSemaphore;
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Mutex used to protect concurent access to ScanSemaphore used by both
+ * le_wifiClient_GetSignalStrength() and ScanThreadDestructor. It avoids to confuse between the
+ * results of a terminating scan and a new asked one.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_mutex_Ref_t ScanMutex = NULL;
+
+//--------------------------------------------------------------------------------------------------
+/**
  * Struct to hold the AccessPoint from the Scan's data.
  *
  */
@@ -432,7 +456,6 @@ static void *ScanThread
     {
         LE_ERROR("pa_wifiClient_ScanDone() failed (%d)", paResult);
         *scanResultPtr = paResult;
-        return NULL;
     }
 
     return NULL;
@@ -451,7 +474,7 @@ static void ScanThreadDestructor
 {
     le_result_t scanResult = *((le_result_t*)context);
 
-    LE_DEBUG("Scan thread exited.");
+    LE_DEBUG("Destruct scan thread");
     ScanThreadRef = NULL;
 
     if (scanResult == LE_OK)
@@ -464,6 +487,14 @@ static void ScanThreadDestructor
         LE_WARN("Scan failed");
         PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_FAILED, NULL);
     }
+
+    le_mutex_Lock(ScanMutex);
+    if (ScanSemaphore)
+    {
+        LE_DEBUG("Post ScanSemaphore");
+        le_sem_Post(ScanSemaphore);
+    }
+    le_mutex_Unlock(ScanMutex);
 }
 
 
@@ -610,11 +641,12 @@ void le_wifiClient_RemoveNewEventHandler
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Start the WIFI device.
+ * Starts the WIFI device.
  *
- * @return LE_FAULT         The function failed to start the WIFI module.
- * @return LE_OK            The function succeeded.
- *
+ * @return
+ *      - LE_OK     Function succeeded.
+ *      - LE_FAULT  Function failed.
+ *      - LE_BUSY   The WIFI device is already started.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Start
@@ -622,7 +654,7 @@ le_result_t le_wifiClient_Start
     void
 )
 {
-    le_result_t result = LE_OK;
+    le_result_t result;
 
     // Only the first client starts the WIFI module
     if (!ClientStartCount)
@@ -631,6 +663,8 @@ le_result_t le_wifiClient_Start
         if (LE_OK == result)
         {
             LE_DEBUG("WIFI client started successfully");
+            // Increment the number of clients calling this start function
+            ClientStartCount++;
         }
         else
         {
@@ -639,13 +673,10 @@ le_result_t le_wifiClient_Start
     }
     else
     {
-        LE_INFO("WIFI client already started");
-    }
-
-    // Increment the number of clients calling this start function
-    if (LE_OK == result)
-    {
+        LE_WARN("WIFI client already started");
+        // Increment the number of clients calling this start function
         ClientStartCount++;
+        result = LE_BUSY;
     }
 
     return result;
@@ -653,10 +684,12 @@ le_result_t le_wifiClient_Start
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Stop the WIFI device.
+ * Stops the WIFI device.
  *
- * @return LE_FAULT         The function failed to stop the WIFI module.
- * @return LE_OK            The function succeeded.
+ * @return
+ *      - LE_OK        Function succeeded.
+ *      - LE_FAULT     Function failed.
+ *      - LE_DUPLICATE The WIFI device is already stopped.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -666,6 +699,12 @@ le_result_t le_wifiClient_Stop
 )
 {
     le_result_t result = LE_OK;
+
+    if (0 == ClientStartCount)
+    {
+        LE_WARN("The WIFI device is already stopped");
+        return LE_DUPLICATE;
+    }
 
     // Only the last client closes the WIFI module
     if (1 == ClientStartCount)
@@ -693,12 +732,13 @@ le_result_t le_wifiClient_Stop
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Start scanning for WiFi access points
- * Will result in event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available or
- * event EVENT_SCAN_FAILED if there was an error while scanning.
+ * Start Scanning for WiFi Access points
+ * Will result in event LE_WIFICLIENT_EVENT_SCAN_DONE when the scan results are available.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_OK            Function succeeded.
+ * @return
+ *      - LE_OK     Function succeeded.
+ *      - LE_FAULT  Function failed.
+ *      - LE_BUSY   Scan already running.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Scan
@@ -725,14 +765,13 @@ le_result_t le_wifiClient_Scan
     }
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
- * Get the first WiFi access point found.
- * It returns the first discovered access point.
+ * Get the first WiFi Access Point found.
  *
- * @return WiFi access point reference if ok.
- * @return NULL if no access point reference available.
+ * @return
+ *      - WiFi  Access Point reference if ok.
+ *      - NULL  If no Access Point reference available.
  */
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_AccessPointRef_t le_wifiClient_GetFirstAccessPoint
@@ -775,15 +814,15 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetFirstAccessPoint
     }
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Get the next WiFi Access Point.
  * Will return the Access Points in the order of found.
  * This function must be called in the same context as the GetFirstAccessPoint
  *
- * @return WiFi Access Point reference if ok.
- * @return NULL if no Access Point reference available.
+ * @return
+ *      - WiFi  Access Point reference if ok.
+ *      - NULL  If no Access Point reference available.
 */
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_AccessPointRef_t le_wifiClient_GetNextAccessPoint
@@ -832,14 +871,15 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetNextAccessPoint
     }
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
- * Get the signal strength of the Access Point
+ * Get the signal strength of the AccessPoint
  *
  * @return
- *  - signal strength in dBm. Example -30 = -30dBm
- *  - if no signal available it will return LE_WIFICLIENT_NO_SIGNAL_STRENGTH
+ *      - Signal strength in dBm. Example -30 = -30dBm
+ *      - If no signal available it will return LE_WIFICLIENT_NO_SIGNAL_STRENGTH
+ *
+ * @note The function returns the latest signal strength.
  */
 //--------------------------------------------------------------------------------------------------
 int16_t le_wifiClient_GetSignalStrength
@@ -850,6 +890,7 @@ int16_t le_wifiClient_GetSignalStrength
 )
 {
     FoundAccessPoint_t *apPtr = le_ref_Lookup(ScanApRefMap, apRef);
+    le_clk_Time_t timer = { .sec= TIMEOUT_SEC, .usec= TIMEOUT_USEC };
 
     LE_DEBUG("Get signal strength");
     if (NULL == apPtr)
@@ -858,17 +899,43 @@ int16_t le_wifiClient_GetSignalStrength
         return LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
     }
 
+    // Create scan semaphore
+    le_mutex_Lock(ScanMutex);
+    if (NULL == ScanSemaphore)
+    {
+        LE_DEBUG("Create semaphore");
+        ScanSemaphore = le_sem_Create("ScanSem",0);
+    }
+
+    // No need to test for LE_BUSY return: in this case the scan is in progress
+    // lets just wait for its results
+    le_wifiClient_Scan();
+    le_mutex_Unlock(ScanMutex);
+
+    LE_DEBUG("Wait for scan result");
+    if (LE_OK != le_sem_WaitWithTimeOut(ScanSemaphore,timer))
+    {
+        LE_WARN("Not possible to launch a scan, return previous signal strength");
+        goto out;
+    }
+
+    LE_INFO("Scan results occured, delete semaphore");
+    le_sem_Delete(ScanSemaphore);
+    ScanSemaphore = NULL;
+
+out:
     return apPtr->accessPoint.signalStrength;
 }
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Get the BSSID of the AccessPoint
+ * Get the Basic Service set identifier (BSSID) of the AccessPoint
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Some parameter is invalid.
- * @return LE_OVERFLOW      bssid buffer is too small to contain the BSSID
- * @return LE_OK            Function succeeded.
+ * @return
+ *         LE_OK            Function succeeded.
+ *         LE_FAULT         Function failed.
+ *         LE_BAD_PARAMETER Invalid parameter.
+ *         LE_OVERFLOW      bssid buffer is too small to contain the BSSID.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_GetBssid
@@ -912,12 +979,14 @@ le_result_t le_wifiClient_GetBssid
 //--------------------------------------------------------------------------------------------------
 /**
  * Get the Service set identification (SSID) of the AccessPoint
- * @note that the SSID does not have to be human readable ASCII values, but often has.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Some parameter is invalid.
- * @return LE_OVERFLOW      ssid buffer is too small to contain the SSID
- * @return LE_OK            Function succeeded.
+ * @return
+ *        LE_OK            Function succeeded.
+ *        LE_FAULT         Function failed.
+ *        LE_BAD_PARAMETER Invalid parameter.
+ *        LE_OVERFLOW      ssid buffer is too small to contain the SSID.
+ *
+ * @note The SSID does not have to be human readable ASCII values, but often is.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_GetSsid
@@ -964,18 +1033,16 @@ le_result_t le_wifiClient_GetSsid
     return LE_OK;
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Set the passphrase used to generate the PSK.
  *
- * @note This is one way to authenticate against the access point. The other one is provided by the
- * le_wifiClient_SetPreSharedKey() function. Both ways are exclusive and are effective only when
- * used with WPA-personal authentication.
+ * @return
+ *      - LE_OK            Function succeeded.
+ *      - LE_FAULT         Function failed.
+ *      - LE_BAD_PARAMETER Invalid parameter.
  *
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
- *
+ * @note The difference between le_wifiClient_SetPreSharedKey() and this function
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetPassphrase
@@ -1007,18 +1074,18 @@ le_result_t le_wifiClient_SetPassphrase
     return result;
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the pre-shared key (PSK).
+ * Set the Pre Shared Key, PSK.
+ *
+ * @return
+ *      - LE_OK             Function succeeded.
+ *      - LE_FAULT          Function failed.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
  *
  * @note This is one way to authenticate against the access point. The other one is provided by the
  * le_wifiClient_SetPassPhrase() function. Both ways are exclusive and are effective only when used
  * with WPA-personal authentication.
- *
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
- *
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetPreSharedKey
@@ -1054,13 +1121,13 @@ le_result_t le_wifiClient_SetPreSharedKey
  * This function specifies whether the target Access Point is hiding its presence from clients or
  * not. When an Access Point is hidden, it cannot be discovered by a scan process.
  *
+ * @return
+ *      - LE_OK             Function succeeded.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
+ *
  * @note By default, this attribute is not set which means that the client is unable to connect to
  * a hidden access point. When enabled, the client will be able to connect to the access point
  * whether it is hidden or not.
- *
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
- *
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetHiddenNetworkAttribute
@@ -1085,16 +1152,15 @@ le_result_t le_wifiClient_SetHiddenNetworkAttribute
     return LE_OK;
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * WPA-Enterprise requires a username and password to authenticate.
  * This function sets these parameters.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
- *
+ * @return
+ *      - LE_OK             Function succeeded.
+ *      - LE_FAULT          Function failed.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetUserCredentials
@@ -1129,13 +1195,13 @@ le_result_t le_wifiClient_SetUserCredentials
     return result;
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Set the WEP key (WEP)
  *
- * @return LE_FAULT  The function failed.
- * @return LE_OK     The function succeed.
+ * @return
+ *      - LE_OK     Function succeeded.
+ *      - LE_FAULT  Function failed.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetWepKey
@@ -1166,15 +1232,14 @@ le_result_t le_wifiClient_SetWepKey
     return result;
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the security mode for connection
+ * Set the security protocol for connection
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
- *
+ * @return
+ *      - LE_OK             Function succeeded.
+ *      - LE_FAULT          Function failed.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_SetSecurityProtocol
@@ -1198,16 +1263,16 @@ le_result_t le_wifiClient_SetSecurityProtocol
     return pa_wifiClient_SetSecurityProtocol(securityProtocol);
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * This function creates a reference to an Access Point given its SSID.
  * If an Access Point is hidden, it will not show up in the scan. So, its SSID must be known
  * in advance in order to create a reference.
  *
- * @note This function fails if called while scan is running.
+ * @return
+ *      - AccessPoint reference to the current Access Point.
  *
- * @return Access Point reference to the current
+ * @note This function fails if called while scan is running.
  */
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_AccessPointRef_t le_wifiClient_Create
@@ -1272,15 +1337,16 @@ le_wifiClient_AccessPointRef_t le_wifiClient_Create
     return returnedRef;
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
- * Deletes an apRef.
+ * Deletes an accessPointRef.
+ *
+ * @return
+ *      - LE_OK             Function succeeded.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
+ *      - LE_BUSY           Function called during scan.
  *
  * @note The handle becomes invalid after it has been deleted.
- * @return LE_BAD_PARAMETER apRef was not found.
- * @return LE_BUSY          Function called during scan.
- * @return LE_OK            Function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Delete
@@ -1316,9 +1382,9 @@ le_result_t le_wifiClient_Delete
  * Connect to the WiFi Access Point.
  * All authentication must be set prior to calling this function.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_BAD_PARAMETER Parameter is invalid.
- * @return LE_OK            Function succeeded.
+ * @return
+ *      - LE_OK             Function succeeded.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
  *
  * @note For PSK credentials see le_wifiClient_SetPassphrase() or le_wifiClient_SetPreSharedKey() .
  * @note For WPA-Enterprise credentials see le_wifiClient_SetUserCredentials()
@@ -1350,14 +1416,16 @@ le_result_t le_wifiClient_Connect
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Disconnect from the WiFi Access Point.
+ * Disconnect from the current connected WiFi Access Point.
  *
- * @return LE_FAULT         Function failed.
- * @return LE_OK            Function succeeded.
+ * @return
+ *      - LE_OK     Function succeeded.
+ *      - LE_FAULT  Function failed.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Disconnect
 (
+    void
 )
 {
     LE_DEBUG("Disconnect");
@@ -1378,6 +1446,9 @@ void le_wifiClient_Init
     LE_DEBUG("WiFi client service starting...");
 
     pa_wifiClient_Init();
+
+    // Create Mutex
+    ScanMutex = le_mutex_CreateNonRecursive("ScanMutex");
 
     // Create the Access Point object pool.
     AccessPointPool = le_mem_CreatePool("le_wifi_FoundAccessPointPool", sizeof(FoundAccessPoint_t));
