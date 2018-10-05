@@ -22,30 +22,6 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Generic timeout for waiting for a scan
- */
-//--------------------------------------------------------------------------------------------------
-#define TIMEOUT_SEC         10
-#define TIMEOUT_USEC        0
-
-//--------------------------------------------------------------------------------------------------
-/**
- * Semaphore to synchronize a scan.
- */
-//--------------------------------------------------------------------------------------------------
-static le_sem_Ref_t  ScanSemaphore;
-
-//--------------------------------------------------------------------------------------------------
-/**
- * Mutex used to protect concurent access to ScanSemaphore used by both
- * le_wifiClient_GetSignalStrength() and ScanThreadDestructor. It avoids to confuse between the
- * results of a terminating scan and a new asked one.
- */
-//--------------------------------------------------------------------------------------------------
-static le_mutex_Ref_t ScanMutex = NULL;
-
-//--------------------------------------------------------------------------------------------------
-/**
  * Struct to hold the AccessPoint from the Scan's data.
  *
  */
@@ -487,14 +463,6 @@ static void ScanThreadDestructor
         LE_WARN("Scan failed");
         PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_FAILED, NULL);
     }
-
-    le_mutex_Lock(ScanMutex);
-    if (ScanSemaphore)
-    {
-        LE_DEBUG("Post ScanSemaphore");
-        le_sem_Post(ScanSemaphore);
-    }
-    le_mutex_Unlock(ScanMutex);
 }
 
 
@@ -879,7 +847,7 @@ le_wifiClient_AccessPointRef_t le_wifiClient_GetNextAccessPoint
  *      - Signal strength in dBm. Example -30 = -30dBm
  *      - If no signal available it will return LE_WIFICLIENT_NO_SIGNAL_STRENGTH
  *
- * @note The function returns the latest signal strength.
+ * @note The function returns the signal strength as reported at the time of the scan.
  */
 //--------------------------------------------------------------------------------------------------
 int16_t le_wifiClient_GetSignalStrength
@@ -890,7 +858,6 @@ int16_t le_wifiClient_GetSignalStrength
 )
 {
     FoundAccessPoint_t *apPtr = le_ref_Lookup(ScanApRefMap, apRef);
-    le_clk_Time_t timer = { .sec= TIMEOUT_SEC, .usec= TIMEOUT_USEC };
 
     LE_DEBUG("Get signal strength");
     if (NULL == apPtr)
@@ -899,31 +866,6 @@ int16_t le_wifiClient_GetSignalStrength
         return LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
     }
 
-    // Create scan semaphore
-    le_mutex_Lock(ScanMutex);
-    if (NULL == ScanSemaphore)
-    {
-        LE_DEBUG("Create semaphore");
-        ScanSemaphore = le_sem_Create("ScanSem",0);
-    }
-
-    // No need to test for LE_BUSY return: in this case the scan is in progress
-    // lets just wait for its results
-    le_wifiClient_Scan();
-    le_mutex_Unlock(ScanMutex);
-
-    LE_DEBUG("Wait for scan result");
-    if (LE_OK != le_sem_WaitWithTimeOut(ScanSemaphore,timer))
-    {
-        LE_WARN("Not possible to launch a scan, return previous signal strength");
-        goto out;
-    }
-
-    LE_INFO("Scan results occured, delete semaphore");
-    le_sem_Delete(ScanSemaphore);
-    ScanSemaphore = NULL;
-
-out:
     return apPtr->accessPoint.signalStrength;
 }
 
@@ -1446,9 +1388,6 @@ void le_wifiClient_Init
     LE_DEBUG("WiFi client service starting...");
 
     pa_wifiClient_Init();
-
-    // Create Mutex
-    ScanMutex = le_mutex_CreateNonRecursive("ScanMutex");
 
     // Create the Access Point object pool.
     AccessPointPool = le_mem_CreatePool("le_wifi_FoundAccessPointPool", sizeof(FoundAccessPoint_t));
