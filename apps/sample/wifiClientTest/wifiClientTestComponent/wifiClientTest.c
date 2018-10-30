@@ -267,14 +267,21 @@ void Testle_wifiClient
     void
 )
 {
+    le_result_t result;
+
     LE_DEBUG("Start Test");
 
     // Add an handler function to handle message reception
     HdlrRef = le_wifiClient_AddNewEventHandler(WifiClientEventHandler, NULL);
 
-    if (LE_OK == le_wifiClient_Start())
+    result = le_wifiClient_Start();
+    if (LE_OK == result)
     {
         LE_DEBUG("Start OK");
+    }
+    else if (LE_DUPLICATE == result)
+    {
+        LE_DEBUG("Already started");
     }
     else
     {
