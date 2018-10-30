@@ -191,7 +191,7 @@ static le_wifiClient_AccessPointRef_t FindAccessPointRefFromSsid
             FoundAccessPoint_t *apPtr = (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, apRef);
             if (NULL != apPtr)
             {
-                if ((apPtr->accessPoint.ssidLength == ssidNumElements))
+                if (apPtr->accessPoint.ssidLength == ssidNumElements)
                 {
                     if (0 == memcmp(apPtr->accessPoint.ssidBytes, ssidPtr, ssidNumElements))
                     {
@@ -281,7 +281,6 @@ static le_wifiClient_AccessPointRef_t AddAccessPointToApRefMap
  *  Frees one members of the access point and the corresponding access points memory
  */
 //--------------------------------------------------------------------------------------------------
-
 static void RemoveAccessPoint
 (
     le_wifiClient_AccessPointRef_t apRef
@@ -306,7 +305,6 @@ static void RemoveAccessPoint
  *  le_wifiClient_Create()
  */
 //--------------------------------------------------------------------------------------------------
-
 static void ReleaseAllAccessPoints
 (
     void
@@ -342,7 +340,6 @@ static void ReleaseAllAccessPoints
  *
  */
 //--------------------------------------------------------------------------------------------------
-
 static void MarkAllAccessPointsOld
 (
     void
@@ -962,7 +959,7 @@ le_result_t le_wifiClient_GetSsid
     }
 
     if (*ssidNumElementsPtr < apPtr->accessPoint.ssidLength) {
-        LE_ERROR("SSID buffer length (%d) is too small to contain SSID of length (%d)",
+        LE_ERROR("SSID buffer length (%zu) is too small to contain SSID of length (%d)",
                  *ssidNumElementsPtr, apPtr->accessPoint.ssidLength);
         return LE_OVERFLOW;
     }
