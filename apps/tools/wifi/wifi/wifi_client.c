@@ -290,7 +290,7 @@ void ExecuteWifiClientCommand
             printf("successfully called start.\n");
             exit(EXIT_SUCCESS);
         }
-        else if (LE_DUPLICATE == result)
+        else if (LE_BUSY == result)
         {
             printf("already started.\n");
             exit(EXIT_SUCCESS);

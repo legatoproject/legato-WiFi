@@ -35,7 +35,7 @@ static void TestWifiClient_StartStop
         }
         else
         {
-            LE_ASSERT(LE_DUPLICATE == le_wifiClient_Start());
+            LE_ASSERT(LE_BUSY == le_wifiClient_Start());
         }
     }
 

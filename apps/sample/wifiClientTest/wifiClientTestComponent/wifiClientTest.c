@@ -279,7 +279,7 @@ void Testle_wifiClient
     {
         LE_DEBUG("Start OK");
     }
-    else if (LE_DUPLICATE == result)
+    else if (LE_BUSY == result)
     {
         LE_DEBUG("Already started");
     }

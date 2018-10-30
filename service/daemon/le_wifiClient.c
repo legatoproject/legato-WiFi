@@ -609,9 +609,9 @@ void le_wifiClient_RemoveNewEventHandler
  * Starts the WIFI device.
  *
  * @return
- *      - LE_OK          Function succeeded.
- *      - LE_FAULT       Function failed.
- *      - LE_DUPLICATE   The WIFI device is already started.
+ *      - LE_OK     Function succeeded.
+ *      - LE_FAULT  Function failed.
+ *      - LE_BUSY   The WIFI device is already started.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Start
@@ -641,7 +641,7 @@ le_result_t le_wifiClient_Start
         LE_WARN("WIFI client already started");
         // Increment the number of clients calling this start function
         ClientStartCount++;
-        result = LE_DUPLICATE;
+        result = LE_BUSY;
     }
 
     return result;
