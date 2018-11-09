@@ -284,15 +284,9 @@ void ExecuteWifiClientCommand
     else if (strcmp(commandPtr, "start") == 0)
     {
 
-        result = le_wifiClient_Start();
-        if (LE_OK == result)
+        if (LE_OK == le_wifiClient_Start())
         {
             printf("successfully called start.\n");
-            exit(EXIT_SUCCESS);
-        }
-        else if (LE_DUPLICATE == result)
-        {
-            printf("already started.\n");
             exit(EXIT_SUCCESS);
         }
         else

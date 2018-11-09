@@ -191,7 +191,7 @@ static le_wifiClient_AccessPointRef_t FindAccessPointRefFromSsid
             FoundAccessPoint_t *apPtr = (FoundAccessPoint_t *)le_ref_Lookup(ScanApRefMap, apRef);
             if (NULL != apPtr)
             {
-                if (apPtr->accessPoint.ssidLength == ssidNumElements)
+                if ((apPtr->accessPoint.ssidLength == ssidNumElements))
                 {
                     if (0 == memcmp(apPtr->accessPoint.ssidBytes, ssidPtr, ssidNumElements))
                     {
@@ -281,6 +281,7 @@ static le_wifiClient_AccessPointRef_t AddAccessPointToApRefMap
  *  Frees one members of the access point and the corresponding access points memory
  */
 //--------------------------------------------------------------------------------------------------
+
 static void RemoveAccessPoint
 (
     le_wifiClient_AccessPointRef_t apRef
@@ -305,6 +306,7 @@ static void RemoveAccessPoint
  *  le_wifiClient_Create()
  */
 //--------------------------------------------------------------------------------------------------
+
 static void ReleaseAllAccessPoints
 (
     void
@@ -340,6 +342,7 @@ static void ReleaseAllAccessPoints
  *
  */
 //--------------------------------------------------------------------------------------------------
+
 static void MarkAllAccessPointsOld
 (
     void
@@ -609,9 +612,9 @@ void le_wifiClient_RemoveNewEventHandler
  * Starts the WIFI device.
  *
  * @return
- *      - LE_OK          Function succeeded.
- *      - LE_FAULT       Function failed.
- *      - LE_DUPLICATE   The WIFI device is already started.
+ *      - LE_OK     Function succeeded.
+ *      - LE_FAULT  Function failed.
+ *      - LE_BUSY   The WIFI device is already started.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Start
@@ -641,7 +644,7 @@ le_result_t le_wifiClient_Start
         LE_WARN("WIFI client already started");
         // Increment the number of clients calling this start function
         ClientStartCount++;
-        result = LE_DUPLICATE;
+        result = LE_BUSY;
     }
 
     return result;
@@ -959,7 +962,7 @@ le_result_t le_wifiClient_GetSsid
     }
 
     if (*ssidNumElementsPtr < apPtr->accessPoint.ssidLength) {
-        LE_ERROR("SSID buffer length (%zu) is too small to contain SSID of length (%d)",
+        LE_ERROR("SSID buffer length (%d) is too small to contain SSID of length (%d)",
                  *ssidNumElementsPtr, apPtr->accessPoint.ssidLength);
         return LE_OVERFLOW;
     }
