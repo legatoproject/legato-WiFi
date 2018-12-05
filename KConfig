@@ -24,7 +24,7 @@ choice
 config WIFI_PA_TI
   bool "TI"
   ---help---
-  Platform adaptor for TI wireless module, such as that on the MangOH WiFi IoT
+  Platform adaptor for TI wireless module, such as that on the mangOH WiFi IoT
   card.
 
 config WIFI_PA_TI_SIMU
