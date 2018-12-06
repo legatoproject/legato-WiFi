@@ -33,10 +33,10 @@ WPA_CFG=wpa_supplicant.conf
 export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
 # Check the connection on the WiFi network interface.
-# Exit with 0 if connected otherwise exit with 30 (number of retries)
+# Exit with 0 if connected otherwise exit with 10 (number of retries)
 CheckConnection()
 {
-    retries=25
+    retries=10
     echo "Checking connection..."
     # Verify connection status
     for i in $(seq 1 ${retries})
