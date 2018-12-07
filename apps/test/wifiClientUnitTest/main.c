@@ -10,6 +10,16 @@
 #include "wifiService.h"
 
 //--------------------------------------------------------------------------------------------------
+// Config tree parameters used in testing le_wifiClient_LoadSsid()
+//--------------------------------------------------------------------------------------------------
+#define CFG_TREE_ROOT_DIR           "wifiService:"
+#define CFG_PATH_WIFI               "wifi/channel"
+#define CFG_NODE_SECPROTOCOL        "secProtocol"
+#define CFG_NODE_PASSPHRASE         "passphrase"
+#define TEST_LOAD_SSID_SECPROTOCOL  3
+#define TEST_LOAD_SSID_PASSPHRASE   "A1B2C3D4E5"
+
+//--------------------------------------------------------------------------------------------------
 /**
  * Start and stop the WiFi device
  *
@@ -200,6 +210,41 @@ static void TestWifiClient_Configure
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Load WIfi configs of a given SSID
+ *
+ * API tested:
+ * - le_wifiClient_LoadSsid
+ */
+//--------------------------------------------------------------------------------------------------
+static void TestWifiClient_LoadSsid
+(
+    void
+)
+{
+    char configPath[LE_CFG_STR_LEN_BYTES], ssid[] = "Example";
+    le_result_t ret;
+    le_wifiClient_AccessPointRef_t ref;
+    le_cfg_IteratorRef_t cfg;
+
+    snprintf(configPath, sizeof(configPath), "%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI);
+    cfg = le_cfg_CreateWriteTxn(configPath);
+    le_cfg_SetString(cfg, "", ssid);
+    le_cfg_CommitTxn(cfg);
+
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI, ssid);
+    cfg = le_cfg_CreateWriteTxn(configPath);
+    le_cfg_SetInt(cfg, CFG_NODE_SECPROTOCOL, TEST_LOAD_SSID_SECPROTOCOL);
+    le_cfg_SetString(cfg, CFG_NODE_PASSPHRASE, TEST_LOAD_SSID_PASSPHRASE);
+    le_cfg_CommitTxn(cfg);
+
+    ret = le_wifiClient_LoadSsid(ssid, &ref);
+    LE_INFO("LoadSsid returns %d", ret);
+    LE_ASSERT(ret == LE_OK);
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
  * main of the test
  *
  */
@@ -217,6 +262,8 @@ COMPONENT_INIT
     TestWifiClient_ConnectDisconnect();
 
     TestWifiClient_Configure();
+
+    TestWifiClient_LoadSsid();
 
     LE_INFO ("======== UnitTest of WiFi client SUCCESS ========");
 

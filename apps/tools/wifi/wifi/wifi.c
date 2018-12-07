@@ -62,7 +62,7 @@ COMPONENT_INIT
             }
             else if (strcmp(servicePtr, "ap") == 0)
             {
-                ExecuteWifiApCommand(commandPtr, le_arg_NumArgs());;
+                ExecuteWifiApCommand(commandPtr, le_arg_NumArgs());
             }
             else
             {

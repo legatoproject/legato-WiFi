@@ -32,6 +32,14 @@ static le_wifiClient_NewEventHandlerRef_t ConnectHdlrRef = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Indicator of whether wifiClient is in the middle of a scan
+ */
+//--------------------------------------------------------------------------------------------------
+static bool ScanInProgress = false;
+
+
+//--------------------------------------------------------------------------------------------------
+/**
  * Handler for WiFi client Connect event(s)
  *
  */
@@ -160,19 +168,27 @@ static void WifiClientScanEventHandler
     {
         case LE_WIFICLIENT_EVENT_CONNECTED:
         {
-            LE_DEBUG("FYI: Got EVENT CONNECTED, was while waiting for SCAN.");
+            LE_DEBUG("FYI: Got EVENT CONNECTED");
         }
         break;
 
         case LE_WIFICLIENT_EVENT_DISCONNECTED:
         {
-            LE_DEBUG("FYI: Got EVENT DISCONNECTED, was while waiting for SCAN.");
+            LE_DEBUG("FYI: Got EVENT DISCONNECTED");
         }
         break;
 
         case LE_WIFICLIENT_EVENT_SCAN_DONE:
         {
+            if (!ScanInProgress)
+            {
+                // Ignore scan result posting by wifiClient not initiated here
+                LE_DEBUG("Ignore wifi scan result posting not initiated by command");
+                break;
+            }
+
             LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: Now read the results ");
+            ScanInProgress = false;
             WifiReadScanResults();
             le_wifiClient_RemoveNewEventHandler(ScanHdlrRef);
             exit(EXIT_SUCCESS);
@@ -181,7 +197,15 @@ static void WifiClientScanEventHandler
 
         case LE_WIFICLIENT_EVENT_SCAN_FAILED:
         {
+            if (!ScanInProgress)
+            {
+                // Ignore scan result posting by wifiClient not initiated here
+                LE_DEBUG("Ignore wifi scan result posting not initiated by command");
+                break;
+            }
+
             printf("ERROR: Scan failed.\n");
+            ScanInProgress = false;
             le_wifiClient_RemoveNewEventHandler(ScanHdlrRef);
             exit(EXIT_FAILURE);
         }
@@ -316,15 +340,22 @@ void ExecuteWifiClientCommand
     }
     else if (strcmp(commandPtr, "scan") == 0)
     {
+        if (ScanInProgress)
+        {
+            printf("ERROR: le_wifiClient_Scan already in progress.\n");
+            exit(EXIT_FAILURE);
+        }
+
         // Command: wifi client scan
         printf("starting scan.\n");
 
         // Add a handler function to handle message reception
         ScanHdlrRef=le_wifiClient_AddNewEventHandler(WifiClientScanEventHandler, NULL);
-
-        if (LE_OK != (result= le_wifiClient_Scan()))
+        ScanInProgress = true;
+        if (LE_OK != (result = le_wifiClient_Scan()))
         {
             printf("ERROR: le_wifiClient_Scan returns %d.\n", result);
+            ScanInProgress = false;
             exit(EXIT_FAILURE);
         }
     }

@@ -12,6 +12,18 @@
 
 #include "pa_wifi.h"
 
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * The following are Wifi client's config tree path and node definitions
+ */
+//-------------------------------------------------------------------------------------------------
+#define CFG_TREE_ROOT_DIR           "wifiService:"
+#define CFG_PATH_WIFI               "wifi/channel"
+#define CFG_NODE_HIDDEN_SSID        "hidden"
+#define CFG_NODE_SECPROTOCOL        "secProtocol"
+#define CFG_NODE_PASSPHRASE         "passphrase"
+
 //--------------------------------------------------------------------------------------------------
 /**
  * The initial allocated AP:s at system start.
@@ -102,6 +114,17 @@ static le_event_Id_t NewWifiEventId;
  */
 //--------------------------------------------------------------------------------------------------
 static uint32_t ClientStartCount = 0;
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This CurrentConnection records the selected connection to get established via an API call to
+ * le_wifiClient_Connect().  But note that it doesn't necessarily mean that this connection has
+ * been successfully established, since the attempt to connect might fail, take time to finish, etc.
+ * Its value will be reset after an API call to le_wifiClient_Disconnect() or le_wifiClient_Stop().
+ * Thus, this CurrentConnection variable refers more to the selected SSID to get connected instead.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_wifiClient_AccessPointRef_t CurrentConnection = NULL;
 
 
 //--------------------------------------------------------------------------------------------------
@@ -475,8 +498,6 @@ static void CloseSessionEventHandler
     void                *contextPtr
 )
 {
-    LE_DEBUG("sessionRef %p GetFirstSessionRef %p", sessionRef, GetFirstSessionRef);
-
     if (sessionRef == GetFirstSessionRef)
     {
         GetFirstSessionRef = NULL;
@@ -675,6 +696,7 @@ le_result_t le_wifiClient_Stop
     if (1 == ClientStartCount)
     {
         pa_wifiClient_ClearAllCredentials();
+        CurrentConnection = NULL;
 
         result = pa_wifiClient_Stop();
         if (LE_OK != result)
@@ -971,6 +993,31 @@ le_result_t le_wifiClient_GetSsid
 
     return LE_OK;
 }
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Get the currently selected connection to be established. The output will be Null if none is
+ * selected
+ *
+ * @return
+ *      - LE_OK            Function succeeded.
+ *      - LE_FAULT         Function failed.
+ */
+//--------------------------------------------------------------------------------------------------
+void le_wifiClient_GetCurrentConnection
+(
+    le_wifiClient_AccessPointRef_t *apRef  ///< [OUT] currently selected connection's AP reference
+)
+{
+    LE_DEBUG("AP reference of currently selected connection: %p", CurrentConnection);
+    if (!apRef)
+    {
+        return;
+    }
+    *apRef = CurrentConnection;
+}
+
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -1338,16 +1385,19 @@ le_result_t le_wifiClient_Connect
 {
     le_result_t         result = LE_BAD_PARAMETER;
     FoundAccessPoint_t *apPtr  = le_ref_Lookup(ScanApRefMap, apRef);
+    uint16_t ssidLen;
 
     // verify le_ref_Lookup
     if (NULL !=  apPtr)
     {
-        LE_DEBUG("SSID length %d | SSID: \"%.*s\"",
-            apPtr->accessPoint.ssidLength,
-            apPtr->accessPoint.ssidLength,
-            (char *)apPtr->accessPoint.ssidBytes);
-
-        result = pa_wifiClient_Connect(apPtr->accessPoint.ssidBytes, apPtr->accessPoint.ssidLength);
+        ssidLen = apPtr->accessPoint.ssidLength;
+        LE_DEBUG("SSID length %d | SSID: \"%.*s\"", ssidLen, ssidLen,
+                 (char *)apPtr->accessPoint.ssidBytes);
+        result = pa_wifiClient_Connect(apPtr->accessPoint.ssidBytes, ssidLen);
+        if (LE_OK == result)
+        {
+            CurrentConnection = apRef;
+        }
     }
     return result;
 }
@@ -1368,7 +1418,128 @@ le_result_t le_wifiClient_Disconnect
 )
 {
     LE_DEBUG("Disconnect");
+    CurrentConnection = NULL;
     return pa_wifiClient_Disconnect();
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Load the given SSID's configurations as it is selected as the connection to get established,
+ * after creating for it an AP reference
+ *
+ * @return
+ *      - LE_OK     Function succeeded.
+ *      - LE_FAULT  Function failed.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_LoadSsid
+(
+    const char *ssidPtr,                          ///< [IN] SSID which configs are to be installed
+    le_wifiClient_AccessPointRef_t *apRefPtr      ///< [OUT] reference to be created
+)
+{
+    // Retrieve data from config tree
+    char configPath[LE_CFG_STR_LEN_BYTES], passphrase[LE_WIFIDEFS_MAX_PASSPHRASE_BYTES] = {0};
+    le_wifiClient_SecurityProtocol_t secProtocol;
+    le_cfg_IteratorRef_t cfg;
+    bool is_hidden = false;
+
+    if (!apRefPtr)
+    {
+        LE_ERROR("Invalid AP reference input for setting configs");
+        return LE_BAD_PARAMETER;
+    }
+
+    *apRefPtr = 0;
+
+    if (!ssidPtr || (strlen(ssidPtr) == 0))
+    {
+        LE_ERROR("Invalid SSID input for setting configs");
+        return LE_BAD_PARAMETER;
+    }
+
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI,
+             ssidPtr);
+    cfg = le_cfg_CreateReadTxn(configPath);
+    if (!cfg)
+    {
+        LE_ERROR("Failed to get configs of SSID %s", ssidPtr);
+        return LE_BAD_PARAMETER;
+    }
+
+    // Security protocol
+    if (!le_cfg_NodeExists(cfg, CFG_NODE_SECPROTOCOL))
+    {
+        LE_WARN("No wifi security protocol set at %s/%s", configPath, CFG_NODE_SECPROTOCOL);
+        le_cfg_CancelTxn(cfg);
+        return LE_NOT_FOUND;
+    }
+    secProtocol = le_cfg_GetInt(cfg, CFG_NODE_SECPROTOCOL,
+                                LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL);
+    if (LE_WIFICLIENT_SECURITY_NONE != secProtocol)
+    {
+        // Passphrase
+        if (!le_cfg_NodeExists(cfg, CFG_NODE_PASSPHRASE))
+        {
+            LE_ERROR("No wifi passphrase found at %s/%s when security protocol %d is used",
+                     configPath, CFG_NODE_PASSPHRASE, secProtocol);
+            le_cfg_CancelTxn(cfg);
+            return LE_NOT_FOUND;
+        }
+
+        if (LE_OK != le_cfg_GetString(cfg, CFG_NODE_PASSPHRASE, passphrase, sizeof(passphrase),
+                                      "passphrase"))
+        {
+            LE_ERROR("Wifi passphrase at %s/%s too long or invalid when security protocol %d "
+                     "is used", configPath, CFG_NODE_PASSPHRASE, secProtocol);
+            le_cfg_CancelTxn(cfg);
+            return LE_OVERFLOW;
+        }
+    }
+
+    // Hidden SSID or not
+    if (le_cfg_NodeExists(cfg, CFG_NODE_HIDDEN_SSID))
+    {
+        is_hidden = le_cfg_GetBool(cfg, CFG_NODE_HIDDEN_SSID, false);
+    }
+
+    LE_DEBUG("Security protocol %d successfully configured for SSID %s", secProtocol, ssidPtr);
+    le_cfg_CancelTxn(cfg);
+
+    // Create the Access Point to connect to
+    *apRefPtr = le_wifiClient_Create((const uint8_t *)ssidPtr, strlen(ssidPtr));
+    if (!*apRefPtr)
+    {
+        LE_ERROR("Failed to create Access Point to start wifi connection over SSID %s",
+                 ssidPtr);
+        return LE_FAULT;
+    }
+
+    // Configure the Access Point
+    if (LE_OK != le_wifiClient_SetSecurityProtocol(*apRefPtr, secProtocol))
+    {
+        LE_ERROR("Failed to config security protocol to start wifi connection over SSID %s",
+                 ssidPtr);
+        return LE_FAULT;
+    }
+
+    if ((strlen(passphrase) > 0) && LE_OK != le_wifiClient_SetPassphrase(*apRefPtr, passphrase))
+    {
+        LE_ERROR("Failed to config security passphrase to start wifi connection over SSID %s",
+                 ssidPtr);
+        return LE_FAULT;
+    }
+
+    if (is_hidden && (LE_OK != le_wifiClient_SetHiddenNetworkAttribute(*apRefPtr, true)))
+    {
+        LE_ERROR("Failed to set as hidden SSID %s with AP reference %p", ssidPtr, *apRefPtr);
+        return LE_FAULT;
+    }
+
+    LE_INFO("AP reference %p successfully created for SSID %s", *apRefPtr, ssidPtr);
+    return LE_OK;
 }
 
 

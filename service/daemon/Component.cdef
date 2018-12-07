@@ -1,3 +1,11 @@
+requires:
+{
+    api:
+    {
+        ${LEGATO_ROOT}/interfaces/le_cfg.api
+    }
+}
+
 provides:
 {
     api:

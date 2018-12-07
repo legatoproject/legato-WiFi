@@ -352,8 +352,7 @@ le_result_t pa_wifiClient_Start
         return LE_FAULT;
     }
 
-
-    LE_INFO("WiFi client stopped correclty");
+    LE_INFO("WiFi client started correctly");
     return LE_OK;
 }
 
@@ -539,33 +538,33 @@ le_result_t pa_wifiClient_GetScanResult
             LE_DEBUG("Read next scan result");
             if (NULL != fgets(path, sizeof(path), IwScanPipePtr))
             {
-                LE_INFO("PARSING: '%s'", path);
+                LE_DEBUG("PARSING: '%s'", path);
 
                 if (0 == strncmp(ssidPrefix, path, ssidPrefixLen))
                 {
                     accessPointPtr->ssidLength =
                     strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES + ssidPrefixLen) - ssidPrefixLen - 1;
 
-                    LE_INFO("FOUND SSID: '%s'", &path[ssidPrefixLen]);
+                    LE_DEBUG("FOUND SSID: '%s'", &path[ssidPrefixLen]);
 
                     memcpy(&accessPointPtr->ssidBytes, &path[ssidPrefixLen],
                            accessPointPtr->ssidLength);
-                    LE_INFO("SSID: '%s'", &accessPointPtr->ssidBytes[0]);
+                    LE_DEBUG("SSID: '%s'", &accessPointPtr->ssidBytes[0]);
                     ret = LE_OK;
                     goto cleanup;
                 }
                 else if (0 == strncmp(signalPrefix, path, signalPrefixLen))
                 {
-                    LE_INFO("FOUND SIGNAL STRENGTH: '%s'", &path[signalPrefixLen]);
+                    LE_DEBUG("FOUND SIGNAL STRENGTH: '%s'", &path[signalPrefixLen]);
                     accessPointPtr->signalStrength = atoi(&path[signalPrefixLen]);
-                    LE_INFO("signal(%d)", accessPointPtr->signalStrength);
+                    LE_DEBUG("signal(%d)", accessPointPtr->signalStrength);
                 }
                 else if (0 == strncmp(bssidPrefix, path, bssidPrefixLen))
                 {
-                    LE_INFO("FOUND BSSID: '%s'", &path[bssidPrefixLen]);
+                    LE_DEBUG("FOUND BSSID: '%s'", &path[bssidPrefixLen]);
                     memcpy(&accessPointPtr->bssid, &path[bssidPrefixLen],
                            LE_WIFIDEFS_MAX_BSSID_LENGTH);
-                    LE_INFO("BSSID: '%s'", &accessPointPtr->bssid[0]);
+                    LE_DEBUG("BSSID: '%s'", &accessPointPtr->bssid[0]);
                 }
             }
             else
