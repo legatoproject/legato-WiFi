@@ -788,12 +788,12 @@ static le_result_t GenerateWpaSupplicant
     if (pskPtr)
     {
         snprintf(tmpString, sizeof(tmpString), WPA_SUPPLICANT_DATA,
-                 strlen(ssidPtr), (char *)ssidPtr, HiddenAccessPoint, pskPtr);
+                 ssidLength, (char *)ssidPtr, HiddenAccessPoint, pskPtr);
     }
     else
     {
         snprintf(tmpString, sizeof(tmpString), WPA_SUPPLICANT_DATA_NO_SECURITY,
-                 strlen(ssidPtr), (char *)ssidPtr, HiddenAccessPoint);
+                 ssidLength, (char *)ssidPtr, HiddenAccessPoint);
     }
 
     length = strlen(tmpString);
