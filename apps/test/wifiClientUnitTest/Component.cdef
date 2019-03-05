@@ -4,6 +4,7 @@ requires:
     {
         ${LEGATO_ROOT}/interfaces/le_cfg.api
         ${LEGATO_ROOT}/interfaces/wifi/le_wifiClient.api [types-only]
+        ${LEGATO_ROOT}/interfaces/le_secStore.api [types-only]
     }
 }
 

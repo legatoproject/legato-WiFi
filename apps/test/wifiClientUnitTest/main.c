@@ -10,16 +10,6 @@
 #include "wifiService.h"
 
 //--------------------------------------------------------------------------------------------------
-// Config tree parameters used in testing le_wifiClient_LoadSsid()
-//--------------------------------------------------------------------------------------------------
-#define CFG_TREE_ROOT_DIR           "wifiService:"
-#define CFG_PATH_WIFI               "wifi/channel"
-#define CFG_NODE_SECPROTOCOL        "secProtocol"
-#define CFG_NODE_PASSPHRASE         "passphrase"
-#define TEST_LOAD_SSID_SECPROTOCOL  3
-#define TEST_LOAD_SSID_PASSPHRASE   "A1B2C3D4E5"
-
-//--------------------------------------------------------------------------------------------------
 /**
  * Start and stop the WiFi device
  *
@@ -210,10 +200,14 @@ static void TestWifiClient_Configure
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Load WIfi configs of a given SSID
+ * Positive tests of Wifi security config setting & loading of a given SSID
  *
  * API tested:
  * - le_wifiClient_LoadSsid
+ * - le_wifiClient_ConfigureWep
+ * - le_wifiClient_ConfigurePsk
+ * - le_wifiClient_ConfigureEap
+ * - le_wifiClient_RemoveSsidSecurityConfigs
  */
 //--------------------------------------------------------------------------------------------------
 static void TestWifiClient_LoadSsid
@@ -221,25 +215,210 @@ static void TestWifiClient_LoadSsid
     void
 )
 {
-    char configPath[LE_CFG_STR_LEN_BYTES], ssid[] = "Example";
+    const uint8_t ssid[] = "Example";
+    const uint8_t username[] = "myName";
+    const uint8_t secret[] = "mySecret";
     le_result_t ret;
     le_wifiClient_AccessPointRef_t ref;
-    le_cfg_IteratorRef_t cfg;
 
-    snprintf(configPath, sizeof(configPath), "%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI);
-    cfg = le_cfg_CreateWriteTxn(configPath);
-    le_cfg_SetString(cfg, "", ssid);
-    le_cfg_CommitTxn(cfg);
-
-    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI, ssid);
-    cfg = le_cfg_CreateWriteTxn(configPath);
-    le_cfg_SetInt(cfg, CFG_NODE_SECPROTOCOL, TEST_LOAD_SSID_SECPROTOCOL);
-    le_cfg_SetString(cfg, CFG_NODE_PASSPHRASE, TEST_LOAD_SSID_PASSPHRASE);
-    le_cfg_CommitTxn(cfg);
-
-    ret = le_wifiClient_LoadSsid(ssid, &ref);
-    LE_INFO("LoadSsid returns %d", ret);
+    // Test le_wifiClient_LoadSsid() with WEP
+    LE_INFO("Test Wifi's config setting & loading of WEP");
+    ret = le_wifiClient_ConfigureWep(ssid, sizeof(ssid), secret, sizeof(secret));
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to configure WEP into secStore; retcode %d", ret);
+    }
+    else
+    {
+        ret = le_wifiClient_LoadSsid(ssid, sizeof(ssid), &ref);
+        if (ret != LE_OK)
+        {
+            LE_ERROR("LoadSsid failed over WEP; retcode %d", ret);
+        }
+        else
+        {
+            le_wifiClient_Delete(ref);
+            ref = NULL;
+        }
+    }
     LE_ASSERT(ret == LE_OK);
+
+    // Test le_wifiClient_LoadSsid() with WPA passphrase
+    LE_INFO("Test Wifi's config setting & loading of WPA passphrase");
+    ret = le_wifiClient_ConfigurePsk(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL,
+                                     secret, sizeof(secret), NULL, 0);
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to configure WPA passphrase into secStore; retcode %d", ret);
+    }
+    else
+    {
+        ret = le_wifiClient_LoadSsid(ssid, sizeof(ssid), &ref);
+        if (ret != LE_OK)
+        {
+            LE_ERROR("LoadSsid failed over WPA passphrase; retcode %d", ret);
+        }
+        else
+        {
+            le_wifiClient_Delete(ref);
+            ref = NULL;
+        }
+    }
+    LE_ASSERT(ret == LE_OK);
+
+    // Test le_wifiClient_LoadSsid() with WPA2 PSK
+    LE_INFO("Test Wifi's config setting & loading of WPA2 PSK");
+    ret = le_wifiClient_ConfigurePsk(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL,
+                                     NULL, 0, secret, sizeof(secret));
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to configure WPA2 PSK into secStore; retcode %d", ret);
+    }
+    else
+    {
+        ret = le_wifiClient_LoadSsid(ssid, sizeof(ssid), &ref);
+        if (ret != LE_OK)
+        {
+            LE_ERROR("LoadSsid failed over WPA2 PSK; retcode %d", ret);
+        }
+        else
+        {
+            le_wifiClient_Delete(ref);
+            ref = NULL;
+        }
+    }
+    LE_ASSERT(ret == LE_OK);
+
+    // Test le_wifiClient_LoadSsid() with WPA EAP
+    LE_INFO("Test Wifi's config setting & loading of WPA EAP");
+    ret = le_wifiClient_ConfigureEap(ssid, sizeof(ssid),
+                                     LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE,
+                                     username, sizeof(username), secret, sizeof(secret));
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to configure WPA EAP into secStore; retcode %d", ret);
+    }
+    else
+    {
+        ret = le_wifiClient_LoadSsid(ssid, sizeof(ssid), &ref);
+        if (ret != LE_OK)
+        {
+            LE_ERROR("LoadSsid failed over WPA EAP; retcode %d", ret);
+        }
+        else
+        {
+            le_wifiClient_Delete(ref);
+            ref = NULL;
+        }
+    }
+    LE_ASSERT(ret == LE_OK);
+
+    // Test le_wifiClient_LoadSsid() with WPA2 EAP
+    LE_INFO("Test Wifi's config setting & loading of WPA2 EAP");
+    ret = le_wifiClient_ConfigureEap(ssid, sizeof(ssid),
+                                     LE_WIFICLIENT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE,
+                                     username, sizeof(username), secret, sizeof(secret));
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to configure WPA2 EAP into secStore; retcode %d", ret);
+    }
+    else
+    {
+        ret = le_wifiClient_LoadSsid(ssid, sizeof(ssid), &ref);
+        if (ret != LE_OK)
+        {
+            LE_ERROR("LoadSsid failed over WPA2 EAP; retcode %d", ret);
+        }
+        else
+        {
+            le_wifiClient_Delete(ref);
+            ref = NULL;
+        }
+    }
+    LE_ASSERT(ret == LE_OK);
+
+    // Test le_wifiClient_LoadSsid() with no security
+    LE_INFO("Test Wifi's config setting & loading of no security");
+    ret = le_wifiClient_RemoveSsidSecurityConfigs(ssid, sizeof(ssid));
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to configure no security; retcode %d", ret);
+    }
+    else
+    {
+        ret = le_wifiClient_LoadSsid(ssid, sizeof(ssid), &ref);
+        if (ret != LE_OK)
+        {
+            LE_ERROR("LoadSsid failed over no security; retcode %d", ret);
+        }
+        else
+        {
+            le_wifiClient_Delete(ref);
+            ref = NULL;
+        }
+    }
+    LE_ASSERT(ret == LE_OK);
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Negative tests of config of Wifi security protocols
+ *
+ * APIs tested:
+ * - le_wifiClient_ConfigureWep
+ * - le_wifiClient_ConfigurePsk
+ * - le_wifiClient_ConfigureEap
+ * - le_wifiClient_RemoveSsidSecurityConfigs
+ */
+//--------------------------------------------------------------------------------------------------
+static void TestWifiClient_ConfigureSecurity_NegTests
+(
+    void
+)
+{
+    const uint8_t ssid[] = "Example";
+    const uint8_t username[] = "myName";
+    const uint8_t secret[] = "mySecret";
+    le_result_t ret;
+
+    // -ve test le_wifiClient_ConfigureWep() with WEP
+    LE_INFO("Negative test Wifi's config setting of WEP");
+    ret = le_wifiClient_ConfigureWep(ssid, sizeof(ssid), NULL, sizeof(secret));
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+
+    // -ve test le_wifiClient_ConfigurePsk() with WPA passphrase
+    LE_INFO("Negative test Wifi's config setting of WPA passphrase");
+    ret = le_wifiClient_ConfigurePsk(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WEP,
+                                     secret, sizeof(secret), NULL, 0);
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+    ret = le_wifiClient_ConfigurePsk(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL,
+                                     NULL, 0, NULL, 0);
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+    ret = le_wifiClient_ConfigurePsk(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL,
+                                     secret, 1000, NULL, 0);
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+    ret = le_wifiClient_ConfigurePsk(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL,
+                                     NULL, 0, secret, 1000);
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+
+    // -ve test le_wifiClient_ConfigureEap() with EAP
+    LE_INFO("Negative test Wifi's config setting of EAP");
+    ret = le_wifiClient_ConfigureEap(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WEP,
+                                     username, sizeof(username), secret, sizeof(secret));
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+    ret = le_wifiClient_ConfigureEap(ssid, sizeof(ssid),
+                                     LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE,
+                                     NULL, 0, secret, sizeof(secret));
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+    ret = le_wifiClient_ConfigureEap(ssid, sizeof(ssid), LE_WIFICLIENT_SECURITY_WEP,
+                                     username, sizeof(username), NULL, 0);
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
+
+    // -ve test le_wifiClient_RemoveSsidSecurityConfigs() with no security
+    LE_INFO("Negative test Wifi's config setting of no security");
+    ret = le_wifiClient_RemoveSsidSecurityConfigs(ssid, 0);
+    LE_ASSERT(ret == LE_BAD_PARAMETER);
 }
 
 
@@ -264,6 +443,8 @@ COMPONENT_INIT
     TestWifiClient_Configure();
 
     TestWifiClient_LoadSsid();
+
+    TestWifiClient_ConfigureSecurity_NegTests();
 
     LE_INFO ("======== UnitTest of WiFi client SUCCESS ========");
 

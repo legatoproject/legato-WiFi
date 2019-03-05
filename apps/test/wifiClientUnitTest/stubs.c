@@ -469,3 +469,54 @@ le_msg_SessionEventHandlerRef_t MyAddServiceCloseHandler
 {
     return NULL;
 }
+
+//--------------------------------------------------------------------------------------------------
+// Secure storage service stubbing
+//--------------------------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Stub for reading an item from secure storage.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_secStore_Read
+(
+    const char* name,               ///< [IN] Name of the secure storage item.
+    uint8_t* bufPtr,                ///< [OUT] Buffer to store the data in.
+    size_t* bufNumElementsPtr       ///< [INOUT] Size of buffer.
+)
+{
+    #define STUB_SECSTORE_ITEM_VALUE "mySecret"
+    *bufNumElementsPtr = strlen(STUB_SECSTORE_ITEM_VALUE);
+    memcpy(bufPtr, STUB_SECSTORE_ITEM_VALUE, *bufNumElementsPtr);
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Stub for writing an item to secure storage.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_secStore_Write
+(
+    const char* name,               ///< [IN] Name of the secure storage item.
+    const uint8_t* bufPtr,          ///< [IN] Buffer contain the data to store.
+    size_t bufNumElements           ///< [IN] Size of buffer.
+)
+{
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Stub for deleting an item from secure storage.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_secStore_Delete
+(
+    const char* name               ///< [IN] Name of the secure storage item.
+
+)
+{
+    return LE_OK;
+}

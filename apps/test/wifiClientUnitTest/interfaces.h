@@ -7,6 +7,7 @@
 
 #include "le_wifiClient_interface.h"
 #include "le_cfg_interface.h"
+#include "le_secStore_interface.h"
 
 #undef LE_KILL_CLIENT
 #define LE_KILL_CLIENT LE_WARN

@@ -22,11 +22,22 @@
 #define CFG_PATH_WIFI               "wifi/channel"
 #define CFG_NODE_HIDDEN_SSID        "hidden"
 #define CFG_NODE_SECPROTOCOL        "secProtocol"
-#define CFG_NODE_PASSPHRASE         "passphrase"
 
 //--------------------------------------------------------------------------------------------------
 /**
- * The initial allocated AP:s at system start.
+ * The following are Wifi client's secured store's item root and node definitions
+ */
+//-------------------------------------------------------------------------------------------------
+#define SECSTORE_WIFI_ITEM_ROOT     "wifiService/channel"
+#define SECSTORE_NODE_PASSPHRASE    "passphrase"
+#define SECSTORE_NODE_PSK           "preSharedKey"
+#define SECSTORE_NODE_WEP_KEY       "wepKey"
+#define SECSTORE_NODE_USERNAME      "userName"
+#define SECSTORE_NODE_USERPWD       "userPassword"
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * The initial allocated number of APs at system start.
  * Note that the pool will grow automatically if it is needed.
  */
 //-------------------------------------------------------------------------------------------------
@@ -1428,6 +1439,361 @@ le_result_t le_wifiClient_Disconnect
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * This function seeks to load the WEP key of a given SSID from the known secured store path, which
+ * has been configured there earlier via the le_wifiClient_ConfigureWep() API.
+ *
+ * @return:
+ *     - LE_OK upon the success in retrieving the WEP key; LE_FAULT otherwise
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t WifiClient_LoadCfg_Wep
+(
+    const char *ssidPtr,
+    uint8_t *wepKeyPtr,
+    size_t *wepKeyPtrSize
+)
+{
+    le_result_t ret;
+    char secStorePath[LE_CFG_STR_LEN_BYTES] = {0};
+
+    snprintf(secStorePath, sizeof(secStorePath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssidPtr, SECSTORE_NODE_WEP_KEY);
+    *wepKeyPtrSize = LE_WIFIDEFS_MAX_WEPKEY_LENGTH;
+    ret = le_secStore_Read(secStorePath, wepKeyPtr, wepKeyPtrSize);
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to read WEP key from secStore path %s for SSID %s; retcode %d",
+                 secStorePath, ssidPtr, ret);
+        wepKeyPtr[0] = '\0';
+        *wepKeyPtrSize = 0;
+        return LE_FAULT;
+    }
+
+    LE_DEBUG("Succeeded to read WEP key from secStore path %s for SSID %s", secStorePath,
+             ssidPtr);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function seeks to load the WPA EAP configs of a given SSID from the known secured store
+ * path, which have been configured there earlier via the le_wifiClient_ConfigureEAP() API. These
+ * include the user name and password.
+ *
+ * @return:
+ *     - LE_OK upon the success in retrieving both the user name and password; LE_FAULT otherwise
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t WifiClient_LoadCfg_WpaEap
+(
+    const char *ssidPtr,
+    le_wifiClient_SecurityProtocol_t secProtocol,
+    uint8_t *usernamePtr,
+    size_t *usernamePtrSize,
+    uint8_t *passwordPtr,
+    size_t *passwordPtrSize
+)
+{
+    le_result_t ret;
+    char secStorePath[LE_CFG_STR_LEN_BYTES] = {0};
+
+    snprintf(secStorePath, sizeof(secStorePath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssidPtr, SECSTORE_NODE_USERPWD);
+    *passwordPtrSize = LE_WIFIDEFS_MAX_PASSWORD_LENGTH;
+    ret = le_secStore_Read(secStorePath, passwordPtr, passwordPtrSize);
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to read EAP password from secStore path %s for SSID %s; retcode %d",
+                 secStorePath, ssidPtr, ret);
+        usernamePtr[0] = '\0';
+        *usernamePtrSize = 0;
+        passwordPtr[0] = '\0';
+        *passwordPtrSize = 0;
+        return LE_FAULT;
+    }
+
+    snprintf(secStorePath, sizeof(secStorePath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssidPtr, SECSTORE_NODE_USERNAME);
+    *usernamePtrSize = LE_WIFIDEFS_MAX_USERNAME_LENGTH;
+    ret = le_secStore_Read(secStorePath, usernamePtr, usernamePtrSize);
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to read EAP username from secStore path %s for SSID %s; retcode %d",
+                 secStorePath, ssidPtr, ret);
+        usernamePtr[0] = '\0';
+        *usernamePtrSize = 0;
+        passwordPtr[0] = '\0';
+        *passwordPtrSize = 0;
+        return LE_FAULT;
+    }
+
+    LE_DEBUG("Succeeded to read EAP username & password from secStore for SSID %s", ssidPtr);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function seeks to set the retrieved WPA passphrase or PSK of a given SSID into wifiClient
+ * before le_wifiClient_Connect() can be attempted. Either a passphrase or a pre-shared key needs
+ * to be set before connecting.
+ *
+ * @return:
+ *     - LE_OK upon the success in setting the given WPA passphrase or pre-shared key into
+ *       wifiClient; LE_FAULT otherwise
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t WifiClient_SetCfg_WpaPsk
+(
+    le_wifiClient_AccessPointRef_t *apRefPtr,
+    const char *ssidPtr,
+    uint8_t *passPhrasePtr,
+    size_t passPhrasePtrSize,
+    uint8_t *preSharedKeyPtr,
+    size_t preSharedKeyPtrSize
+)
+{
+    if (passPhrasePtrSize > 0)
+    {
+        // As passPhrasePtr might not have been null terminated, null-terminate it before passing
+        // it to le_wifiClient_SetPassphrase() as a char string. It should have enough space
+        // to accommodate this 1 more character.
+        passPhrasePtr[passPhrasePtrSize] = '\0';
+        if (LE_OK != le_wifiClient_SetPassphrase(*apRefPtr, (const char *)passPhrasePtr))
+        {
+            LE_ERROR("Failed to config passphrase to start connection over SSID %s", ssidPtr);
+            return LE_FAULT;
+        }
+        return LE_OK;
+    }
+
+    if (preSharedKeyPtrSize > 0)
+    {
+        // As preSharedKeyPtr might not have been null terminated, null-terminate it before passing
+        // it to le_wifiClient_SetPreSharedKey() as a char string. It should have enough space
+        // to accommodate this 1 more character.
+        preSharedKeyPtr[preSharedKeyPtrSize] = '\0';
+        if (LE_OK != le_wifiClient_SetPreSharedKey(*apRefPtr, (const char *)preSharedKeyPtr))
+        {
+            LE_ERROR("Failed to config pre-shared key to start connection over SSID %s", ssidPtr);
+            return LE_FAULT;
+        }
+        return LE_OK;
+    }
+
+    LE_ERROR("Failed to set WPA parameters to start connection over SSID %s", ssidPtr);
+    return LE_FAULT;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function seeks to load the WPA config of a given SSID from the known secured store path,
+ * which has been configured there earlier via the le_wifiClient_ConfigurePsk() API. It'll try to
+ * retrieve passphrase 1st. If no valid one can be found, then it proceeds to try retrieving PSK
+ * config.
+ *
+ * @return:
+ *     - LE_OK upon the success in retrieving a WPA passphrase or pre-shared key; LE_FAULT otherwise
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t WifiClient_LoadCfg_WpaPsk
+(
+    const char *ssidPtr,
+    le_wifiClient_SecurityProtocol_t secProtocol,
+    uint8_t *passPhrasePtr,
+    size_t *passPhrasePtrSize,
+    uint8_t *preSharedKeyPtr,
+    size_t *preSharedKeyPtrSize
+)
+{
+    le_result_t ret;
+    char secStorePath[LE_CFG_STR_LEN_BYTES] = {0};
+
+    // Try to load passphrase 1st. If no valid one is found, don't quit yet but try loading a
+    // pre-shared key
+    snprintf(secStorePath, sizeof(secStorePath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssidPtr, SECSTORE_NODE_PASSPHRASE);
+    *passPhrasePtrSize = LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH;
+    ret = le_secStore_Read(secStorePath, passPhrasePtr, passPhrasePtrSize);
+    if ((ret == LE_OK) && (*passPhrasePtrSize > 0))
+    {
+        LE_DEBUG("Succeeded to read passphrase from secStore path %s for SSID %s", secStorePath,
+                 ssidPtr);
+        return LE_OK;
+    }
+
+    LE_WARN("Failed to read passphrase from secStore path %s for SSID %s; retcode %d",
+             secStorePath, ssidPtr, ret);
+    LE_DEBUG("Failed to retrieve a valid WPA passphrase; try pre-shared key now");
+    *passPhrasePtrSize = 0;
+
+    // Try to load pre-shared key as it has failed to load passphrase
+    snprintf(secStorePath, sizeof(secStorePath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssidPtr, SECSTORE_NODE_PSK);
+    *preSharedKeyPtrSize = LE_WIFIDEFS_MAX_PSK_LENGTH;
+    ret = le_secStore_Read(secStorePath, preSharedKeyPtr, preSharedKeyPtrSize);
+    if ((ret != LE_OK) || (*preSharedKeyPtrSize == 0))
+    {
+        LE_ERROR("Failed to read pre-shared key from secStore path %s for SSID %s; retcode %d",
+                 secStorePath, ssidPtr, ret);
+        *preSharedKeyPtrSize = 0;
+        return LE_FAULT;
+    }
+
+    LE_DEBUG("Succeeded to read pre-shared key from secStore path %s for SSID %s", secStorePath,
+             ssidPtr);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function seeks to load the security configs of a given SSID from the known secured store
+ * paths and set them into wifiClient for use. It takes care of the various security protocols
+ * supported and the their necessary config parameters. Before setting the valid security configs
+ * into use, it creates a local AP reference for the given SSID, into which these security
+ * configs will be set before the Wifi client proceeds with le_wifiClient_Connect() to  establish
+ * a connection over this SSID.
+ *
+ * @return:
+ *     - LE_OK upon the success in retrieving the necessary security configs and setting them into
+ *       place for proceeding with connecting; LE_FAULT otherwise
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t WifiClient_LoadSecurityConfigs
+(
+    const char *ssidPtr,
+    le_wifiClient_AccessPointRef_t *apRefPtr,
+    le_wifiClient_SecurityProtocol_t secProtocol
+)
+{
+    le_result_t ret;
+
+    // Use unions for these strings to save memory space, as they're mutually exclusive
+    union {
+        uint8_t passphrase[LE_WIFIDEFS_MAX_PASSPHRASE_BYTES];
+        uint8_t username[LE_WIFIDEFS_MAX_USERNAME_BYTES];
+        uint8_t wepKey[LE_WIFIDEFS_MAX_WEPKEY_BYTES];
+    } u1;
+    union {
+        uint8_t preSharedKey[LE_WIFIDEFS_MAX_PSK_BYTES];
+        uint8_t password[LE_WIFIDEFS_MAX_PASSWORD_BYTES];
+    } u2;
+    size_t size1 = 0, size2 = 0;
+
+    memset(&u1, 0x0, sizeof(u1));
+    memset(&u2, 0x0, sizeof(u2));
+
+    // Load security parameters from configs
+    switch (secProtocol)
+    {
+        case LE_WIFICLIENT_SECURITY_NONE:
+            break;
+
+        case LE_WIFICLIENT_SECURITY_WEP:
+            ret = WifiClient_LoadCfg_Wep(ssidPtr, u1.wepKey, &size1);
+            if (ret != LE_OK)
+            {
+                return ret;
+            }
+            break;
+
+        case LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL:
+        case LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL:
+            ret = WifiClient_LoadCfg_WpaPsk(ssidPtr, secProtocol, u1.passphrase, &size1,
+                                            u2.preSharedKey, &size2);
+            if (ret != LE_OK)
+            {
+                return ret;
+            }
+            break;
+
+        case LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE:
+        case LE_WIFICLIENT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE:
+            ret = WifiClient_LoadCfg_WpaEap(ssidPtr, secProtocol, u1.username, &size1,
+                                            u2.password, &size2);
+            if (ret != LE_OK)
+            {
+                return ret;
+            }
+            break;
+
+        default:
+            LE_ERROR("Invalid security protocol %d", secProtocol);
+            return LE_FAULT;
+    }
+
+    LE_DEBUG("Successfully retrieved security parameters for protocol %d over SSID %s",
+             secProtocol, ssidPtr);
+
+    // Create the Access Point to connect to
+    *apRefPtr = le_wifiClient_Create((const uint8_t *)ssidPtr, strlen(ssidPtr));
+    if (!*apRefPtr)
+    {
+        LE_ERROR("Failed to create Access Point to start connection over SSID %s", ssidPtr);
+        return LE_FAULT;
+    }
+
+    if (LE_OK != le_wifiClient_SetSecurityProtocol(*apRefPtr, secProtocol))
+    {
+        LE_ERROR("Failed to set security protocol to start connection over SSID %s", ssidPtr);
+        (void)le_wifiClient_Delete(*apRefPtr);
+        *apRefPtr = 0;
+        return LE_FAULT;
+    }
+
+    // Set security parameters into le_wifiClient for use
+    switch (secProtocol)
+    {
+        case LE_WIFICLIENT_SECURITY_NONE:
+            ret = LE_OK;
+            break;
+
+        case LE_WIFICLIENT_SECURITY_WEP:
+            // As wepKey might not have been null terminated, null-terminate it before passing
+            // it to le_wifiClient_SetWepKey() as a char string. It should have enough space
+            // to accommodate this 1 more character.
+            u1.wepKey[size1] = '\0';
+            ret = le_wifiClient_SetWepKey(*apRefPtr, (const char *)u1.wepKey);
+            break;
+
+        case LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL:
+        case LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL:
+            ret = WifiClient_SetCfg_WpaPsk(apRefPtr, ssidPtr, u1.passphrase, size1,
+                                           u2.preSharedKey, size2);
+            break;
+
+        case LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE:
+        case LE_WIFICLIENT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE:
+            // As they might not have been null terminated, null-terminate the 2 uint8_t arrays
+            // before passing them to le_wifiClient_SetUserCredentials() as char strings. They
+            // should have enough space to accommodate this 1 more character.
+            u1.username[size1] = '\0';
+            u2.password[size2] = '\0';
+            ret = le_wifiClient_SetUserCredentials(*apRefPtr, (const char *)u1.username,
+                                                   (const char *)u2.password);
+            break;
+
+        default:
+            break;
+    }
+
+    if (ret != LE_OK)
+    {
+        (void)le_wifiClient_Delete(*apRefPtr);
+        *apRefPtr = 0;
+        return ret;
+    }
+    LE_INFO("Succeeded to set into wifiClient security parameters of protocol %d for SSID %s",
+            secProtocol, ssidPtr);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
  * Load the given SSID's configurations as it is selected as the connection to get established,
  * after creating for it an AP reference
  *
@@ -1439,14 +1805,17 @@ le_result_t le_wifiClient_Disconnect
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_LoadSsid
 (
-    const char *ssidPtr,                          ///< [IN] SSID which configs are to be installed
+    const uint8_t *ssidPtr,                       ///< [IN] SSID which configs are to be installed
+    size_t ssidPtrSize,                           ///< [IN] Length of the SSID in octets
     le_wifiClient_AccessPointRef_t *apRefPtr      ///< [OUT] reference to be created
 )
 {
     // Retrieve data from config tree
-    char configPath[LE_CFG_STR_LEN_BYTES], passphrase[LE_WIFIDEFS_MAX_PASSPHRASE_BYTES] = {0};
-    le_wifiClient_SecurityProtocol_t secProtocol;
+    char configPath[LE_CFG_STR_LEN_BYTES] = {0};
+    char ssid[LE_WIFIDEFS_MAX_SSID_BYTES] = {0};
     le_cfg_IteratorRef_t cfg;
+    le_wifiClient_SecurityProtocol_t secProtocol;
+    le_result_t ret;
     bool is_hidden = false;
 
     if (!apRefPtr)
@@ -1457,49 +1826,40 @@ le_result_t le_wifiClient_LoadSsid
 
     *apRefPtr = 0;
 
-    if (!ssidPtr || (strlen(ssidPtr) == 0))
+    if (!ssidPtr || (ssidPtrSize == 0))
     {
         LE_ERROR("Invalid SSID input for setting configs");
         return LE_BAD_PARAMETER;
     }
 
-    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI,
-             ssidPtr);
+    // Copy the ssidPtr input over, in case it's not null terminated and has no extra space behind
+    // to set it there
+    memcpy(ssid, ssidPtr, ssidPtrSize);
+
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI, ssid);
     cfg = le_cfg_CreateReadTxn(configPath);
     if (!cfg)
     {
-        LE_ERROR("Failed to get configs of SSID %s", ssidPtr);
+        LE_ERROR("Failed to get configs of SSID %s", ssid);
         return LE_BAD_PARAMETER;
     }
 
     // Security protocol
     if (!le_cfg_NodeExists(cfg, CFG_NODE_SECPROTOCOL))
     {
-        LE_WARN("No wifi security protocol set at %s/%s", configPath, CFG_NODE_SECPROTOCOL);
-        le_cfg_CancelTxn(cfg);
-        return LE_NOT_FOUND;
+        LE_DEBUG("No wifi security protocol set at %s/%s", configPath, CFG_NODE_SECPROTOCOL);
+        secProtocol = LE_WIFICLIENT_SECURITY_NONE;
     }
-    secProtocol = le_cfg_GetInt(cfg, CFG_NODE_SECPROTOCOL,
-                                LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL);
-    if (LE_WIFICLIENT_SECURITY_NONE != secProtocol)
+    else
     {
-        // Passphrase
-        if (!le_cfg_NodeExists(cfg, CFG_NODE_PASSPHRASE))
-        {
-            LE_ERROR("No wifi passphrase found at %s/%s when security protocol %d is used",
-                     configPath, CFG_NODE_PASSPHRASE, secProtocol);
-            le_cfg_CancelTxn(cfg);
-            return LE_NOT_FOUND;
-        }
-
-        if (LE_OK != le_cfg_GetString(cfg, CFG_NODE_PASSPHRASE, passphrase, sizeof(passphrase),
-                                      "passphrase"))
-        {
-            LE_ERROR("Wifi passphrase at %s/%s too long or invalid when security protocol %d "
-                     "is used", configPath, CFG_NODE_PASSPHRASE, secProtocol);
-            le_cfg_CancelTxn(cfg);
-            return LE_OVERFLOW;
-        }
+        secProtocol = le_cfg_GetInt(cfg, CFG_NODE_SECPROTOCOL,
+                                    LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL);
+    }
+    ret = WifiClient_LoadSecurityConfigs(ssid, apRefPtr, secProtocol);
+    if (ret != LE_OK)
+    {
+        le_cfg_CancelTxn(cfg);
+        return ret;
     }
 
     // Hidden SSID or not
@@ -1508,41 +1868,358 @@ le_result_t le_wifiClient_LoadSsid
         is_hidden = le_cfg_GetBool(cfg, CFG_NODE_HIDDEN_SSID, false);
     }
 
-    LE_DEBUG("Security protocol %d successfully configured for SSID %s", secProtocol, ssidPtr);
     le_cfg_CancelTxn(cfg);
-
-    // Create the Access Point to connect to
-    *apRefPtr = le_wifiClient_Create((const uint8_t *)ssidPtr, strlen(ssidPtr));
-    if (!*apRefPtr)
-    {
-        LE_ERROR("Failed to create Access Point to start wifi connection over SSID %s",
-                 ssidPtr);
-        return LE_FAULT;
-    }
-
-    // Configure the Access Point
-    if (LE_OK != le_wifiClient_SetSecurityProtocol(*apRefPtr, secProtocol))
-    {
-        LE_ERROR("Failed to config security protocol to start wifi connection over SSID %s",
-                 ssidPtr);
-        return LE_FAULT;
-    }
-
-    if ((strlen(passphrase) > 0) && LE_OK != le_wifiClient_SetPassphrase(*apRefPtr, passphrase))
-    {
-        LE_ERROR("Failed to config security passphrase to start wifi connection over SSID %s",
-                 ssidPtr);
-        return LE_FAULT;
-    }
 
     if (is_hidden && (LE_OK != le_wifiClient_SetHiddenNetworkAttribute(*apRefPtr, true)))
     {
-        LE_ERROR("Failed to set as hidden SSID %s with AP reference %p", ssidPtr, *apRefPtr);
+        LE_ERROR("Failed to set as hidden SSID %s with AP reference %p", ssid, *apRefPtr);
+        (void)le_wifiClient_Delete(*apRefPtr);
+        *apRefPtr = 0;
         return LE_FAULT;
     }
 
-    LE_INFO("AP reference %p successfully created for SSID %s", *apRefPtr, ssidPtr);
+    LE_INFO("Succeeded to create AP reference %p for SSID %s", *apRefPtr, ssid);
     return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Configure the given SSID to use WEP and the given WEP key in the respective input argument.
+ *
+ * @return
+ *      - LE_OK     Succeeded to configure the given WEP key for the given SSID.
+ *      - LE_FAULT  Failed to configure.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_ConfigureWep
+(
+    const uint8_t *ssidPtr,    ///< [IN] SSID which configs are to be installed
+    size_t ssidPtrSize,        ///< [IN] Length of the SSID in octets
+    const uint8_t *wepKeyPtr,  ///< [IN] WEP key used for this SSID
+    size_t wepKeyPtrSize       ///< [IN] Length of the WEP key in octets
+)
+{
+    le_result_t ret;
+    char configPath[LE_CFG_STR_LEN_BYTES] = {0};
+    char ssid[LE_WIFIDEFS_MAX_SSID_BYTES] = {0};
+    le_cfg_IteratorRef_t cfg;
+
+    if (!ssidPtr || (ssidPtrSize == 0))
+    {
+        LE_ERROR("Invalid inputs: SSID size %d", (int)ssidPtrSize);
+        return LE_BAD_PARAMETER;
+    }
+
+    if (!wepKeyPtr)
+    {
+        LE_ERROR("Invalid WEP key");
+        return LE_BAD_PARAMETER;
+    }
+
+    // Copy the ssidPtr input over, in case it's not null terminated and has no extra space behind
+    // to set it there
+    memcpy(ssid, ssidPtr, ssidPtrSize);
+
+    // Write secProtocol into config tree
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI, ssid);
+    cfg = le_cfg_CreateWriteTxn(configPath);
+    le_cfg_SetInt(cfg, CFG_NODE_SECPROTOCOL, LE_WIFICLIENT_SECURITY_WEP);
+    le_cfg_CommitTxn(cfg);
+
+    // Write WEP key into secStore
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssid, SECSTORE_NODE_WEP_KEY);
+    ret = le_secStore_Write(configPath, wepKeyPtr, wepKeyPtrSize);
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to write WEP key into secStore path %s for SSID %s; retcode %d",
+                 configPath, ssid, ret);
+        return LE_FAULT;
+    }
+
+    LE_INFO("Succeeded to write WEP configs for SSID %s into secStore", ssid);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Configure the given SSID to use PSK and the given pass-phrase or pre-shared key in the
+ * respective input arguments. The protocol input is mandatory and has to be set to either
+ * LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL or LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL.
+ * Besides, it's mandatory to have at least one of the pass-phrase and pre-shared key supplied. If
+ * both are provided as input, the pass-phrase has precedence and will be used. But it fails to
+ * authenticate, a second attempt using the provided pre-shared key will not be done.
+ *
+ * @return
+ *      - LE_OK     Succeeded to configure the given passphrase or pre-shared key for the given
+ *                  SSID.
+ *      - LE_FAULT  Failed to configure.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_ConfigurePsk
+(
+    const uint8_t *ssidPtr,                     ///< [IN] SSID which configs are to be installed
+    size_t ssidPtrSize,                         ///< [IN] Length of the SSID in octets
+    le_wifiClient_SecurityProtocol_t protocol,  ///< [IN] security protocol WPA-PSK or WPA2-PSK
+    const uint8_t *passPhrasePtr,               ///< [IN] passphrase used for this SSID
+    size_t passPhrasePtrSize,                   ///< [IN] Length of the passphrase in octets
+    const uint8_t *pskPtr,                      ///< [IN] pre-shared key used for this SSID
+    size_t pskPtrSize                           ///< [IN] Length of the pre-shared key in octets
+)
+{
+    le_result_t ret1 = LE_OK, ret2 = LE_OK;
+    char configPath[LE_CFG_STR_LEN_BYTES] = {0};
+    char ssid[LE_WIFIDEFS_MAX_SSID_BYTES] = {0};
+    le_cfg_IteratorRef_t cfg;
+
+    if ((protocol != LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL) &&
+        (protocol != LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL))
+    {
+        LE_ERROR("Incorrect protocol type %d for setting PSK", protocol);
+        return LE_BAD_PARAMETER;
+    }
+    if (!ssidPtr || (ssidPtrSize == 0))
+    {
+        LE_ERROR("Invalid inputs: SSID size %d", (int)ssidPtrSize);
+        return LE_BAD_PARAMETER;
+    }
+
+    if (!passPhrasePtr && !pskPtr)
+    {
+        LE_ERROR("Invalid input: both given passphrase and pre-shared key are null");
+        return LE_BAD_PARAMETER;
+    }
+
+    // Copy the ssidPtr input over, in case it's not null terminated and has no extra space behind
+    // to set it there
+    memcpy(ssid, ssidPtr, ssidPtrSize);
+
+    // Write secProtocol into config tree
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI, ssid);
+    cfg = le_cfg_CreateWriteTxn(configPath);
+    le_cfg_SetInt(cfg, CFG_NODE_SECPROTOCOL, protocol);
+    le_cfg_CommitTxn(cfg);
+
+    // Write passPhrase into secStore
+    if (passPhrasePtr)
+    {
+        if (passPhrasePtrSize > LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH)
+        {
+            LE_ERROR("Invalid input: passphrase's length %d has to be shorter than %d",
+                     (int)passPhrasePtrSize, LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH);
+            ret1 = LE_BAD_PARAMETER;
+        }
+        else if (passPhrasePtrSize < LE_WIFIDEFS_MIN_PASSPHRASE_LENGTH)
+        {
+            LE_ERROR("Invalid input: passphrase's length %d has to be longer than %d",
+                     (int)passPhrasePtrSize, LE_WIFIDEFS_MIN_PASSPHRASE_LENGTH);
+            ret1 = LE_BAD_PARAMETER;
+        }
+        else
+        {
+            snprintf(configPath, sizeof(configPath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+                     ssid, SECSTORE_NODE_PASSPHRASE);
+            ret1 = le_secStore_Write(configPath, passPhrasePtr, passPhrasePtrSize);
+            if (ret1 != LE_OK)
+            {
+                LE_ERROR("Failed to write passphrase into secStore path %s for SSID %s; retcode %d",
+                         configPath, ssid, ret2);
+            }
+            else
+            {
+                LE_DEBUG("Succeeded writing passphrase into secStore");
+            }
+        }
+
+        if (!pskPtr)
+        {
+            return ((ret1 == LE_OK) ? LE_OK : ret1);
+        }
+    }
+
+    if (pskPtr)
+    {
+        if (pskPtrSize > LE_WIFIDEFS_MAX_PSK_LENGTH)
+        {
+            LE_ERROR("Invalid input: pre-shared key's length %d has to be shorter than %d",
+                     (int)pskPtrSize, LE_WIFIDEFS_MAX_PSK_LENGTH);
+            ret2 = LE_BAD_PARAMETER;
+        }
+        else
+        {
+            snprintf(configPath, sizeof(configPath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+                     ssid, SECSTORE_NODE_PSK);
+            ret2 = le_secStore_Write(configPath, pskPtr, pskPtrSize);
+            if (ret2 != LE_OK)
+            {
+                LE_ERROR("Failed to write pre-shared key into secStore path %s for SSID %s; "
+                         "retcode %d", configPath, ssid, ret2);
+            }
+            else
+            {
+                LE_DEBUG("Succeeded to write pre-shared key into secStore");
+            }
+        }
+
+        if (!passPhrasePtr)
+        {
+            return ((ret2 == LE_OK) ? LE_OK : ret2);
+        }
+    }
+
+    if ((ret1 != LE_OK) && (ret2 != LE_OK))
+    {
+        return LE_FAULT;
+    }
+
+    LE_INFO("Succeeded to write PSK configs for SSID %s into secStore", ssid);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Configure the given SSID to use EAP and the given EAP username and password in the respective
+ * input arguments. The protocol input is mandatory and has to be set to either
+ * LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE or
+ * LE_WIFICLIENT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE. Besides, both the username and password inputs
+ * are mandatory.
+ *
+ * @return
+ *      - LE_OK     Succeeded to configure the given EAP username and password for the given
+ *                  SSID.
+ *      - LE_FAULT  Failed to configure.
+ *      - LE_BAD_PARAMETER  Invalid parameter.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_ConfigureEap
+(
+    const uint8_t *ssidPtr,                     ///< [IN] SSID which configs are to be installed
+    size_t ssidPtrSize,                         ///< [IN] Length of the SSID in octets
+    le_wifiClient_SecurityProtocol_t protocol,  ///< [IN] security protocol WPA-EAP or WPA2-EAP
+    const uint8_t *usernamePtr,                 ///< [IN] EAP username used for this SSID
+    size_t usernamePtrSize,                     ///< [IN] Length of the username in octets
+    const uint8_t *passwordPtr,                 ///< [IN] EAP password used for this SSID
+    size_t passwordPtrSize                      ///< [IN] Length of the password in octets
+)
+{
+    le_result_t ret;
+    char configPath[LE_CFG_STR_LEN_BYTES] = {0};
+    char ssid[LE_WIFIDEFS_MAX_SSID_BYTES] = {0};
+    le_cfg_IteratorRef_t cfg;
+
+    if ((protocol != LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE) &&
+        (protocol != LE_WIFICLIENT_SECURITY_WPA2_EAP_PEAP0_ENTERPRISE))
+    {
+        LE_ERROR("Incorrect protocol type %d for setting EAP", protocol);
+        return LE_BAD_PARAMETER;
+    }
+    if (!ssidPtr || (ssidPtrSize == 0))
+    {
+        LE_ERROR("Invalid inputs: SSID size %d", (int)ssidPtrSize);
+        return LE_BAD_PARAMETER;
+    }
+
+    if (!usernamePtr || !passwordPtr)
+    {
+        LE_ERROR("Invalid input: username %p password %p", usernamePtr, passwordPtr);
+        return LE_BAD_PARAMETER;
+    }
+
+    // Copy the ssidPtr input over, in case it's not null terminated and has no extra space behind
+    // to set it there
+    memcpy(ssid, ssidPtr, ssidPtrSize);
+
+    // Write secProtocol into config tree
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI, ssid);
+    cfg = le_cfg_CreateWriteTxn(configPath);
+    le_cfg_SetInt(cfg, CFG_NODE_SECPROTOCOL, protocol);
+    le_cfg_CommitTxn(cfg);
+
+    // Write username & password into secStore
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssid, SECSTORE_NODE_USERNAME);
+    ret = le_secStore_Write(configPath, usernamePtr, usernamePtrSize);
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to write username into secStore path %s for SSID %s; retcode %d",
+                 configPath, ssid, ret);
+        return LE_FAULT;
+    }
+
+    snprintf(configPath, sizeof(configPath), "%s/%s/%s", SECSTORE_WIFI_ITEM_ROOT,
+             ssid, SECSTORE_NODE_USERPWD);
+    ret = le_secStore_Write(configPath, passwordPtr, passwordPtrSize);
+    if (ret != LE_OK)
+    {
+        LE_ERROR("Failed to write user password into secStore path %s for SSID %s; retcode %d",
+                 configPath, ssid, ret);
+        return LE_FAULT;
+    }
+
+    LE_INFO("Succeeded to write EAP configs for SSID %s into secStore", ssid);
+    return LE_OK;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Remove and clear Wifi's security configurations to use with the given SSID from the config tree
+ * and secured store. This includes the security protocol and all the username, password,
+ * passphrase, pre-shared key, key, etc., previously configured via le_wifiClient_Configure APIs for
+ * WEP, PSK and EAP.
+ *
+ * @return
+ *      - LE_OK upon success to deconfigure the given SSID's configured user credentials;
+ *        LE_FAULT otherwise
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_RemoveSsidSecurityConfigs
+(
+    const uint8_t *ssidPtr,         ///< [IN] SSID which user credentials are to be deconfigured
+    size_t ssidPtrSize              ///< [IN] Length of the SSID in octets
+)
+{
+    le_result_t ret;
+    char ssid[LE_WIFIDEFS_MAX_SSID_BYTES] = {0};
+    char configPath[LE_CFG_STR_LEN_BYTES] = {0};
+    le_cfg_IteratorRef_t cfg;
+
+    if (!ssidPtr || (ssidPtrSize == 0))
+    {
+        LE_ERROR("Invalid inputs: SSID size %d", (int)ssidPtrSize);
+        return LE_BAD_PARAMETER;
+    }
+
+    // Copy the ssidPtr input over, in case it's not null terminated and has no extra space behind
+    // to set it there
+    memcpy(ssid, ssidPtr, ssidPtrSize);
+    snprintf(configPath, sizeof(configPath), "%s/%s", SECSTORE_WIFI_ITEM_ROOT, ssid);
+    ret = le_secStore_Delete(configPath);
+    if (ret == LE_NOT_FOUND)
+    {
+        LE_WARN("Found secStore path %s non-existent to remove", configPath);
+    }
+    else if (ret == LE_OK)
+    {
+        // Clear secProtocol setting on config tree
+        snprintf(configPath, sizeof(configPath), "%s/%s/%s", CFG_TREE_ROOT_DIR, CFG_PATH_WIFI,
+                 ssid);
+        cfg = le_cfg_CreateWriteTxn(configPath);
+        le_cfg_SetInt(cfg, CFG_NODE_SECPROTOCOL, LE_WIFICLIENT_SECURITY_NONE);
+        le_cfg_CommitTxn(cfg);
+        LE_INFO("Succeeded to delete from secStore user credentials for SSID %s", ssid);
+    }
+    else
+    {
+        LE_ERROR("Failed to delete user credentials for SSID %s on secStore path %s; retcode %d",
+                 ssid, configPath, ret);
+    }
+    return ret;
 }
 
 
@@ -1576,4 +2253,3 @@ void le_wifiClient_Init
     // Add a handler to handle the close
     le_msg_AddServiceCloseHandler(le_wifiClient_GetServiceRef(), CloseSessionEventHandler, NULL);
 }
-

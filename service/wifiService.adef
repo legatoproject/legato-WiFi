@@ -34,3 +34,8 @@ extern:
     wifiService.daemon.le_wifiAp
     wifiService.daemon.le_wifiClient
 }
+
+bindings:
+{
+    wifiService.daemon.le_secStore -> <root>.le_secStore
+}
