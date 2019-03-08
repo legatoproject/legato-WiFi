@@ -654,7 +654,7 @@ le_result_t le_wifiClient_Start
         }
         else
         {
-            LE_ERROR("Unable to start WIFI client. Err: %d", result);
+            LE_WARN("Unable to start WIFI client; return code: %d", result);
         }
     }
     else
