@@ -255,10 +255,13 @@ static le_wifiClient_AccessPointRef_t AddAccessPointToApRefMap
 
         if (NULL != oldAccessPointPtr)
         {
-            LE_DEBUG("Already exists %p. Update  SignalStrength %d",
-                returnedRef, apPtr->signalStrength);
+            LE_DEBUG("Already exists %p. Update SignalStrength %d, SSID '%s'",
+                     returnedRef, apPtr->signalStrength, &apPtr->ssidBytes[0]);
 
             oldAccessPointPtr->accessPoint.signalStrength = apPtr->signalStrength;
+            oldAccessPointPtr->accessPoint.ssidLength = apPtr->ssidLength;
+            memcpy(&oldAccessPointPtr->accessPoint.ssidBytes, &apPtr->ssidBytes,
+                   apPtr->ssidLength);
             oldAccessPointPtr->foundInLatestScan = true;
         }
 
