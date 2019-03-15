@@ -66,7 +66,7 @@
 #define WIFI_AP_CONFIG_HOSTAPD \
     "interface=wlan0\n"\
     "driver=nl80211\n"\
-    "hw_mode=g\n"\
+    "wmm_enabled=1\n"\
     "beacon_int=100\n"\
     "dtim_period=2\n"\
     "rts_threshold=2347\n"\
@@ -82,7 +82,6 @@
     "auth_algs=1\n"\
     "eap_server=0\n"\
     "eapol_key_index_workaround=0\n"\
-    "wmm_enabled=1\n"\
     "macaddr_acl=0\n"
 //--------------------------------------------------------------------------------------------------
 /**
@@ -113,7 +112,29 @@ static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol;
  * The current SSID
  */
 //--------------------------------------------------------------------------------------------------
-static char                         SavedSsid[LE_WIFIDEFS_MAX_SSID_BYTES] = "";
+static char          SavedSsid[LE_WIFIDEFS_MAX_SSID_BYTES] = "";
+//--------------------------------------------------------------------------------------------------
+/**
+ * The current country code
+ */
+//--------------------------------------------------------------------------------------------------
+static char          SavedCountryCode[LE_WIFIDEFS_MAX_COUNTRYCODE_BYTES] = { 'U', 'S', '\0'};
+//--------------------------------------------------------------------------------------------------
+/**
+ * The current IEEE mask
+ * IEEE 802.11g is set by default
+ */
+//--------------------------------------------------------------------------------------------------
+static le_wifiAp_IeeeStdBitMask_t   SavedIeeeStdMask = 0x0004;
+//--------------------------------------------------------------------------------------------------
+/**
+ * The current MAX and MIN channel
+ * Different MAX/MIN channel for different hardware mode
+ * IEEE 802.11g is set by default
+ */
+//--------------------------------------------------------------------------------------------------
+static int8_t MIN_CHANNEL_VALUE = LE_WIFIDEFS_MIN_CHANNEL_VALUE;
+static int8_t MAX_CHANNEL_VALUE = LE_WIFIDEFS_MAX_CHANNEL_VALUE;
 //--------------------------------------------------------------------------------------------------
 /**
  * Defines whether the SSID is hidden or not
@@ -125,7 +146,7 @@ static bool                         SavedDiscoverable                     = true
  * The WiFi channel associated with the SSID
  */
 //--------------------------------------------------------------------------------------------------
-static uint32_t                     SavedChannelNumber                    = 1;
+static uint32_t                     SavedChannelNumber                    = 7;
 //--------------------------------------------------------------------------------------------------
 /**
  * The maximum numbers of clients the AP is able to manage
@@ -459,10 +480,18 @@ le_result_t pa_wifiAp_Start
     int          status;
     FILE        *configFilePtr  = NULL;
 
-    // Check than an SSID is provided before starting
+    // Check that an SSID is provided before starting
     if ('\0' == SavedSsid[0])
     {
         LE_ERROR("Unable to start AP because no valid SSID provided");
+        return LE_FAULT;
+    }
+
+    // Check channel number is properly set before starting
+    if ((SavedChannelNumber < MIN_CHANNEL_VALUE) ||
+            (SavedChannelNumber > MAX_CHANNEL_VALUE))
+    {
+        LE_ERROR("Unable to start AP because no valid channel number provided");
         return LE_FAULT;
     }
 
@@ -500,10 +529,11 @@ le_result_t pa_wifiAp_Start
         goto error;
     }
 
-    snprintf(tmpString, sizeof(tmpString), "ssid=%s\nchannel=%d\nmax_num_sta=%d\n",
+    snprintf(tmpString, sizeof(tmpString), "ssid=%s\nchannel=%d\nmax_num_sta=%d\ncountry_code=%s\n",
              (char *)SavedSsid,
              SavedChannelNumber,
-             SavedMaxNumClients);
+             SavedMaxNumClients,
+             (char *)SavedCountryCode);
 
     // Write SSID, channel and maximum number of clients in hostapd.conf
     if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
@@ -556,6 +586,58 @@ le_result_t pa_wifiAp_Start
     if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
     {
         LE_ERROR("Unable to set broadcast paramater in hostapd.conf");
+        goto error;
+    }
+
+    // Write IEEE std including hardware mode into hostapd.conf
+    memset(tmpString, '\0', sizeof(tmpString));
+    switch( SavedIeeeStdMask & 0x000F )
+    {
+        case LE_WIFIAP_BITMASK_IEEE_STD_A:
+            strncpy(tmpString, "hw_mode=a\n", sizeof("hw_mode=a\n"));
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_B:
+            strncpy(tmpString, "hw_mode=b\n", sizeof("hw_mode=b\n"));
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_G:
+            strncpy(tmpString, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_AD:
+            strncpy(tmpString, "hw_mode=ad\n", sizeof("hw_mode=ad\n"));;
+            break;
+        default:
+            strncpy(tmpString, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+    }
+
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_D )
+    {
+        strncat(tmpString, "ieee80211d=1\n", sizeof("ieee80211d=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_H )
+    {
+        strncat(tmpString, "ieee80211h=1\n", sizeof("ieee80211h=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_N )
+    {
+        // hw_mode=b does not support ieee80211n, but driver can handle it
+        strncat(tmpString, "ieee80211n=1\n", sizeof("ieee80211n=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AC )
+    {
+        strncat(tmpString, "ieee80211ac=1\n", sizeof("ieee80211ac=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AX )
+    {
+        strncat(tmpString, "ieee80211ax=1\n", sizeof("ieee80211ax=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_W )
+    {
+        strncat(tmpString, "ieee80211w=1\n", sizeof("ieee80211w=1\n"));
+    }
+
+    if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
+    {
+        LE_ERROR("Unable to set IEEE STD in hostapd.conf");
     }
 
     fclose(configFilePtr);
@@ -576,6 +658,15 @@ error:
     remove(WIFI_HOSTAPD_FILE);
     le_thread_Cancel(WifiApPaThread);
     le_thread_Join(WifiApPaThread, NULL);
+    // If driver module is loaded, unload it
+    if (0 == status)
+    {
+        status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP);
+        if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+        {
+            LE_ERROR("WiFi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_STOP, status);
+        }
+    }
     return LE_FAULT;
 }
 
@@ -855,12 +946,15 @@ le_result_t pa_wifiAp_SetDiscoverable
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the WiFi channel to use.
- * Default value is 1.
- * Some legal restrictions for values 12 - 14 might apply for your region.
- *
- * @return LE_OUT_OF_RANGE Requested channel number is out of range.
- * @return LE_OK           Function succeeded.
+ * Set which WiFi channel to use.
+ * Default number is 7.
+ * Some legal restrictions might apply for your region.
+ * The channel number must be between 1 and 14 for IEEE 802.11b/g.
+ * The channel number must be between 7 and 196 for IEEE 802.11a.
+ * The channel number must be between 1 and 6 for IEEE 802.11ad.
+ * @return
+ *      - LE_OUT_OF_RANGE if requested channel number is out of range.
+ *      - LE_OK if the function succeeded.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -868,18 +962,154 @@ le_result_t pa_wifiAp_SetChannel
 (
     int8_t channelNumber
         ///< [IN]
-        ///< the channel number must be between 1 and 14.
+        ///< the channel number.
 )
 {
-    // Store PreSharedKey to be used later during startup procedure
     le_result_t result = LE_OUT_OF_RANGE;
+    int8_t hwMode = SavedIeeeStdMask & 0x0F;
 
     LE_INFO("Set channel");
-    if ((channelNumber >= LE_WIFIDEFS_MIN_CHANNEL_VALUE) &&
-        (channelNumber <= LE_WIFIDEFS_MAX_CHANNEL_VALUE))
+    switch (hwMode)
+    {
+        case LE_WIFIAP_BITMASK_IEEE_STD_A:
+            MIN_CHANNEL_VALUE = LE_WIFIDEFS_MIN_CHANNEL_STD_A;
+            MAX_CHANNEL_VALUE = LE_WIFIDEFS_MAX_CHANNEL_STD_A;
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_B:
+        case LE_WIFIAP_BITMASK_IEEE_STD_G:
+            MIN_CHANNEL_VALUE = LE_WIFIDEFS_MIN_CHANNEL_VALUE;
+            MAX_CHANNEL_VALUE = LE_WIFIDEFS_MAX_CHANNEL_VALUE;
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_AD:
+            MIN_CHANNEL_VALUE = LE_WIFIDEFS_MIN_CHANNEL_STD_AD;
+            MAX_CHANNEL_VALUE = LE_WIFIDEFS_MAX_CHANNEL_STD_AD;
+            break;
+        default:
+            LE_WARN("Invalid hardware mode");
+    }
+
+    if ((channelNumber >= MIN_CHANNEL_VALUE) &&
+        (channelNumber <= MAX_CHANNEL_VALUE))
     {
        SavedChannelNumber = channelNumber;
        result = LE_OK;
+    }
+    return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set which IEEE standard to use.
+ * Default hardware mode is IEEE 802.11g.
+ *
+ * @return
+ *      - LE_BAD_PARAMETER if invalid IEEE standard is set.
+ *      - LE_OK if the function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t pa_wifiAp_SetIeeeStandard
+(
+    le_wifiAp_IeeeStdBitMask_t stdMask
+        ///< [IN]
+        ///< Bit mask for the IEEE standard.
+)
+{
+    int8_t hwMode = stdMask & 0x0F;
+    int8_t modeCheck = (hwMode & 0x1) + ((hwMode >> 1) & 0x1) +
+                       ((hwMode >> 2) & 0x1) + ((hwMode >> 3) & 0x1);
+
+    LE_INFO("Set IeeeStdBitMask : 0x%X", stdMask);
+    //Hardware mode should be exclusive.
+    if ( 1 != modeCheck )
+    {
+        LE_WARN("Only one hardware mode can be set.");
+        return LE_BAD_PARAMETER;
+    }
+
+    if ( stdMask & LE_WIFIAP_BITMASK_IEEE_STD_AC )
+    {
+        // ieee80211ac=1 only works with hw_mode=a
+        if ( 0 == (stdMask & LE_WIFIAP_BITMASK_IEEE_STD_A) )
+        {
+            LE_WARN("ieee80211ac=1 only works with hw_mode=a.");
+            return LE_BAD_PARAMETER;
+        }
+    }
+
+    if ( stdMask & LE_WIFIAP_BITMASK_IEEE_STD_H )
+    {
+        // ieee80211h=1 can be used only with ieee80211d=1
+        if ( 0 == (stdMask & LE_WIFIAP_BITMASK_IEEE_STD_D) )
+        {
+            LE_WARN("ieee80211h=1 only works with ieee80211d=1.");
+            return LE_BAD_PARAMETER;
+        }
+    }
+
+    SavedIeeeStdMask = stdMask;
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Get which IEEE standard was set.
+ * Default hardware mode is IEEE 802.11g.
+ *
+ * @return
+ *      - LE_FAULT if the function failed.
+ *      - LE_OK if the function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t pa_wifiAp_GetIeeeStandard
+(
+    le_wifiAp_IeeeStdBitMask_t *stdMaskPtr
+        ///< [OUT]
+        ///< Bit mask for the IEEE standard.
+)
+{
+    if ( NULL == stdMaskPtr )
+    {
+        LE_WARN("stdMaskPtr == NULL");
+        return LE_FAULT;
+    }
+
+    *stdMaskPtr = SavedIeeeStdMask;
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set what country code to use for regulatory domain.
+ * ISO/IEC 3166-1 Alpha-2 code is used.
+ * Default country code is US.
+ * @return
+ *      - LE_FAULT if the function failed.
+ *      - LE_OK if the function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t pa_wifiAp_SetCountryCode
+(
+    const char *countryCodePtr
+        /// [IN]
+        ///< the country code.
+)
+{
+    le_result_t result = LE_FAULT;
+
+    LE_INFO("Set countryCode");
+    if (NULL != countryCodePtr)
+    {
+        uint32_t length = strlen(countryCodePtr);
+
+        if (length == LE_WIFIDEFS_ISO_COUNTRYCODE_LENGTH)
+        {
+            strncpy( &SavedCountryCode[0], &countryCodePtr[0], length );
+            SavedCountryCode[length] = '\0';
+            result = LE_OK;
+        }
     }
     return result;
 }

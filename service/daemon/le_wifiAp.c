@@ -272,12 +272,15 @@ le_result_t le_wifiAp_SetDiscoverable
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Set the WiFi channel used to communicate with the access point.
- * Default value is 1.
- * Some legal restrictions for values 12 - 14 might apply for your region.
- *
- * @return LE_OUT_OF_RANGE Requested channel number is out of range.
- * @return LE_OK           Function succeeded.
+ * Set which WiFi channel to use.
+ * Default number is 7.
+ * Some legal restrictions might apply for your region.
+ * The channel number must be between 1 and 14 for IEEE 802.11b/g.
+ * The channel number must be between 7 and 196 for IEEE 802.11a.
+ * The channel number must be between 1 and 6 for IEEE 802.11ad.
+ * @return
+ *      - LE_OUT_OF_RANGE if requested channel number is out of range.
+ *      - LE_OK if the function succeeded.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -285,12 +288,79 @@ le_result_t le_wifiAp_SetChannel
 (
     int8_t channelNumber
         ///< [IN]
-        ///< the channel number must be between 1 and 14.
+        ///< the channel number.
 )
 {
     return pa_wifiAp_SetChannel(channelNumber);
 }
 
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Set which IEEE standard to use.
+ * Default hardware mode is IEEE 802.11g.
+ *
+ * @return
+ *      - LE_BAD_PARAMETER if invalid IEEE standard is set.
+ *      - LE_OK if the function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiAp_SetIeeeStandard
+(
+    le_wifiAp_IeeeStdBitMask_t stdMask
+        ///< [IN]
+        ///< Bit mask for the IEEE standard.
+)
+{
+    return pa_wifiAp_SetIeeeStandard(stdMask);
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Get which IEEE standard was set.
+ * Default hardware mode is IEEE 802.11g.
+ *
+ * @return
+ *      - LE_FAULT if the function failed.
+ *      - LE_OK if the function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiAp_GetIeeeStandard
+(
+    le_wifiAp_IeeeStdBitMask_t *stdMaskPtr
+        ///< [OUT]
+        ///< Bit mask for the IEEE standard.
+)
+{
+    if ( NULL == stdMaskPtr )
+    {
+        LE_WARN("stdMaskPtr is NULL.");
+        return LE_FAULT;
+    }
+    return pa_wifiAp_GetIeeeStandard(stdMaskPtr);
+}
+
+/**
+ * Set what country code to use for regulatory domain.
+ * ISO/IEC 3166-1 Alpha-2 code is used.
+ * Default country code is US.
+ * @return
+ *      - LE_FAULT if the function failed.
+ *      - LE_OK if the function succeeded.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiAp_SetCountryCode
+(
+    const char *countryCodePtr
+        ///< [IN]
+        ///< the country code.
+)
+{
+    return pa_wifiAp_SetCountryCode(countryCodePtr);
+}
 
 //--------------------------------------------------------------------------------------------------
 /**

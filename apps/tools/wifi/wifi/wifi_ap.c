@@ -33,10 +33,35 @@ void PrintApHelp(void)
         "\twifi ap stop\n"
 
         "To set the SSID of the WiFi access point:\n"
-        "\twifi ap setssid [SSID]\n"
+        "\twifi ap setssid [\"SSID\"]\n"
+
+        "To set the IEEE stdmask of the WiFi access point:\n"
+        "\twifi ap setstdmask [IEEEStdMask]\n"
+        "Bit mask for IEEEStdMask;\n"
+        "\t0x1:   IEEE 802.11a\n"
+        "\t0x2:   IEEE 802.11b\n"
+        "\t0x4:   IEEE 802.11g\n"
+        "\t0x8:   IEEE 802.11ad\n"
+        "\t0x10:  IEEE 802.11d\n"
+        "\t0x20:  IEEE 802.11h\n"
+        "\t0x40:  IEEE 802.11n\n"
+        "\t0x80:  IEEE 802.11ac\n"
+        "\t0x100: IEEE 802.11ax\n"
+        "\t0x200: IEEE 802.11w\n"
+
+        "To get the IEEE stdmask of the WiFi access point:\n"
+        "\twifi ap getstdmask\n"
 
         "To set the channel of the WiFi access point:\n"
         "\twifi ap setchannel [ChannelNo]\n"
+        "Values for ChannelNo;\n"
+        "\tbetween 1 and 14  for IEEE 802.11b/g\n"
+        "\tbetween 7 and 196 for IEEE 802.11a\n"
+        "\tbetween 1 and 6   for IEEE 802.11ad\n"
+        "\tSome legal restrictions might apply for your region\n"
+
+        "To set the countrycode of the WiFi access point:\n"
+        "\twifi ap setcountrycode [CountryCode]\n"
 
         "To set the security protocol used :\n"
         "\twifi ap setsecurityproto [SecuProto]\n"
@@ -179,6 +204,74 @@ void ExecuteWifiApCommand
             exit(EXIT_FAILURE);
         }
     }
+    else if (strcmp(commandPtr, "setstdmask") == 0)
+    {
+        // wifi ap setbitmask [IEEEStdMask]
+        const char *stdMaskPtr = le_arg_GetArg(2);
+        le_wifiAp_IeeeStdBitMask_t stdMask;
+        int8_t      hwMode = 0;
+        int8_t      modeCheck = 0;
+
+        if (NULL == stdMaskPtr)
+        {
+            printf("ERROR: Missing or bad argument.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        stdMask = strtol(stdMaskPtr, NULL, 0);
+        if (errno != 0)
+        {
+            printf("ERROR: Invalid argument.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        hwMode = stdMask & 0x0F;
+        modeCheck = (hwMode & 0x1) + ((hwMode >> 1) & 0x1) +
+                       ((hwMode >> 2) & 0x1) + ((hwMode >> 3) & 0x1);
+
+        // CAUTION: Hardware mode is exclusive. At least one mode should be set.
+        if ( 1 != modeCheck )
+        {
+            printf("ERROR: Only one hardware mode can be set.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // CAUTION: ieee80211ac=1 only works with hw_mode=a
+        if ((stdMask & LE_WIFIAP_BITMASK_IEEE_STD_AC) &&
+            (0 == (stdMask & LE_WIFIAP_BITMASK_IEEE_STD_A)))
+        {
+            printf("ERROR: ieee80211ac=1 only works with hw_mode=a.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        if (LE_OK == (result = le_wifiAp_SetIeeeStandard(stdMask)))
+        {
+            printf("IEEEStdMask set to 0x%X.\n", stdMask);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("ERROR: le_wifiAp_SetIeeeStandard returns %d.\n", result);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (strcmp(commandPtr, "getstdmask") == 0)
+    {
+        // wifi ap getbitmask [IEEEStdMask]
+        le_wifiAp_IeeeStdBitMask_t stdmask;
+
+        if (LE_OK == (result = le_wifiAp_GetIeeeStandard(&stdmask)))
+        {
+            printf("IEEEStdMask is 0x%X.\n", stdmask);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("ERROR: le_wifiAp_GetIeeeStandard returns %d.\n", result);
+            exit(EXIT_FAILURE);
+        }
+    }
+
     else if (strcmp(commandPtr, "setchannel") == 0)
     {
         // wifi ap setchannel [ChannelNo]
@@ -197,16 +290,7 @@ void ExecuteWifiApCommand
             printf("ERROR: Invalid argument.\n");
             exit(EXIT_FAILURE);
         }
-        // CAUTION: Range of channels value only valid for 2,4 GHz WiFi frequencies.
-        if ((channelNo < LE_WIFIDEFS_MIN_CHANNEL_VALUE) ||
-            (channelNo > LE_WIFIDEFS_MAX_CHANNEL_VALUE))
-        {
-            printf("ERROR: Valid channel is between %d and %d.\n",
-                LE_WIFIDEFS_MIN_CHANNEL_VALUE,
-                LE_WIFIDEFS_MAX_CHANNEL_VALUE);
-            exit(EXIT_FAILURE);
-        }
-
+        // CAUTION: Range of channels value is different with different hardware mode.
         if (LE_OK == (result = le_wifiAp_SetChannel(channelNo)))
         {
             printf("Channel set to %d.\n", channelNo);
@@ -214,7 +298,37 @@ void ExecuteWifiApCommand
         }
         else
         {
+            printf("Please check hardware mode and channel range.\n");
             printf("ERROR: le_wifiAp_SetChannel returns %d.\n", result);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (strcmp(commandPtr, "setcountrycode") == 0)
+    {
+        // wifi ap setcountrycode [CountryCode]
+        const char *countryCodePtr = le_arg_GetArg(2);
+
+        if (NULL == countryCodePtr)
+        {
+            printf("ERROR: Missing or bad argument.\n");
+            exit(EXIT_FAILURE);
+        }
+        length = strlen(countryCodePtr);
+        if (length != LE_WIFIDEFS_ISO_COUNTRYCODE_LENGTH)
+        {
+            printf("ERROR: Countrycode length must be %d.\n",
+                   LE_WIFIDEFS_ISO_COUNTRYCODE_LENGTH);
+            exit(EXIT_FAILURE);
+        }
+
+        if (LE_OK == (result = le_wifiAp_SetCountryCode(countryCodePtr)))
+        {
+            printf("Countrycode set to %s.\n", countryCodePtr);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("ERROR: le_wifiAp_SetCountryCode returns %d.\n", result);
             exit(EXIT_FAILURE);
         }
     }
