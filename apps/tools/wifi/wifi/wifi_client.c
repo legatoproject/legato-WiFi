@@ -21,14 +21,14 @@
  * Event handler reference.
  */
 //--------------------------------------------------------------------------------------------------
-static le_wifiClient_NewEventHandlerRef_t ScanHdlrRef = NULL;
+static le_wifiClient_ConnectionEventHandlerRef_t ScanHdlrRef = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
  * Event handler reference.
  */
 //--------------------------------------------------------------------------------------------------
-static le_wifiClient_NewEventHandlerRef_t ConnectHdlrRef = NULL;
+static le_wifiClient_ConnectionEventHandlerRef_t ConnectHdlrRef = NULL;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -46,7 +46,7 @@ static bool ScanInProgress = false;
 //--------------------------------------------------------------------------------------------------
 static void WifiClientConnectEventHandler
 (
-    le_wifiClient_Event_t event,
+    const le_wifiClient_EventInd_t* wifiEventPtr,
         ///< [IN]
         ///< WiFi event to process
     void* contextPtr
@@ -54,21 +54,47 @@ static void WifiClientConnectEventHandler
         ///< Associated event context
 )
 {
-    LE_DEBUG("WiFi client event received");
-    switch(event)
+    LE_DEBUG("WiFi client event %d\n", wifiEventPtr->event);
+    switch(wifiEventPtr->event)
     {
         case LE_WIFICLIENT_EVENT_CONNECTED:
         {
-            printf("CONNECTED.\n");
-            le_wifiClient_RemoveNewEventHandler(ConnectHdlrRef);
+            printf("CONNECTED: interface: %s, bssid: %s\n",
+                   wifiEventPtr->ifName,
+                   wifiEventPtr->apBssid);
+            le_wifiClient_RemoveConnectionEventHandler(ConnectHdlrRef);
             exit(EXIT_SUCCESS);
         }
         break;
 
         case LE_WIFICLIENT_EVENT_DISCONNECTED:
         {
-            printf("DISCONNECTED.\n");
-            le_wifiClient_RemoveNewEventHandler(ConnectHdlrRef);
+            printf("DISCONNECTED: interface: %s, bssid: %s, disconnectionCause: ",
+                   wifiEventPtr->ifName,
+                   wifiEventPtr->apBssid);
+
+            switch(wifiEventPtr->disconnectionCause)
+            {
+               case 1:
+                    printf("WiFi Client request to disconnect\n");
+                    break;
+               case 2:
+                    printf("WiFi card is detached\n");
+                    break;
+               case 3:
+                    printf("WiFi driver has been removed\n");
+                    break;
+               case 4:
+                    printf("Beacon loss due to poor SINR\n");
+                    break;
+               case 5:
+                    printf("Disconnected by AP\n");
+                    break;
+               default:
+                    printf("Unknown reason\n");
+            }
+
+            le_wifiClient_RemoveConnectionEventHandler(ConnectHdlrRef);
             exit(EXIT_SUCCESS);
         }
         break;
@@ -88,7 +114,7 @@ static void WifiClientConnectEventHandler
         break;
 
         default:
-            LE_ERROR("ERROR Unknown event %d", event);
+            LE_ERROR("ERROR Unknown event %d", wifiEventPtr->event);
         break;
     }
 }
@@ -155,7 +181,7 @@ static void WifiReadScanResults
 //--------------------------------------------------------------------------------------------------
 static void WifiClientScanEventHandler
 (
-    le_wifiClient_Event_t event,
+    const le_wifiClient_EventInd_t* wifiEventPtr,
         ///< [IN]
         ///< WiFi event to process
     void* contextPtr
@@ -164,7 +190,7 @@ static void WifiClientScanEventHandler
 )
 {
     LE_DEBUG("WiFi Client event received");
-    switch(event)
+    switch(wifiEventPtr->event)
     {
         case LE_WIFICLIENT_EVENT_CONNECTED:
         {
@@ -190,7 +216,7 @@ static void WifiClientScanEventHandler
             LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: Now read the results ");
             ScanInProgress = false;
             WifiReadScanResults();
-            le_wifiClient_RemoveNewEventHandler(ScanHdlrRef);
+            le_wifiClient_RemoveConnectionEventHandler(ScanHdlrRef);
             exit(EXIT_SUCCESS);
         }
         break;
@@ -206,13 +232,13 @@ static void WifiClientScanEventHandler
 
             printf("ERROR: Scan failed.\n");
             ScanInProgress = false;
-            le_wifiClient_RemoveNewEventHandler(ScanHdlrRef);
+            le_wifiClient_RemoveConnectionEventHandler(ScanHdlrRef);
             exit(EXIT_FAILURE);
         }
         break;
 
         default:
-            LE_ERROR("ERROR Unknown event %d", event);
+            LE_ERROR("ERROR Unknown event %d", wifiEventPtr->event);
         break;
     }
 }
@@ -350,12 +376,13 @@ void ExecuteWifiClientCommand
         printf("starting scan.\n");
 
         // Add a handler function to handle message reception
-        ScanHdlrRef=le_wifiClient_AddNewEventHandler(WifiClientScanEventHandler, NULL);
+        ScanHdlrRef = le_wifiClient_AddConnectionEventHandler(WifiClientScanEventHandler, NULL);
         ScanInProgress = true;
         if (LE_OK != (result = le_wifiClient_Scan()))
         {
             printf("ERROR: le_wifiClient_Scan returns %d.\n", result);
             ScanInProgress = false;
+            le_wifiClient_RemoveConnectionEventHandler(ScanHdlrRef);
             exit(EXIT_FAILURE);
         }
     }
@@ -438,7 +465,8 @@ void ExecuteWifiClientCommand
         rc1 = sscanf(refPtr, "%x", (unsigned int *)&apRef);
 
         // Add a handler function to handle message reception
-        ConnectHdlrRef = le_wifiClient_AddNewEventHandler(WifiClientConnectEventHandler, NULL);
+        ConnectHdlrRef =
+            le_wifiClient_AddConnectionEventHandler(WifiClientConnectEventHandler, NULL);
 
         if ((1 == rc1) && (LE_OK == (result = le_wifiClient_Connect(apRef))))
         {
@@ -447,21 +475,24 @@ void ExecuteWifiClientCommand
         else
         {
             printf("ERROR: le_wifiClient_Connect returns error code %d.\n", result);
-            le_wifiClient_RemoveNewEventHandler(ConnectHdlrRef);
+            le_wifiClient_RemoveConnectionEventHandler(ConnectHdlrRef);
             exit(EXIT_FAILURE);
         }
     }
     else if (strcmp(commandPtr, "disconnect") == 0)
     {
         // Command: wifi client disconnect
+        ConnectHdlrRef =
+            le_wifiClient_AddConnectionEventHandler(WifiClientConnectEventHandler, NULL);
+
         if (LE_OK == (result = le_wifiClient_Disconnect()))
         {
-            printf("WiFi client disconnected.\n");
-            exit(EXIT_SUCCESS);
+            printf("WiFi client request disconnect done.\n");
         }
         else
         {
             printf("ERROR: le_wifiClient_Disconnect returns error code %d.\n", result);
+            le_wifiClient_RemoveConnectionEventHandler(ConnectHdlrRef);
             exit(EXIT_FAILURE);
         }
     }

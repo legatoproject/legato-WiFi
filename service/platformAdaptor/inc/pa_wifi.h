@@ -31,6 +31,9 @@ typedef struct
  * Event handler for PA WiFi access point changes.
  *
  * Handles the PA WiFi events.
+ *
+ * @deprecated pa_wifiClient_AddEventHandler() should not be used anymore.
+ * It has been replaced by pa_wifiClient_AddEventIndHandler().
  */
 //--------------------------------------------------------------------------------------------------
 typedef void (*pa_wifiClient_NewEventHandlerFunc_t)
@@ -48,11 +51,48 @@ typedef void (*pa_wifiClient_NewEventHandlerFunc_t)
  * Add handler function for PA EVENT 'le_wifiClient_Event_t'
  *
  * This event provides information on PA WiFi Client event changes.
+ *
+ * @deprecated pa_wifiClient_AddEventHandler() should not be used anymore.
+ * It has been replaced by pa_wifiClient_AddEventIndHandler().
  */
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t pa_wifiClient_AddEventHandler
 (
     pa_wifiClient_NewEventHandlerFunc_t handlerPtr,
+        ///< [IN]
+        ///< Event handler function pointer.
+    void *contextPtr
+        ///< [IN]
+        ///< Associated event context.
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Event handler for PA WiFi connection changes.
+ *
+ * Handles the PA WiFi events.
+ */
+//--------------------------------------------------------------------------------------------------
+typedef void (*pa_wifiClient_EventIndHandlerFunc_t)
+(
+    le_wifiClient_EventInd_t* wifiEventIndPtr,
+        ///< [IN]
+        ///< WiFi event pointer to process
+    void *contextPtr
+        ///< [IN]
+        ///< Associated WiFi event context
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Add handler function for PA EVENT 'le_wifiClient_EventInd_t'
+ *
+ * This event provides information on PA WiFi Client event changes.
+ */
+//--------------------------------------------------------------------------------------------------
+LE_SHARED le_result_t pa_wifiClient_AddEventIndHandler
+(
+    pa_wifiClient_EventIndHandlerFunc_t handlerPtr,
         ///< [IN]
         ///< Event handler function pointer.
     void *contextPtr
@@ -121,16 +161,20 @@ LE_SHARED bool pa_wifiClient_IsScanRunning
  * pa_wifiClient_ScanDone MUST be called.
  *
  * @return LE_NOT_FOUND  There is no more AP found.
- * @return LE_OK     The function succeeded.
- * @return LE_FAULT  The function failed.
+ * @return LE_OK         The function succeeded.
+ * @return LE_FAULT      The function failed.
  */
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t pa_wifiClient_GetScanResult
 (
-    pa_wifiClient_AccessPoint_t *accessPointPtr
+    pa_wifiClient_AccessPoint_t *accessPointPtr,
     ///< [IN][OUT]
     ///< Structure provided by calling function.
     ///< Results filled out if result was LE_OK.
+    char scanIfName[]
+    ///< [IN][OUT]
+    ///< Array provided by calling function.
+    ///< Store WLAN interface used for scan.
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -151,8 +195,11 @@ LE_SHARED le_result_t pa_wifiClient_ScanDone
 /**
  * This function connects a wifiClient.
  *
- * @return LE_FAULT  The function failed.
- * @return LE_OK     The function succeeded.
+ * @return LE_FAULT             The function failed.
+ * @return LE_BAD_PARAMETER     Invalid parameter.
+ * @return LE_DUPLICATE         Duplicated request.
+ * @return LE_TIMEOUT           Connection request time out.
+ * @return LE_OK                The function succeeded.
  */
 //--------------------------------------------------------------------------------------------------
 LE_SHARED le_result_t pa_wifiClient_Connect

@@ -120,6 +120,21 @@ static le_event_Id_t NewWifiEventId;
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Event ID for WiFi Event indication notification.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+static le_event_Id_t WifiEventId;
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Pool for WifiClient state events reporting.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_mem_PoolRef_t WifiEventPool;
+
+//--------------------------------------------------------------------------------------------------
+/**
  * The number of calls to le_wifiClient_Start().
  * This is used to call stop the WiFi hardware, when the last client calls stop.
  */
@@ -137,6 +152,12 @@ static uint32_t ClientStartCount = 0;
 //--------------------------------------------------------------------------------------------------
 static le_wifiClient_AccessPointRef_t CurrentConnection = NULL;
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * WLAN interface being used to do WiFi scan.
+ */
+//--------------------------------------------------------------------------------------------------
+static char scanIfName[LE_WIFIDEFS_MAX_IFNAME_BYTES] = {0};
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -145,13 +166,21 @@ static le_wifiClient_AccessPointRef_t CurrentConnection = NULL;
 //--------------------------------------------------------------------------------------------------
 static void PaEventHandler
 (
-    le_wifiClient_Event_t event,
+    le_wifiClient_EventInd_t* wifiEventPtr,
     void *contextPtr
 )
 {
-    LE_DEBUG("Event: %d ", event);
+    LE_DEBUG("WiFi event: %d, interface: %s, bssid: %s",
+            wifiEventPtr->event,
+            wifiEventPtr->ifName,
+            wifiEventPtr->apBssid);
 
-    le_event_Report(NewWifiEventId, (void *)&event, sizeof(le_wifiClient_Event_t));
+    if (LE_WIFICLIENT_EVENT_DISCONNECTED == wifiEventPtr->event)
+    {
+        LE_DEBUG("disconnectCause: %d", wifiEventPtr->disconnectionCause);
+    }
+
+    le_event_ReportWithRefCounting(WifiEventId, wifiEventPtr);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -448,8 +477,8 @@ static void *ScanThread
     FoundWifiApCount = 0;
 
     MarkAllAccessPointsOld();
-
-    while (LE_OK == (paResult = pa_wifiClient_GetScanResult(&accessPoint)))
+    memset(scanIfName, 0, LE_WIFIDEFS_MAX_IFNAME_BYTES);
+    while (LE_OK == (paResult = pa_wifiClient_GetScanResult(&accessPoint, scanIfName)))
     {
         if (AddAccessPointToApRefMap(&accessPoint) == NULL)
         {
@@ -486,17 +515,23 @@ static void ScanThreadDestructor
 
     LE_DEBUG("Destruct scan thread");
     ScanThreadRef = NULL;
+    le_wifiClient_EventInd_t* wifiEventPtr = le_mem_ForceAlloc(WifiEventPool);
 
     if (scanResult == LE_OK)
     {
-        // use the PA callback to generate the event.
-        PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_DONE, NULL);
+        wifiEventPtr->event = LE_WIFICLIENT_EVENT_SCAN_DONE;
     }
     else
     {
         LE_WARN("Scan failed");
-        PaEventHandler(LE_WIFICLIENT_EVENT_SCAN_FAILED, NULL);
+        wifiEventPtr->event = LE_WIFICLIENT_EVENT_SCAN_FAILED;
     }
+
+    wifiEventPtr->disconnectionCause = LE_WIFICLIENT_UNKNOWN_CAUSE;
+    strncpy(wifiEventPtr->ifName, scanIfName, LE_WIFIDEFS_MAX_IFNAME_LENGTH);
+    wifiEventPtr->ifName[LE_WIFIDEFS_MAX_IFNAME_LENGTH] = '\0';
+    wifiEventPtr->apBssid[0] = '\0';
+    PaEventHandler(wifiEventPtr, NULL);
 }
 
 
@@ -530,11 +565,13 @@ static bool IsScanRunning(void)
     return (NULL != ScanThreadRef);
 }
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * The first-layer WiFi Client Event Handler.
  *
+ * @deprecated le_wifiClient_AddNewEventHandler() should not be used anymore.
+ *
+ * It has been replaced by le_wifiClient_AddConnectionEventHandler().
  */
 //--------------------------------------------------------------------------------------------------
 static void FirstLayerWifiClientEventHandler
@@ -557,6 +594,33 @@ static void FirstLayerWifiClientEventHandler
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * The first-layer WiFi Client Connection Event Handler.
+ *
+ */
+//--------------------------------------------------------------------------------------------------
+static void FirstLayerWifiClientConnectionEventHandler
+(
+    void *reportPtr,
+    void *secondLayerHandlerFunc
+)
+{
+    le_wifiClient_EventInd_t*  wifiEventPtr = reportPtr;
+    le_wifiClient_ConnectionEventHandlerFunc_t  clientHandlerFunc = secondLayerHandlerFunc;
+
+
+    if (NULL != wifiEventPtr)
+    {
+        clientHandlerFunc(wifiEventPtr, le_event_GetContextPtr());
+    }
+    else
+    {
+        LE_WARN("wifiEventPtr is NULL");
+    }
+    // The reportPtr is a reference counted object, so need to release it
+    le_mem_Release(reportPtr);
+}
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -587,7 +651,11 @@ static bool WasApFoundInLastScan
 /**
  * Add handler function for EVENT 'le_wifiClient_NewEvent'
  *
- * This event provide information on Wfifi Client event changes.
+ * This event provide information on Wifi Client event changes.
+ *
+ * @deprecated le_wifiClient_AddNewEventHandler() should not be used anymore.
+ *
+ * It has been replaced by le_wifiClient_AddConnectionEventHandler().
  */
 //--------------------------------------------------------------------------------------------------
 le_wifiClient_NewEventHandlerRef_t le_wifiClient_AddNewEventHandler
@@ -624,7 +692,52 @@ le_wifiClient_NewEventHandlerRef_t le_wifiClient_AddNewEventHandler
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * This function must be called to register an handler for WiFi connection state change.
+ *
+ * @return A handler reference, which is only needed for later removal of the handler.
+ *
+ * @note Doesn't return on failure, so there's no need to check the return value for errors.
+ */
+//--------------------------------------------------------------------------------------------------
+le_wifiClient_ConnectionEventHandlerRef_t le_wifiClient_AddConnectionEventHandler
+(
+    le_wifiClient_ConnectionEventHandlerFunc_t handlerFuncPtr,
+        ///< [IN]
+        ///< Event handling function
+
+    void *contextPtr
+        ///< [IN]
+        ///< Associated event context
+)
+{
+    le_event_HandlerRef_t handlerRef;
+
+    // Note: THIS ONE REGISTERS THE CB function..
+    LE_DEBUG("Add wifi connection event handler");
+
+    if (handlerFuncPtr == NULL)
+    {
+        LE_KILL_CLIENT("handlerFuncPtr is NULL !");
+        return NULL;
+    }
+
+    handlerRef = le_event_AddLayeredHandler("WiFiClientMsgHandler",
+                                            WifiEventId,
+                                            FirstLayerWifiClientConnectionEventHandler,
+                                            (le_event_HandlerFunc_t)handlerFuncPtr);
+
+    le_event_SetContextPtr(handlerRef, contextPtr);
+
+    return (le_wifiClient_ConnectionEventHandlerRef_t)(handlerRef);
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
  * Remove handler function for EVENT 'le_wifiClient_NewEvent'
+ *
+ * @deprecated le_wifiClient_AddNewEventHandler() should not be used anymore.
+ *
+ * It has been replaced by le_wifiClient_AddConnectionEventHandler().
  */
 //--------------------------------------------------------------------------------------------------
 void le_wifiClient_RemoveNewEventHandler
@@ -638,6 +751,21 @@ void le_wifiClient_RemoveNewEventHandler
     le_event_RemoveHandler((le_event_HandlerRef_t)handlerRef);
 }
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * Remove handler function for EVENT 'le_wifiClient_ConnectionEvent'
+ */
+//--------------------------------------------------------------------------------------------------
+void le_wifiClient_RemoveConnectionEventHandler
+(
+    le_wifiClient_ConnectionEventHandlerRef_t handlerRef
+        ///< [IN]
+        ///< Reference of the event handler to remove
+)
+{
+    LE_DEBUG("Remove event handler");
+    le_event_RemoveHandler((le_event_HandlerRef_t)handlerRef);
+}
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -1385,6 +1513,9 @@ le_result_t le_wifiClient_Delete
  * @return
  *      - LE_OK             Function succeeded.
  *      - LE_BAD_PARAMETER  Invalid parameter.
+ *      - LE_DUPLICATE      Duplicated request.
+ *      - LE_TIMEOUT        Connection request time out.
+ *      - LE_FAULT          The function failed.
  *
  * @note For PSK credentials see le_wifiClient_SetPassphrase() or le_wifiClient_SetPreSharedKey() .
  * @note For WPA-Enterprise credentials see le_wifiClient_SetUserCredentials()
@@ -2245,10 +2376,11 @@ void le_wifiClient_Init
     ScanApRefMap = le_ref_CreateMap("le_wifiClient_AccessPoints", INIT_AP_COUNT);
 
     // Create an event Id for new WiFi Events
-    NewWifiEventId = le_event_CreateId("WifiClientEvent", sizeof(le_wifiClient_Event_t));
+    WifiEventId = le_event_CreateIdWithRefCounting("WifiConnectState");
+    WifiEventPool = le_mem_CreatePool("WifiConnectStatePool", sizeof(le_wifiClient_EventInd_t));
 
     // register for events from PA.
-    pa_wifiClient_AddEventHandler(PaEventHandler, NULL);
+    pa_wifiClient_AddEventIndHandler(PaEventHandler, NULL);
 
     // Add a handler to handle the close
     le_msg_AddServiceCloseHandler(le_wifiClient_GetServiceRef(), CloseSessionEventHandler, NULL);

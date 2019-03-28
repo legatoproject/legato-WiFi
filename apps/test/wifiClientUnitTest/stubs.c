@@ -28,6 +28,23 @@ typedef void (*pa_wifiClient_NewEventHandlerFunc_t)
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Event handler for PA WiFi connection changes.
+ *
+ * Handles the PA WiFi events.
+ */
+//--------------------------------------------------------------------------------------------------
+typedef void (*pa_wifiClient_EventIndHandlerFunc_t)
+(
+    le_wifiClient_EventInd_t* wifiEventIndPtr,
+        ///< [IN]
+        ///< WiFi event pointer to process
+    void *contextPtr
+        ///< [IN]
+        ///< Associated WiFi event context
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
  * AccessPoint structure.
  */
 //--------------------------------------------------------------------------------------------------
@@ -417,6 +434,26 @@ le_result_t pa_wifiClient_SetUserCredentials
 le_result_t pa_wifiClient_AddEventHandler
 (
     pa_wifiClient_NewEventHandlerFunc_t handlerPtr,
+        ///< [IN]
+        ///< Event handler function pointer.
+    void *contextPtr
+        ///< [IN]
+        ///< Associated event context.
+)
+{
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Add handler function for PA EVENT 'le_wifiClient_EventInd_t'
+ *
+ * This event provides information on PA WiFi Client event changes.
+ */
+//--------------------------------------------------------------------------------------------------
+LE_SHARED le_result_t pa_wifiClient_AddEventIndHandler
+(
+    pa_wifiClient_EventIndHandlerFunc_t handlerPtr,
         ///< [IN]
         ///< Event handler function pointer.
     void *contextPtr

@@ -210,7 +210,7 @@ void ExecuteWifiApCommand
         const char *stdMaskPtr = le_arg_GetArg(2);
         le_wifiAp_IeeeStdBitMask_t stdMask;
         int8_t      hwMode = 0;
-        int8_t      modeCheck = 0;
+        int8_t      numCheck = 0;
 
         if (NULL == stdMaskPtr)
         {
@@ -226,11 +226,16 @@ void ExecuteWifiApCommand
         }
 
         hwMode = stdMask & 0x0F;
-        modeCheck = (hwMode & 0x1) + ((hwMode >> 1) & 0x1) +
+        numCheck = (hwMode & 0x1) + ((hwMode >> 1) & 0x1) +
                        ((hwMode >> 2) & 0x1) + ((hwMode >> 3) & 0x1);
 
         // CAUTION: Hardware mode is exclusive. At least one mode should be set.
-        if ( 1 != modeCheck )
+        if ( 0 == numCheck )
+        {
+            printf("ERROR: No hardware mode is set.\n");
+            exit(EXIT_FAILURE);
+        }
+        if ( numCheck > 1 )
         {
             printf("ERROR: Only one hardware mode can be set.\n");
             exit(EXIT_FAILURE);

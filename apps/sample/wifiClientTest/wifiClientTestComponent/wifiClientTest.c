@@ -18,6 +18,7 @@
 
 #define NBR_OF_SCAN_LOOPS   2
 #define NBR_OF_PINGS        "5"
+#define TEMP_STRING_MAX_BYTES 512
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -25,6 +26,12 @@
  */
 //--------------------------------------------------------------------------------------------------
 static le_wifiClient_NewEventHandlerRef_t HdlrRef = NULL;
+//--------------------------------------------------------------------------------------------------
+/**
+ * Event indicator handler reference.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_wifiClient_ConnectionEventHandlerRef_t IndHdlrRef = NULL;
 //--------------------------------------------------------------------------------------------------
 /**
  * Access point reference.
@@ -38,6 +45,12 @@ static le_wifiClient_AccessPointRef_t AccessPointRefToConnectTo = NULL;
 //--------------------------------------------------------------------------------------------------
 static uint32_t ScanDoneEventCounter = 0;
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * Wifi interface name
+ */
+//--------------------------------------------------------------------------------------------------
+static char   InterfaceName[LE_WIFIDEFS_MAX_IFNAME_BYTES] = {0};
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -50,15 +63,17 @@ static void AskForIpAddress
 )
 {
     int  systemResult;
-    char tmpString[512];
+    char tmpString[TEMP_STRING_MAX_BYTES];
 
     // DHCP client
-    snprintf(tmpString,
-        sizeof(tmpString),
-        "PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin;"
-        "/sbin/udhcpc -R -b -i wlan0"
-   );
+    memset(tmpString, '\0', TEMP_STRING_MAX_BYTES);
 
+    snprintf(tmpString,
+            sizeof(tmpString),
+            "PATH=/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin;"
+            "/sbin/udhcpc -R -b -i %s", InterfaceName);
+
+    tmpString[TEMP_STRING_MAX_BYTES - 1] = '\0';
     systemResult = system(tmpString);
     // Return value of -1 means that the fork() has failed (see man system).
     if (0 == WEXITSTATUS(systemResult))
@@ -83,11 +98,12 @@ static void TestToPingGooglesDNS
 )
 {
     int  systemResult;
-    char tmpString[512];
+    char tmpString[TEMP_STRING_MAX_BYTES];
 
     // PING
+    memset(tmpString, '\0', TEMP_STRING_MAX_BYTES);
     snprintf(tmpString, sizeof(tmpString), "ping -c " NBR_OF_PINGS " 8.8.8.8");
-
+    tmpString[TEMP_STRING_MAX_BYTES - 1] = '\0';
     LE_INFO("pinging 8.8.8.8 5x times: %s", tmpString);
     systemResult = system(tmpString);
     // Return value of -1 means that the fork() has failed (see man system).
@@ -188,9 +204,77 @@ static void TestConnect
     }
     else
     {
-        LE_ERROR("AccessPointRefToConnectTo  ERROR: AccessPointRefToConnectTo not found.");
+        LE_ERROR("ERROR: AccessPointRefToConnectTo not found.");
     }
 }
+//--------------------------------------------------------------------------------------------------
+/**
+ * Handler for WiFi client event indicator changes
+ */
+//--------------------------------------------------------------------------------------------------
+static void WifiClientEventIndHandler
+(
+    const le_wifiClient_EventInd_t* wifiEventPtr,  ///< [IN] Wifi event
+    void* contextPtr                ///< [IN] Associated context pointer
+)
+{
+    LE_DEBUG("WiFi client event: %d, interface: %s, bssid: %s",
+             wifiEventPtr->event,
+             wifiEventPtr->ifName,
+             wifiEventPtr->apBssid);
+
+    switch(wifiEventPtr->event)
+    {
+        case LE_WIFICLIENT_EVENT_CONNECTED:
+        {
+            // WiFi Client Connected
+            LE_DEBUG("LE_WIFICLIENT_EVENT_CONNECTED");
+
+            strncpy(InterfaceName, wifiEventPtr->ifName, LE_WIFIDEFS_MAX_IFNAME_LENGTH);
+            InterfaceName[LE_WIFIDEFS_MAX_IFNAME_LENGTH] = '\0';
+
+            AskForIpAddress();
+
+            TestToPingGooglesDNS();
+
+        }
+        break;
+
+        case LE_WIFICLIENT_EVENT_DISCONNECTED:
+        {
+            // WiFi client Disconnected
+            LE_DEBUG("LE_WIFICLIENT_EVENT_DISCONNECTED");
+            LE_DEBUG("disconnectCause: %d", wifiEventPtr->disconnectionCause);
+            memset(InterfaceName, '\0', LE_WIFIDEFS_MAX_IFNAME_BYTES);
+        }
+        break;
+
+        case LE_WIFICLIENT_EVENT_SCAN_DONE:
+        {
+            ScanDoneEventCounter++;
+            LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: "
+                "Now read the results (ScanDoneEventCounter %d)",
+                ScanDoneEventCounter);
+            TestReadScanResults();
+            if (ScanDoneEventCounter < NBR_OF_SCAN_LOOPS)
+            {
+                sleep(2);
+                LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: Start New Scan %d)", ScanDoneEventCounter);
+                le_wifiClient_Scan();
+            }
+            else
+            {
+                LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: try connect. %d)", ScanDoneEventCounter);
+                TestConnect();
+            }
+        }
+        break;
+        default:
+            LE_ERROR("ERROR Unknown event %d", wifiEventPtr->event);
+        break;
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 /**
  * Handler for WiFi client changes
@@ -212,7 +296,7 @@ static void WifiClientEventHandler
     {
         case LE_WIFICLIENT_EVENT_CONNECTED:
         {
-            ///< WiFi Client Connected
+            // WiFi Client Connected
             LE_DEBUG("LE_WIFICLIENT_EVENT_CONNECTED");
 
             AskForIpAddress();
@@ -224,7 +308,7 @@ static void WifiClientEventHandler
 
         case LE_WIFICLIENT_EVENT_DISCONNECTED:
         {
-            ///< WiFi client Disconnected
+            // WiFi client Disconnected
             LE_DEBUG("LE_WIFICLIENT_EVENT_DISCONNECTED");
         }
         break;
@@ -256,7 +340,6 @@ static void WifiClientEventHandler
 }
 
 
-
 //--------------------------------------------------------------------------------------------------
 /**
  * Test: WiFi client
@@ -271,7 +354,9 @@ void Testle_wifiClient
 
     LE_DEBUG("Start Test");
 
-    // Add an handler function to handle message reception
+    // Add WiFi client event indicator handler
+    IndHdlrRef = le_wifiClient_AddConnectionEventHandler(WifiClientEventIndHandler, NULL);
+    // Add WiFi client event handler (will be deprecated)
     HdlrRef = le_wifiClient_AddNewEventHandler(WifiClientEventHandler, NULL);
 
     result = le_wifiClient_Start();

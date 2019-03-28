@@ -21,8 +21,8 @@ sources:
     wifiService.c
     le_wifiClient.c
     le_wifiAp.c
-    ${LEGATO_WIFI_ROOT}/service/platformAdaptor/${LEGATO_WIFI_PA}/pa_wifi_client_ti.c
-    ${LEGATO_WIFI_ROOT}/service/platformAdaptor/${LEGATO_WIFI_PA}/pa_wifi_ap_ti.c
+    ${LEGATO_WIFI_ROOT}/service/platformAdaptor/common/pa_wifi_client.c
+    ${LEGATO_WIFI_ROOT}/service/platformAdaptor/common/pa_wifi_ap.c
 }
 
 cflags:
@@ -35,6 +35,6 @@ bundles:
     file:
     {
         // Script file implementing Wifi PA
-        [x] ${LEGATO_WIFI_ROOT}/service/platformAdaptor/ti/pa_wifi.sh  pa_wifi.sh
+        [x] ${LEGATO_WIFI_ROOT}/service/platformAdaptor/${LEGATO_WIFI_PA}/pa_wifi.sh  pa_wifi.sh
     }
 }

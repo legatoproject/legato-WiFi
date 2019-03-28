@@ -12,23 +12,22 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "legato.h"
-
 #include "interfaces.h"
-
 #include "pa_wifi_ap.h"
-#include "stdio.h"
 
 // Set of commands to drive the WiFi features.
-#define COMMAND_WIFI_HW_START        "wlan0 WIFI_START"
-#define COMMAND_WIFI_HW_STOP         "wlan0 WIFI_STOP"
-#define COMMAND_WIFI_WLAN_UP         "wlan0 WIFI_WLAN_UP"
-#define COMMAND_WIFI_SET_EVENT       "wlan0 WIFI_SET_EVENT"
-#define COMMAND_WIFIAP_HOSTAPD_START "wlan0 WIFIAP_HOSTAPD_START"
-#define COMMAND_WIFIAP_HOSTAPD_STOP  "wlan0 WIFIAP_HOSTAPD_STOP"
+#define COMMAND_WIFI_HW_START        "WIFI_START"
+#define COMMAND_WIFI_HW_STOP         "WIFI_STOP"
+#define COMMAND_WIFI_SET_EVENT       "WIFI_SET_EVENT"
+#define COMMAND_WIFI_UNSET_EVENT     "WIFI_UNSET_EVENT"
+#define COMMAND_WIFIAP_HOSTAPD_START "WIFIAP_HOSTAPD_START"
+#define COMMAND_WIFIAP_HOSTAPD_STOP  "WIFIAP_HOSTAPD_STOP"
+#define COMMAND_WIFIAP_WLAN_UP       "WIFIAP_WLAN_UP"
 
-// iptables rule to allow/disallow the DHCP port on wlan0
-#define COMMAND_IPTABLE_DHCP_WLAN0   "INPUT -i wlan0 -p udp -m udp " \
-                                     "--sport 67:68 --dport 67:68 -j ACCEPT"
+// iptables rule to allow/disallow the DHCP port on WLAN interface
+#define COMMAND_IPTABLE_DHCP_INSERT  "IPTABLE_DHCP_INSERT"
+#define COMMAND_IPTABLE_DHCP_DELETE  "IPTABLE_DHCP_DELETE"
+#define COMMAND_DNSMASQ_RESTART       "DNSMASQ_RESTART"
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -63,8 +62,7 @@
  * Host access point global configuration.
  */
 //--------------------------------------------------------------------------------------------------
-#define WIFI_AP_CONFIG_HOSTAPD \
-    "interface=wlan0\n"\
+#define HOSTAPD_CONFIG_COMMON \
     "driver=nl80211\n"\
     "wmm_enabled=1\n"\
     "beacon_int=100\n"\
@@ -78,7 +76,7 @@
  * Host access point configuration with security disabled.
  */
 //--------------------------------------------------------------------------------------------------
-#define WIFI_AP_CONFIG_SECURITY_NONE \
+#define HOSTAPD_CONFIG_SECURITY_NONE \
     "auth_algs=1\n"\
     "eap_server=0\n"\
     "eapol_key_index_workaround=0\n"\
@@ -88,7 +86,7 @@
  * Host access point configuration with security enabled.
  */
 //--------------------------------------------------------------------------------------------------
-#define WIFI_AP_CONFIG_SECURITY_WPA2 \
+#define HOSTAPD_CONFIG_SECURITY_WPA2 \
     "wpa=2\n"\
     "wpa_key_mgmt=WPA-PSK\n"\
     "wpa_pairwise=CCMP\n"\
@@ -99,14 +97,28 @@
  * Maximum numbers of WiFi connections for the TI chip
  */
 //--------------------------------------------------------------------------------------------------
-#define TI_WIFI_MAX_USERS 10
+#define WIFI_MAX_USERS 10
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * Hardware mode mask
+ */
+//--------------------------------------------------------------------------------------------------
+#define HARDWARE_MODE_MASK 0x000F
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Maximum numbers of bytes in temporary string written to hostapd.conf
+ */
+//--------------------------------------------------------------------------------------------------
+#define TEMP_STRING_MAX_BYTES 1024
 //--------------------------------------------------------------------------------------------------
 /**
  * The current security protocol
  */
 //--------------------------------------------------------------------------------------------------
-static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol;
+static le_wifiAp_SecurityProtocol_t SavedSecurityProtocol =
+                                                    LE_WIFICLIENT_SECURITY_WPA2_PSK_PERSONAL;
 //--------------------------------------------------------------------------------------------------
 /**
  * The current SSID
@@ -152,7 +164,7 @@ static uint32_t                     SavedChannelNumber                    = 7;
  * The maximum numbers of clients the AP is able to manage
  */
 //--------------------------------------------------------------------------------------------------
-static uint32_t                     SavedMaxNumClients                    = TI_WIFI_MAX_USERS;
+static uint32_t                     SavedMaxNumClients                    = WIFI_MAX_USERS;
 
 // WPA-Personal
 //--------------------------------------------------------------------------------------------------
@@ -192,7 +204,7 @@ static FILE            *IwThreadPipePtr = NULL;
  * WifiAp state event ID used to report WifiAp state events to the registered event handlers.
  */
 //--------------------------------------------------------------------------------------------------
-static le_event_Id_t WifiApPaEvent;
+static le_event_Id_t    WifiApPaEvent;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -207,8 +219,9 @@ static void ThreadDestructor
     int status;
 
     // Kill the script launched by popen() in PA thread
-    status = system("pid=`pgrep -f \""COMMAND_WIFI_SET_EVENT"\"`; [ -n \"$pid\" ] && kill -9 $pid");
-    if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_UNSET_EVENT);
+
+    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
     {
         LE_ERROR("Unable to kill the WIFI events script");
     }
@@ -258,20 +271,19 @@ static void *WifiApPaThreadMain
     void *contextPtr
 )
 {
-    char tmpString[] = (WIFI_SCRIPT_PATH COMMAND_WIFI_SET_EVENT);
     char path[1024];
 
-    LE_INFO("Started!");
+    LE_INFO("Wifi event report thread started!");
 
     // Open the command "iw events" for reading.
-    IwThreadPipePtr = popen(tmpString, "r");
+    IwThreadPipePtr = popen(WIFI_SCRIPT_PATH COMMAND_WIFI_SET_EVENT, "r");
 
     if (NULL == IwThreadPipePtr)
     {
         LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
-            (tmpString),
-            errno,
-            strerror(errno));
+                COMMAND_WIFI_SET_EVENT,
+                errno,
+                strerror(errno));
         return NULL;
     }
 
@@ -333,6 +345,154 @@ static le_result_t WriteApCfgFile
     return LE_OK;
 }
 
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function writes configuration to hostapd.conf.
+ *
+ * @return LE_FAULT  The function failed.
+ * @return LE_OK     The function succeeded.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t GenerateHostapdConf
+(
+    void
+)
+{
+    char        tmpConfig[TEMP_STRING_MAX_BYTES];
+    le_result_t result = LE_FAULT;
+    FILE        *configFilePtr  = NULL;
+
+    configFilePtr = fopen(WIFI_HOSTAPD_FILE, "w");
+    if (NULL ==  configFilePtr)
+    {
+        LE_ERROR("Unable to create hostapd.conf file.");
+        return LE_FAULT;
+    }
+
+    memset(tmpConfig, '\0', sizeof(tmpConfig));
+    // prepare SSID, channel, country code etc in hostapd.conf
+    snprintf(tmpConfig, sizeof(tmpConfig), (HOSTAPD_CONFIG_COMMON
+            "ssid=%s\nchannel=%d\nmax_num_sta=%d\ncountry_code=%s\nignore_broadcast_ssid=%d\n"),
+            (char *)SavedSsid,
+            SavedChannelNumber,
+            SavedMaxNumClients,
+            (char *)SavedCountryCode,
+            !SavedDiscoverable);
+    // Write common config such as SSID, channel, country code, etc in hostapd.conf
+    tmpConfig[TEMP_STRING_MAX_BYTES - 1] = '\0';
+    if (LE_OK != WriteApCfgFile(tmpConfig, configFilePtr))
+    {
+        LE_ERROR("Unable to set SSID, channel, etc in hostapd.conf");
+        goto error;
+    }
+
+    memset(tmpConfig, '\0', sizeof(tmpConfig));
+    // Write security parameters in hostapd.conf
+    switch (SavedSecurityProtocol)
+    {
+        case LE_WIFIAP_SECURITY_NONE:
+            LE_DEBUG("LE_WIFIAP_SECURITY_NONE");
+            result = WriteApCfgFile(HOSTAPD_CONFIG_SECURITY_NONE, configFilePtr);
+            break;
+
+        case LE_WIFIAP_SECURITY_WPA2:
+            LE_DEBUG("LE_WIFIAP_SECURITY_WPA2");
+            if ('\0' != SavedPassphrase[0])
+            {
+                snprintf(tmpConfig, sizeof(tmpConfig), (HOSTAPD_CONFIG_SECURITY_WPA2
+                        "wpa_passphrase=%s\n"), SavedPassphrase);
+                tmpConfig[TEMP_STRING_MAX_BYTES - 1] = '\0';
+                result = WriteApCfgFile(tmpConfig, configFilePtr);
+            }
+            else if ('\0' != SavedPreSharedKey[0])
+            {
+                snprintf(tmpConfig, sizeof(tmpConfig), (HOSTAPD_CONFIG_SECURITY_WPA2
+                        "wpa_psk=%s\n"), SavedPreSharedKey);
+                tmpConfig[TEMP_STRING_MAX_BYTES - 1] = '\0';
+                result = WriteApCfgFile(tmpConfig, configFilePtr);
+            }
+            else
+            {
+                LE_ERROR("Security protocol is missing!");
+                result = LE_FAULT;
+            }
+            break;
+
+        default:
+            LE_ERROR("Unsupported security protocol!");
+            result = LE_FAULT;
+            break;
+    }
+
+    // Write security parameters in hostapd.conf
+    if (LE_OK != result)
+    {
+        LE_ERROR("Unable to set security parameters in hostapd.conf");
+        goto error;
+    }
+
+    // prepare IEEE std including hardware mode into hostapd.conf
+    memset(tmpConfig, '\0', sizeof(tmpConfig));
+    switch( SavedIeeeStdMask & HARDWARE_MODE_MASK )
+    {
+        case LE_WIFIAP_BITMASK_IEEE_STD_A:
+            strncpy(tmpConfig, "hw_mode=a\n", sizeof("hw_mode=a\n"));
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_B:
+            strncpy(tmpConfig, "hw_mode=b\n", sizeof("hw_mode=b\n"));
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_G:
+            strncpy(tmpConfig, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+            break;
+        case LE_WIFIAP_BITMASK_IEEE_STD_AD:
+            strncpy(tmpConfig, "hw_mode=ad\n", sizeof("hw_mode=ad\n"));
+            break;
+        default:
+            strncpy(tmpConfig, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+    }
+
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_D )
+    {
+        strncat(tmpConfig, "ieee80211d=1\n", sizeof("ieee80211d=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_H )
+    {
+        strncat(tmpConfig, "ieee80211h=1\n", sizeof("ieee80211h=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_N )
+    {
+        // hw_mode=b does not support ieee80211n, but driver can handle it
+        strncat(tmpConfig, "ieee80211n=1\n", sizeof("ieee80211n=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AC )
+    {
+        strncat(tmpConfig, "ieee80211ac=1\n", sizeof("ieee80211ac=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AX )
+    {
+        strncat(tmpConfig, "ieee80211ax=1\n", sizeof("ieee80211ax=1\n"));
+    }
+    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_W )
+    {
+        strncat(tmpConfig, "ieee80211w=1\n", sizeof("ieee80211w=1\n"));
+    }
+    // Write IEEE std in hostapd.conf
+    tmpConfig[TEMP_STRING_MAX_BYTES - 1] = '\0';
+    if (LE_OK != WriteApCfgFile(tmpConfig, configFilePtr))
+    {
+        LE_ERROR("Unable to set IEEE std in hostapd.conf");
+        goto error;
+    }
+    fclose(configFilePtr);
+    return LE_OK;
+
+error:
+    fclose(configFilePtr);
+    // Remove generated hostapd.conf file
+    remove(WIFI_HOSTAPD_FILE);
+    return LE_FAULT;
+}
+
 #ifdef SIMU
 // SIMU variable for timers
 static le_timer_Ref_t SimuClientConnectTimer = NULL;
@@ -368,7 +528,6 @@ static void SimuClientConnectTimeCallBack
 
 //--------------------------------------------------------------------------------------------------
 /**
- * TODO: SIMULATION to remove/move
  * This function activates some timers to simulate client connect/disconnect events.
  */
 //--------------------------------------------------------------------------------------------------
@@ -426,7 +585,6 @@ le_result_t pa_wifiAp_Init
     // Create the event for signaling user handlers.
     WifiApPaEvent = le_event_CreateId("WifiApPaEvent", sizeof(le_wifiAp_Event_t));
 
-    // TODO: Temporary fix
     systemResult = system("chmod 755 " WIFI_SCRIPT_PATH);
 
     if (0 == WEXITSTATUS (systemResult))
@@ -475,10 +633,7 @@ le_result_t pa_wifiAp_Start
     void
 )
 {
-    le_result_t  result         = LE_FAULT;
-    char         tmpString[256];
     int          status;
-    FILE        *configFilePtr  = NULL;
 
     // Check that an SSID is provided before starting
     if ('\0' == SavedSsid[0])
@@ -508,145 +663,28 @@ le_result_t pa_wifiAp_Start
     // -1: if the fork() has failed (see man system)
     // 91: if module is not loaded or interface not seen
     status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
-    if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
     {
-        LE_ERROR("WiFi AP Command Failed: (%d)" COMMAND_WIFI_HW_START, status);
+        LE_ERROR("WiFi AP Command \"%s\" Failed: (%d)", COMMAND_WIFI_HW_START, status);
         goto error;
     }
 
     // Create hostapd.conf file in /tmp
-    configFilePtr = fopen(WIFI_HOSTAPD_FILE, "w");
-    if (NULL ==  configFilePtr)
+    if ( LE_OK != GenerateHostapdConf())
     {
-        LE_ERROR("Unable to create hostapd.conf file.");
+        LE_ERROR("Failed to generate hostapd.conf");
         goto error;
     }
-
-    // Write default configuration in hostapd.conf
-    if (LE_OK != WriteApCfgFile(WIFI_AP_CONFIG_HOSTAPD, configFilePtr))
-    {
-        LE_ERROR("Unable to set default configuration in hostapd.conf");
-        goto error;
-    }
-
-    snprintf(tmpString, sizeof(tmpString), "ssid=%s\nchannel=%d\nmax_num_sta=%d\ncountry_code=%s\n",
-             (char *)SavedSsid,
-             SavedChannelNumber,
-             SavedMaxNumClients,
-             (char *)SavedCountryCode);
-
-    // Write SSID, channel and maximum number of clients in hostapd.conf
-    if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
-    {
-        LE_ERROR("Unable to set SSID, channel and maximum number of clients in hostapd.conf");
-        goto error;
-    }
-
-    // Write security parameters in hostapd.conf
-    switch (SavedSecurityProtocol)
-    {
-        case LE_WIFIAP_SECURITY_NONE:
-            LE_DEBUG("LE_WIFIAP_SECURITY_NONE");
-            result = WriteApCfgFile(WIFI_AP_CONFIG_SECURITY_NONE, configFilePtr);
-            break;
-
-        case LE_WIFIAP_SECURITY_WPA2:
-            LE_DEBUG("LE_WIFIAP_SECURITY_WPA2");
-            result = WriteApCfgFile(WIFI_AP_CONFIG_SECURITY_WPA2, configFilePtr);
-            if ('\0' != SavedPassphrase[0])
-            {
-                snprintf(tmpString, sizeof(tmpString), "wpa_passphrase=%s\n", SavedPassphrase);
-                result = WriteApCfgFile(tmpString, configFilePtr);
-            }
-            else if ('\0' != SavedPreSharedKey[0])
-            {
-                snprintf(tmpString, sizeof(tmpString), "wpa_psk=%s\n", SavedPreSharedKey);
-                result = WriteApCfgFile(tmpString, configFilePtr);
-            }
-            else
-            {
-                LE_ERROR("Security protocol is missing!");
-                result = LE_FAULT;
-            }
-            break;
-
-        default:
-            result = LE_FAULT;
-            break;
-    }
-
-    if (LE_OK != result)
-    {
-        LE_ERROR("Unable to set security parameters in hostapd.conf");
-        goto error;
-    }
-
-    // Set whether SSID should be announced or not
-    snprintf(tmpString, sizeof(tmpString), "ignore_broadcast_ssid=%d\n", !SavedDiscoverable);
-    if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
-    {
-        LE_ERROR("Unable to set broadcast paramater in hostapd.conf");
-        goto error;
-    }
-
-    // Write IEEE std including hardware mode into hostapd.conf
-    memset(tmpString, '\0', sizeof(tmpString));
-    switch( SavedIeeeStdMask & 0x000F )
-    {
-        case LE_WIFIAP_BITMASK_IEEE_STD_A:
-            le_utf8_Copy(tmpString, "hw_mode=a\n", sizeof(tmpString), NULL);
-            break;
-        case LE_WIFIAP_BITMASK_IEEE_STD_B:
-            le_utf8_Copy(tmpString, "hw_mode=a\n", sizeof(tmpString), NULL);
-            break;
-        case LE_WIFIAP_BITMASK_IEEE_STD_G:
-            le_utf8_Copy(tmpString, "hw_mode=g\n", sizeof(tmpString), NULL);
-            break;
-        case LE_WIFIAP_BITMASK_IEEE_STD_AD:
-            le_utf8_Copy(tmpString, "hw_mode=ad\n", sizeof(tmpString), NULL);
-            break;
-        default:
-            le_utf8_Copy(tmpString, "hw_mode=g\n", sizeof(tmpString), NULL);
-    }
-
-    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_D )
-    {
-        le_utf8_Append(tmpString, "ieee80211d=1\n", sizeof(tmpString), NULL);
-    }
-    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_H )
-    {
-        le_utf8_Append(tmpString, "ieee80211h=1\n", sizeof(tmpString), NULL);
-    }
-    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_N )
-    {
-        // hw_mode=b does not support ieee80211n, but driver can handle it
-        le_utf8_Append(tmpString, "ieee80211n=1\n", sizeof(tmpString), NULL);
-    }
-    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AC )
-    {
-        le_utf8_Append(tmpString, "ieee80211ac=1\n", sizeof(tmpString), NULL);
-    }
-    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AX )
-    {
-        le_utf8_Append(tmpString, "ieee80211ax=1\n", sizeof(tmpString), NULL);
-    }
-    if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_W )
-    {
-        le_utf8_Append(tmpString, "ieee80211w=1\n", sizeof(tmpString), NULL);
-    }
-
-    if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
-    {
-        LE_ERROR("Unable to set IEEE STD in hostapd.conf");
-    }
-
-    fclose(configFilePtr);
 
     // Start Access Point cmd: /bin/hostapd /etc/hostapd.conf
     status = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_START);
-     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
     {
-        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_START, status);
+        LE_ERROR("WiFi Client Command \"%s\" Failed: (%d)",
+                COMMAND_WIFIAP_HOSTAPD_START,
+                status);
+        // Remove generated hostapd.conf file
+        remove(WIFI_HOSTAPD_FILE);
         goto error;
     }
 
@@ -654,19 +692,8 @@ le_result_t pa_wifiAp_Start
     return LE_OK;
 
 error:
-    if (configFilePtr) fclose(configFilePtr);
-    remove(WIFI_HOSTAPD_FILE);
     le_thread_Cancel(WifiApPaThread);
     le_thread_Join(WifiApPaThread, NULL);
-    // If driver module is loaded, unload it
-    if (0 == status)
-    {
-        status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP);
-        if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
-        {
-            LE_ERROR("WiFi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_STOP, status);
-        }
-    }
     return LE_FAULT;
 }
 
@@ -686,24 +713,26 @@ le_result_t pa_wifiAp_Stop
 {
     int status;
 
-    // Try to delete the rule allowing the DHCP ports on wlan0. Ignore if it fails
-    status = system("iptables -D " COMMAND_IPTABLE_DHCP_WLAN0);
-     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    // Try to delete the rule allowing the DHCP ports on WLAN. Ignore if it fails
+    status = system(WIFI_SCRIPT_PATH COMMAND_IPTABLE_DHCP_DELETE);
+    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
     {
         LE_WARN("Deleting rule for DHCP port fails");
     }
 
     status = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_STOP);
-     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
     {
-        LE_ERROR("WiFi Client Command Failed: (%d)" COMMAND_WIFIAP_HOSTAPD_STOP, status);
+        LE_ERROR("WiFi AP Command \"%s\" Failed: (%d)",
+                COMMAND_WIFIAP_HOSTAPD_STOP,
+                status);
         return LE_FAULT;
     }
 
     status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_STOP);
-     if (!WIFEXITED(status) || (0 != WEXITSTATUS(status)))
+    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
     {
-        LE_ERROR("WiFi Access Point Command Failed: (%d)" COMMAND_WIFI_HW_STOP, status);
+        LE_ERROR("WiFi AP Command \"%s\" Failed: (%d)", COMMAND_WIFI_HW_STOP, status);
         return LE_FAULT;
     }
 
@@ -745,9 +774,9 @@ le_result_t  pa_wifiAp_AddEventHandler
     le_event_HandlerRef_t handlerRef;
 
     handlerRef = le_event_AddLayeredHandler("WifiApPaHandler",
-        WifiApPaEvent,
-        FirstLayerWifiApEventHandler,
-        (le_event_HandlerFunc_t)handlerPtr);
+                                            WifiApPaEvent,
+                                            FirstLayerWifiApEventHandler,
+                                            (le_event_HandlerFunc_t)handlerPtr);
     if (NULL == handlerRef)
     {
         LE_ERROR("ERROR: le_event_AddLayeredHandler returned NULL");
@@ -782,9 +811,9 @@ le_result_t pa_wifiAp_SetSsid
     le_result_t result = LE_BAD_PARAMETER;
 
     LE_INFO("SSID length %d | SSID: \"%.*s\"",
-        (int)ssidNumElements,
-        (int)ssidNumElements,
-        (char *)ssidPtr);
+            (int)ssidNumElements,
+            (int)ssidNumElements,
+            (char *)ssidPtr);
 
     if ((0 < ssidNumElements) && (ssidNumElements <= LE_WIFIDEFS_MAX_SSID_LENGTH))
     {
@@ -1012,12 +1041,18 @@ le_result_t pa_wifiAp_SetIeeeStandard
 )
 {
     int8_t hwMode = stdMask & 0x0F;
-    int8_t modeCheck = (hwMode & 0x1) + ((hwMode >> 1) & 0x1) +
+    int8_t numCheck = (hwMode & 0x1) + ((hwMode >> 1) & 0x1) +
                        ((hwMode >> 2) & 0x1) + ((hwMode >> 3) & 0x1);
 
     LE_INFO("Set IeeeStdBitMask : 0x%X", stdMask);
+    //Hardware mode should be set.
+    if ( 0 == numCheck )
+    {
+        LE_WARN("No hardware mode is set.");
+        return LE_BAD_PARAMETER;
+    }
     //Hardware mode should be exclusive.
-    if ( 1 != modeCheck )
+    if ( numCheck > 1 )
     {
         LE_WARN("Only one hardware mode can be set.");
         return LE_BAD_PARAMETER;
@@ -1131,7 +1166,7 @@ le_result_t pa_wifiAp_SetMaxNumberClients
     // Store maxNumberClients to be used later during startup procedure
     le_result_t result = LE_OUT_OF_RANGE;
     LE_INFO("Set max clients");
-    if ((maxNumberClients >= 1) && (maxNumberClients <= TI_WIFI_MAX_USERS))
+    if ((maxNumberClients >= 1) && (maxNumberClients <= WIFI_MAX_USERS))
     {
        SavedMaxNumClients = maxNumberClients;
        result = LE_OK;
@@ -1170,11 +1205,15 @@ le_result_t pa_wifiAp_SetIpRange
     const char         *parameterPtr = 0;
 
     // Check the parameters
-    if ((ipApPtr == NULL) || (ipStartPtr == NULL) || (ipStopPtr == NULL))
+    if ((NULL == ipApPtr) || (NULL == ipStartPtr) || (NULL == ipStopPtr))
+    {
         return LE_BAD_PARAMETER;
+    }
 
     if ((!strlen(ipApPtr)) || (!strlen(ipStartPtr)) || (!strlen(ipStopPtr)))
+    {
         return LE_BAD_PARAMETER;
+    }
 
     if (inet_pton(AF_INET, ipApPtr, &(saApPtr.sin_addr)) <= 0)
     {
@@ -1225,7 +1264,10 @@ le_result_t pa_wifiAp_SetIpRange
         char cmd[256];
         int  systemResult;
 
-        snprintf((char *)&cmd, sizeof(cmd), "%s %s %s %s", "/sbin/ifconfig", "wlan0", ipApPtr, "up");
+        snprintf((char *)&cmd, sizeof(cmd), "%s %s %s",
+                WIFI_SCRIPT_PATH,
+                COMMAND_WIFIAP_WLAN_UP,
+                ipApPtr);
 
         systemResult = system(cmd);
         if (0 != WEXITSTATUS (systemResult))
@@ -1247,9 +1289,10 @@ le_result_t pa_wifiAp_SetIpRange
             filePtr = fopen (DNSMASQ_CFG_FILE, "w");
             if (filePtr != NULL)
             {
-                fprintf(filePtr, "dhcp-range=%s, %s,%s,%dh\n", "wlan0", ipStartPtr, ipStopPtr, 24);
-                fprintf(filePtr, "dhcp-option=%s, %d,%s\n","wlan0", 3, ipApPtr);
-                fprintf(filePtr, "dhcp-option=%s, %d,%s\n","wlan0", 6, ipApPtr);
+                //Interface is generated when COMMAND_DNSMASQ_RESTART called
+                fprintf(filePtr, "dhcp-range=%s,%s,%dh\n", ipStartPtr, ipStopPtr, 24);
+                fprintf(filePtr, "dhcp-option=%d,%s\n", 3, ipApPtr);
+                fprintf(filePtr, "dhcp-option=%d,%s\n", 6, ipApPtr);
                 fclose(filePtr);
             }
             else
@@ -1260,17 +1303,15 @@ le_result_t pa_wifiAp_SetIpRange
 
             LE_INFO("@AP=%s, @APstart=%s, @APstop=%s", ipApPtr, ipStartPtr, ipStopPtr);
 
-            // Insert the rule allowing the DHCP ports on wlan0
-            systemResult = system("iptables -I " COMMAND_IPTABLE_DHCP_WLAN0);
+            // Insert the rule allowing the DHCP ports on WLAN
+            systemResult = system(WIFI_SCRIPT_PATH COMMAND_IPTABLE_DHCP_INSERT);
             if (0 != WEXITSTATUS (systemResult))
             {
                 LE_ERROR("Unable to allow DHCP ports.");
                 return LE_FAULT;
             }
 
-            systemResult = system("/etc/init.d/dnsmasq stop; "
-                                  "pkill -9 dnsmasq; "
-                                  "/etc/init.d/dnsmasq start");
+            systemResult = system(WIFI_SCRIPT_PATH COMMAND_DNSMASQ_RESTART);
             if (0 != WEXITSTATUS (systemResult))
             {
                 LE_ERROR("Unable to restart the DHCP server.");
