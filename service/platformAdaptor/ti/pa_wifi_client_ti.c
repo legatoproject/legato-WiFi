@@ -1014,7 +1014,7 @@ le_result_t pa_wifiClient_Connect
 
         case LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE:
             // Enterprise environment: connect to WPA EAP PEAP0
-            LE_DEBUG("SwitchCase: ..._SECURITY_WPA2_EAP_PEAP0_ENTERPRISE");
+            LE_DEBUG("SwitchCase: ..._SECURITY_WPA_EAP_PEAP0_ENTERPRISE");
             if ((0 == SavedUsername[0]) && (0 == SavedPassword[0]))
             {
                 LE_ERROR("No valid Username & Password");
