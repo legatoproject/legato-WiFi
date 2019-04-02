@@ -3,7 +3,7 @@ requires:
     api:
     {
         ${LEGATO_ROOT}/interfaces/le_cfg.api
-	${LEGATO_ROOT}/interfaces/le_secStore.api
+        ${LEGATO_ROOT}/interfaces/le_secStore.api
     }
 }
 

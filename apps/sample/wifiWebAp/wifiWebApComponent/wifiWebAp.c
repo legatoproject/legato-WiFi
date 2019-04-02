@@ -96,8 +96,8 @@ static void WifiEventHandler
 )
 {
     char   str[BUF_SIZE];
-    char   buffer[BUF_SIZE];
-    time_t timestamp        = time(NULL);
+    char   timebuf[sizeof("HH:MM:SS")];
+    time_t timestamp = time(NULL);
     struct tm tmp = {0};
 
     LE_INFO("WiFi Ap event received");
@@ -115,7 +115,7 @@ static void WifiEventHandler
         LE_ERROR("Cannot convert Absolute time into local time.");
     }
 
-    strftime(buffer, sizeof(buffer), "%H:%M:%S", &tmp);
+    strftime(timebuf, sizeof(timebuf), "%H:%M:%S", &tmp);
 
     switch (event)
     {
@@ -125,7 +125,7 @@ static void WifiEventHandler
             if (LogFilePipePtr != NULL)
             {
                 ///< A client connect to AP
-                snprintf(str, BUF_SIZE, HTTP_CONNECTION_REPORT, buffer, NumberClients);
+                snprintf(str, BUF_SIZE, HTTP_CONNECTION_REPORT, timebuf, NumberClients);
                 LE_INFO("%s", str);
                 WifiEventLog(str, LogFilePipePtr);
             }
@@ -143,7 +143,7 @@ static void WifiEventHandler
             }
             if (LogFilePipePtr != NULL)
             {
-                snprintf(str, BUF_SIZE, HTTP_CONNECTION_REPORT, buffer, NumberClients);
+                snprintf(str, BUF_SIZE, HTTP_CONNECTION_REPORT, timebuf, NumberClients);
                 LE_INFO("%s", str);
                 WifiEventLog(str, LogFilePipePtr);
             }
@@ -228,8 +228,8 @@ static void StartWebServer
 
     if (LogFilePipePtr != NULL)
     {
-        char   buffer[BUF_SIZE];
-        time_t timestamp        = time(NULL);
+        char   timebuf[sizeof("HH:MM:SS")];
+        time_t timestamp = time(NULL);
 
         LE_INFO("STARTING WIFI HTTP INTERFACE");
 
@@ -238,11 +238,11 @@ static void StartWebServer
             LE_ERROR("Cannot convert Absolute time into local time.");
         }
 
-        strftime(buffer, sizeof(buffer), "%H:%M:%S", &tmp);
+        strftime(timebuf, sizeof(timebuf), "%H:%M:%S", &tmp);
         snprintf(str,
             BUF_SIZE,
             "<font color=\"black\" >%s:</font> Starting WiFi HTTP interface...</br>\r\n",
-            buffer);
+            timebuf);
         WifiEventLog(str, LogFilePipePtr);
         fclose(LogFilePipePtr);
     }

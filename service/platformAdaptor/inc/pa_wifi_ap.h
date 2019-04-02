@@ -210,8 +210,8 @@ le_result_t pa_wifiAp_SetDiscoverable
 le_result_t pa_wifiAp_SetIeeeStandard
 (
     le_wifiAp_IeeeStdBitMask_t stdMask
-	///< [IN]
-	///< Bit mask for the IEEE standard.
+        ///< [IN]
+        ///< Bit mask for the IEEE standard.
 );
 
 //--------------------------------------------------------------------------------------------------

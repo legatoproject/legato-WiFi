@@ -594,45 +594,45 @@ le_result_t pa_wifiAp_Start
     switch( SavedIeeeStdMask & 0x000F )
     {
         case LE_WIFIAP_BITMASK_IEEE_STD_A:
-            strncpy(tmpString, "hw_mode=a\n", sizeof("hw_mode=a\n"));
+            le_utf8_Copy(tmpString, "hw_mode=a\n", sizeof(tmpString), NULL);
             break;
         case LE_WIFIAP_BITMASK_IEEE_STD_B:
-            strncpy(tmpString, "hw_mode=b\n", sizeof("hw_mode=b\n"));
+            le_utf8_Copy(tmpString, "hw_mode=a\n", sizeof(tmpString), NULL);
             break;
         case LE_WIFIAP_BITMASK_IEEE_STD_G:
-            strncpy(tmpString, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+            le_utf8_Copy(tmpString, "hw_mode=g\n", sizeof(tmpString), NULL);
             break;
         case LE_WIFIAP_BITMASK_IEEE_STD_AD:
-            strncpy(tmpString, "hw_mode=ad\n", sizeof("hw_mode=ad\n"));;
+            le_utf8_Copy(tmpString, "hw_mode=ad\n", sizeof(tmpString), NULL);
             break;
         default:
-            strncpy(tmpString, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+            le_utf8_Copy(tmpString, "hw_mode=g\n", sizeof(tmpString), NULL);
     }
 
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_D )
     {
-        strncat(tmpString, "ieee80211d=1\n", sizeof("ieee80211d=1\n"));
+        le_utf8_Append(tmpString, "ieee80211d=1\n", sizeof(tmpString), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_H )
     {
-        strncat(tmpString, "ieee80211h=1\n", sizeof("ieee80211h=1\n"));
+        le_utf8_Append(tmpString, "ieee80211h=1\n", sizeof(tmpString), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_N )
     {
         // hw_mode=b does not support ieee80211n, but driver can handle it
-        strncat(tmpString, "ieee80211n=1\n", sizeof("ieee80211n=1\n"));
+        le_utf8_Append(tmpString, "ieee80211n=1\n", sizeof(tmpString), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AC )
     {
-        strncat(tmpString, "ieee80211ac=1\n", sizeof("ieee80211ac=1\n"));
+        le_utf8_Append(tmpString, "ieee80211ac=1\n", sizeof(tmpString), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AX )
     {
-        strncat(tmpString, "ieee80211ax=1\n", sizeof("ieee80211ax=1\n"));
+        le_utf8_Append(tmpString, "ieee80211ax=1\n", sizeof(tmpString), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_W )
     {
-        strncat(tmpString, "ieee80211w=1\n", sizeof("ieee80211w=1\n"));
+        le_utf8_Append(tmpString, "ieee80211w=1\n", sizeof(tmpString), NULL);
     }
 
     if (LE_OK != WriteApCfgFile(tmpString, configFilePtr))
@@ -867,9 +867,7 @@ le_result_t pa_wifiAp_SetPassPhrase
             (length <= LE_WIFIDEFS_MAX_PASSPHRASE_LENGTH))
         {
             // Store Passphrase to be used later during startup procedure
-            strncpy(&SavedPassphrase[0], &passphrasePtr[0], length);
-            // Make sure there is a null termination
-            SavedPassphrase[length] = '\0';
+            le_utf8_Copy(SavedPassphrase, passphrasePtr, sizeof(SavedPassphrase), NULL);
             result = LE_OK;
         }
         else
@@ -912,9 +910,7 @@ le_result_t pa_wifiAp_SetPreSharedKey
         if (length <= LE_WIFIDEFS_MAX_PSK_LENGTH)
         {
             // Store PSK to be used later during startup procedure
-            strncpy( &SavedPreSharedKey[0], &preSharedKeyPtr[0], length );
-            // Make sure there is a null termination
-            SavedPreSharedKey[length] = '\0';
+            le_utf8_Copy(SavedPreSharedKey, preSharedKeyPtr, sizeof(SavedPreSharedKey), NULL);
             result = LE_OK;
         }
     }
@@ -1106,7 +1102,7 @@ le_result_t pa_wifiAp_SetCountryCode
 
         if (length == LE_WIFIDEFS_ISO_COUNTRYCODE_LENGTH)
         {
-            strncpy( &SavedCountryCode[0], &countryCodePtr[0], length );
+            strncpy(&SavedCountryCode[0], &countryCodePtr[0], length );
             SavedCountryCode[length] = '\0';
             result = LE_OK;
         }
