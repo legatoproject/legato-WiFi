@@ -14,6 +14,12 @@ fi
 CMD=$1
 # WiFi interface
 IFACE=wlan0
+# If WLAN interface exists but can not be brought up, means WiFi hardware is inserted,
+# drivers are loaded successfully, but firmware failed to boot, tiwifi.sh returns 100
+FIRMWAREFAILURE=100
+# If WLAN interface does not exist but driver is installed, means WiFi hardware is absent
+HARDWAREABSENCE=50
+TIMEOUT=8
 # PATH
 export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
@@ -21,18 +27,18 @@ export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/
 # Exit with 0 if connected otherwise exit with 8 (time out)
 CheckConnection()
 {
-    retries=10
+    local retries=10
     echo "Checking connection..."
     # Verify connection status
     for i in $(seq 1 ${retries})
     do
-      echo "loop=${i}"
-      (/usr/sbin/iw $1 link | grep "Connected to") && break
-      sleep 1
+        echo "loop=${i}"
+        (/usr/sbin/iw $1 link | grep "Connected to") && break
+        sleep 1
     done
     if [ "${i}" -eq "${retries}" ]; then
         # Connection request time out.
-        exit 8
+        exit ${TIMEOUT}
     fi
     # Connected.
     exit 0
@@ -40,14 +46,14 @@ CheckConnection()
 
 WiFiReset()
 {
-    retries=3
+    local retries=3
     echo "WiFi reset"
     for i in $(seq 1 ${retries})
     do
-      sleep 1
-      /etc/init.d/tiwifi stop
-      sleep 1
-      /etc/init.d/tiwifi start && exit 0
+        sleep 1
+        /etc/init.d/tiwifi stop
+        sleep 1
+        /etc/init.d/tiwifi start && exit 0
     done
     exit 127
 }
@@ -57,15 +63,23 @@ case ${CMD} in
     echo "WIFI_START"
     # Mount the WiFi network interface
     /etc/init.d/tiwifi start && exit 0
-    WLANSTRING=$(/sbin/ifconfig -a | grep ${IFACE})
-    if [ -n ${WLANSTRING} ]; then
-    # Interface exists but can not be brought up, means WiFi hardware
-    # is inserted, drivers are loaded successfully, do reset
-      WiFiReset && exit 0
+    # Store failure reason
+    FAILUREREASON=$?
+    # If tiwifi.sh indicates firmware fails to boot, do reset
+    if [ ${FAILUREREASON} -eq ${FIRMWAREFAILURE} ]; then
+        WiFiReset && exit 0
+        # Reset fail, do clean up
+        /etc/init.d/tiwifi stop
+        exit ${FAILUREREASON}
     fi
-    # Interface does not exist, or reset fail, do clean up
+    # Hardware is absent, do clean up
+    if [ ${FAILUREREASON} -eq ${HARDWAREABSENCE} ]; then
+        /etc/init.d/tiwifi stop
+        exit ${FAILUREREASON}
+    fi
+    # Other reasons, do clean up also
     /etc/init.d/tiwifi stop
-    exit 127 ;;
+    exit ${FAILUREREASON} ;;
 
   WIFI_STOP)
     echo "WIFI_STOP"
@@ -84,8 +98,8 @@ case ${CMD} in
     [ "${count}" -eq 0 ] && exit 0
     for i in $(seq 1 ${count})
     do
-      pid=$(/usr/bin/pgrep -n iw)
-      /bin/kill -9 ${pid}
+        pid=$(/usr/bin/pgrep -n iw)
+        /bin/kill -9 ${pid}
     done
     count=$(/usr/bin/pgrep -c iw)
     [ "${count}" -eq 0 ] || exit 127

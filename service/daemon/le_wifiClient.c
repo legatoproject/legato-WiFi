@@ -772,9 +772,11 @@ void le_wifiClient_RemoveConnectionEventHandler
  * Starts the WIFI device.
  *
  * @return
- *      - LE_OK     Function succeeded.
- *      - LE_FAULT  Function failed.
- *      - LE_BUSY   The WIFI device is already started.
+ *      - LE_OK             Function succeeded.
+ *      - LE_FAULT          Function failed.
+ *      - LE_BUSY           The WiFi device is already started.
+ *      - LE_NOT_FOUND      The WiFi device is absent.
+ *      - LE_NOT_POSSIBLE   The WiFi device may not work.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiClient_Start

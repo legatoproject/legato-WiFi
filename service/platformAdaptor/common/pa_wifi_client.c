@@ -50,9 +50,11 @@ scan_ssid=%d\n"
 
 //--------------------------------------------------------------------------------------------------
 
-#define PATH_MAX_BYTES  1024
-#define PA_TIMEOUT      8
-#define PA_DUPLICATE    14
+#define PATH_MAX_BYTES      1024
+#define PA_TIMEOUT          8
+#define PA_DUPLICATE        14
+#define PA_NOT_FOUND        50
+#define PA_NOT_POSSIBLE     100
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -481,8 +483,10 @@ le_result_t pa_wifiClient_Release
 /**
  * Start WiFi Client PA
  *
- * @return LE_FAULT  The function failed.
- * @return LE_OK     The function succeeded.
+ * @return LE_FAULT         The function failed.
+ * @return LE_OK            The function succeeded.
+ * @return LE_NOT_FOUND     The WiFi card is absent.
+ * @return LE_NOT_POSSIBLE  The WiFi card may not work.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiClient_Start
@@ -491,6 +495,7 @@ le_result_t pa_wifiClient_Start
 )
 {
     int systemResult;
+    le_result_t result = LE_OK;
 
     /* Create WiFi Client PA Thread */
     WifiClientPaThread = le_thread_Create("WifiClientPaThread", WifiClientPaThreadMain, NULL);
@@ -501,21 +506,41 @@ le_result_t pa_wifiClient_Start
     systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
     /**
      * Returned values:
-     *  0: if the interface is correctly moutned
-     * -1: if the fork() has failed (see man system)
-     * 91: if module is not loaded or interface not seen
+     *   0: if the interface is correctly moutned
+     *  50: if WiFi card is not inserted
+     * 100: if WiFi card can not be reset
+     * 127: if driver can not be installed
+     *  -1: if the fork() has failed (see man system)
      */
-    if ((!WIFEXITED(systemResult)) || (0 != WEXITSTATUS(systemResult)))
+    // Return value of 0 means WLAN interface is up.
+    if (0 == WEXITSTATUS(systemResult))
     {
-        LE_WARN("Unable to start WiFi client command \"%s\" systemResult (%d)",
+        LE_DEBUG("WiFi client started correctly");
+        return LE_OK;
+    }
+    // Return value of 50 means WiFi card is not inserted.
+    else if ( PA_NOT_FOUND == WEXITSTATUS(systemResult))
+    {
+        LE_DEBUG("WiFi card is not inserted");
+        result = LE_NOT_FOUND;
+    }
+    // Return value of 100 means reset WiFi card failed.
+    else if ( PA_NOT_POSSIBLE == WEXITSTATUS(systemResult))
+    {
+        LE_DEBUG("Unable to reset WiFi card");
+        result = LE_NOT_POSSIBLE;
+    }
+    // WiFi card failed to start.
+    else
+    {
+        LE_WARN("Failed to start WiFi client command \"%s\" systemResult (%d)",
                 COMMAND_WIFI_HW_START, systemResult);
-        le_thread_Cancel(WifiClientPaThread);
-        le_thread_Join(WifiClientPaThread, NULL);
-        return LE_FAULT;
+        result = LE_FAULT;
     }
 
-    LE_DEBUG("WiFi client started correctly");
-    return LE_OK;
+    le_thread_Cancel(WifiClientPaThread);
+    le_thread_Join(WifiClientPaThread, NULL);
+    return result;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1003,7 +1028,7 @@ le_result_t pa_wifiClient_Connect
     strncat(tmpString, WPA_SUPPLICANT_FILE, sizeof(WPA_SUPPLICANT_FILE));
 
     systemResult = system(tmpString);
-    // Return value of -1 means that the fork() has failed (see man system).
+    // Return value of 0 means WiFi client connected.
     if (0 == WEXITSTATUS(systemResult))
     {
         LE_DEBUG("WiFi Client connected");
