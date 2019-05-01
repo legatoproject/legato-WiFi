@@ -165,7 +165,7 @@ static le_mem_PoolRef_t WifiPaEventPool;
  * Maximum numbers of bytes in temparatory string
  */
 //--------------------------------------------------------------------------------------------------
-#define TEMP_STRING_MAX_BYTES 128
+#define TEMP_STRING_MAX_BYTES 192
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -903,7 +903,7 @@ static le_result_t GenerateWpaSupplicant
     switch (SavedSecurityProtocol)
     {
         case LE_WIFICLIENT_SECURITY_NONE:
-            strncat(tmpConfig, "key_mgmt=NONE\n", sizeof("key_mgmt=NONE\n"));
+            le_utf8_Append(tmpConfig, "key_mgmt=NONE\n", sizeof(tmpConfig), NULL);
             break;
 
         case LE_WIFICLIENT_SECURITY_WEP:
@@ -913,9 +913,9 @@ static le_result_t GenerateWpaSupplicant
                 LE_ERROR("No valid WEP key");
                 goto WRONG_CONFIG;
             }
-            strncat(tmpConfig, "key_mgmt=NONE\n", sizeof("key_mgmt=NONE\n"));
+            le_utf8_Append(tmpConfig, "key_mgmt=NONE\n", sizeof(tmpConfig), NULL);
             snprintf(tmpString, sizeof(tmpString), "wep_key0=\"%s\"\n", SavedWepKey);
-            strncat(tmpConfig, tmpString, sizeof(tmpString));
+            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
             break;
 
         case LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL:
@@ -935,7 +935,7 @@ static le_result_t GenerateWpaSupplicant
             {
                 snprintf(tmpString, sizeof(tmpString), "psk=%s\n", SavedPreSharedKey);
             }
-            strncat(tmpConfig, tmpString, sizeof(tmpString));
+            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
             break;
 
         case LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE:
@@ -947,12 +947,12 @@ static le_result_t GenerateWpaSupplicant
                 goto WRONG_CONFIG;
             }
 
-            snprintf(tmpString, sizeof(tmpString), "identity=\"%s\"\npassword=\"%s\"\n",
-                     SavedUsername,
-                     SavedPassword);
-            strncat(tmpConfig, tmpString, sizeof(tmpString));
-            strncat(tmpConfig, "phase1=\"peaplabel=0\"\n", sizeof("phase1=\"peaplabel=1\"\n"));
-            strncat(tmpConfig, "phase2=\"auth=MSCHAPV2\"\n", sizeof("phase2=\"auth=MSCHAPV2\"\n"));
+            snprintf(tmpString, sizeof(tmpString), "identity=\"%s\"\n", SavedUsername);
+            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
+            snprintf(tmpString, sizeof(tmpString), "password=\"%s\"\n", SavedPassword);
+            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
+            le_utf8_Append(tmpConfig, "phase1=\"peaplabel=0\"\n", sizeof(tmpConfig), NULL);
+            le_utf8_Append(tmpConfig, "phase2=\"auth=MSCHAPV2\"\n", sizeof(tmpConfig), NULL);
             break;
 
         default:
@@ -960,8 +960,8 @@ static le_result_t GenerateWpaSupplicant
             goto WRONG_CONFIG;
     }
 
-    //Append "}" to complete the network block
-    strncat(tmpConfig, "}\n", sizeof("}\n"));
+    // Append "}" to complete the network block
+    le_utf8_Append(tmpConfig, "}\n", sizeof(tmpConfig), NULL);
 
     length = strlen(tmpConfig);
     if ( length > (TEMP_CONFIG_MAX_BYTES - 1) )
@@ -1022,10 +1022,9 @@ le_result_t pa_wifiClient_Connect
     {
         return LE_BAD_PARAMETER;
     }
-    memset(tmpString, '\0', sizeof(tmpString));
-    strncpy(tmpString, WIFI_SCRIPT_PATH, sizeof(WIFI_SCRIPT_PATH));
-    strncat(tmpString, COMMAND_WIFICLIENT_CONNECT, sizeof(COMMAND_WIFICLIENT_CONNECT));
-    strncat(tmpString, WPA_SUPPLICANT_FILE, sizeof(WPA_SUPPLICANT_FILE));
+    le_utf8_Copy(tmpString, WIFI_SCRIPT_PATH, sizeof(tmpString), NULL);
+    le_utf8_Append(tmpString, COMMAND_WIFICLIENT_CONNECT, sizeof(tmpString), NULL);
+    le_utf8_Append(tmpString, WPA_SUPPLICANT_FILE, sizeof(tmpString), NULL);
 
     systemResult = system(tmpString);
     // Return value of 0 means WiFi client connected.

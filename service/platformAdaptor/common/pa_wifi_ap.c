@@ -436,45 +436,46 @@ static le_result_t GenerateHostapdConf
     switch( SavedIeeeStdMask & HARDWARE_MODE_MASK )
     {
         case LE_WIFIAP_BITMASK_IEEE_STD_A:
-            strncpy(tmpConfig, "hw_mode=a\n", sizeof("hw_mode=a\n"));
+            le_utf8_Copy(tmpConfig, "hw_mode=a\n", sizeof(tmpConfig), NULL);
             break;
         case LE_WIFIAP_BITMASK_IEEE_STD_B:
-            strncpy(tmpConfig, "hw_mode=b\n", sizeof("hw_mode=b\n"));
+            le_utf8_Copy(tmpConfig, "hw_mode=b\n", sizeof(tmpConfig), NULL);
             break;
         case LE_WIFIAP_BITMASK_IEEE_STD_G:
-            strncpy(tmpConfig, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+            le_utf8_Copy(tmpConfig, "hw_mode=g\n", sizeof(tmpConfig), NULL);
             break;
         case LE_WIFIAP_BITMASK_IEEE_STD_AD:
-            strncpy(tmpConfig, "hw_mode=ad\n", sizeof("hw_mode=ad\n"));
+            le_utf8_Copy(tmpConfig, "hw_mode=ad\n", sizeof(tmpConfig), NULL);
             break;
         default:
-            strncpy(tmpConfig, "hw_mode=g\n", sizeof("hw_mode=g\n"));
+            le_utf8_Copy(tmpConfig, "hw_mode=g\n", sizeof(tmpConfig), NULL);
+            break;
     }
 
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_D )
     {
-        strncat(tmpConfig, "ieee80211d=1\n", sizeof("ieee80211d=1\n"));
+        le_utf8_Append(tmpConfig, "ieee80211d=1\n", sizeof(tmpConfig), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_H )
     {
-        strncat(tmpConfig, "ieee80211h=1\n", sizeof("ieee80211h=1\n"));
+        le_utf8_Append(tmpConfig, "ieee80211h=1\n", sizeof(tmpConfig), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_N )
     {
         // hw_mode=b does not support ieee80211n, but driver can handle it
-        strncat(tmpConfig, "ieee80211n=1\n", sizeof("ieee80211n=1\n"));
+        le_utf8_Append(tmpConfig, "ieee80211n=1\n", sizeof(tmpConfig), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AC )
     {
-        strncat(tmpConfig, "ieee80211ac=1\n", sizeof("ieee80211ac=1\n"));
+        le_utf8_Append(tmpConfig, "ieee80211ac=1\n", sizeof(tmpConfig), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_AX )
     {
-        strncat(tmpConfig, "ieee80211ax=1\n", sizeof("ieee80211ax=1\n"));
+        le_utf8_Append(tmpConfig, "ieee80211ax=1\n", sizeof(tmpConfig), NULL);
     }
     if ( SavedIeeeStdMask & LE_WIFIAP_BITMASK_IEEE_STD_W )
     {
-        strncat(tmpConfig, "ieee80211w=1\n", sizeof("ieee80211w=1\n"));
+        le_utf8_Append(tmpConfig, "ieee80211w=1\n", sizeof(tmpConfig), NULL);
     }
     // Write IEEE std in hostapd.conf
     tmpConfig[TEMP_STRING_MAX_BYTES - 1] = '\0';
