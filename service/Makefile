@@ -1,7 +1,7 @@
 TARGETS := $(MAKECMDGOALS)
 
 export LEGATO_WIFI_ROOT ?= $(PWD)/..
-export LEGATO_WIFI_PA ?= ti
+export LEGATO_WIFI_PA ?= $(LEGATO_WIFI_ROOT)/service/platformAdaptor/ti
 
 .PHONY: all $(TARGETS)
 all: $(TARGETS)
