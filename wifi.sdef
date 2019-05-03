@@ -10,7 +10,7 @@
 buildVars:
 {
     LEGATO_WIFI_ROOT=${LEGATO_ROOT}/modules/WiFi
-    LEGATO_WIFI_PA=ti
+    LEGATO_WIFI_PA=${LEGATO_WIFI_ROOT}/service/platformAdaptor/ti
 }
 
 apps:
