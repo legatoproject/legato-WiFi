@@ -19,6 +19,8 @@ IFACE=wlan0
 FIRMWAREFAILURE=100
 # If WLAN interface does not exist but driver is installed, means WiFi hardware is absent
 HARDWAREABSENCE=50
+# WiFi driver is not installed
+NODRIVER=100
 TIMEOUT=8
 # PATH
 export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
@@ -114,9 +116,9 @@ case ${CMD} in
     #Check WiFi stop called or not
     /sbin/lsmod | grep wlcore >/dev/null
     #Driver stays, hardware removed
-    [ $? -eq 0 ] && exit 127
+    [ $? -eq 0 ] && exit ${HARDWAREABSENCE}
     #WiFi stop called
-    exit 100 ;;
+    exit ${NODRIVER} ;;
 
   WIFIAP_HOSTAPD_START)
     echo "WIFIAP_HOSTAPD_START"

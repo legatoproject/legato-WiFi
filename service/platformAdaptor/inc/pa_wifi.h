@@ -14,6 +14,19 @@
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Return value from WiFi platform adapter code.
+ * 8 is returned if WiFi connection can not be established within a given time
+ * 14 is returned if wpa_supplicant is running
+ * 50 is returned if WiFi hardware is absent.
+ * 100 is returned if WiFi driver can not be installed.
+ */
+//--------------------------------------------------------------------------------------------------
+#define PA_TIMEOUT          8
+#define PA_DUPLICATE        14
+#define PA_NOT_FOUND        50
+#define PA_NOT_POSSIBLE     100
+//--------------------------------------------------------------------------------------------------
+/**
  * AccessPoint structure.
  */
 //--------------------------------------------------------------------------------------------------

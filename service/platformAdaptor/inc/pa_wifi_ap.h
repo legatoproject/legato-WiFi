@@ -10,7 +10,15 @@
 // -------------------------------------------------------------------------------------------------
 #include "legato.h"
 #include "interfaces.h"
-
+//--------------------------------------------------------------------------------------------------
+/**
+ * Return value from WiFi platform adapter scripts code.
+ * 50 is returned if WiFi hardware is absent.
+ * 100 is returned if WiFi driver can not be installed.
+ */
+//--------------------------------------------------------------------------------------------------
+#define PA_NOT_FOUND        50
+#define PA_NOT_POSSIBLE     100
 //--------------------------------------------------------------------------------------------------
 /**
  * Event handler for PA WiFi access point changes.
@@ -80,6 +88,8 @@ LE_SHARED le_result_t pa_wifiAp_Release
  *
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
+ * @return LE_NOT_FOUND     The WiFi card is absent.
+ * @return LE_NOT_POSSIBLE  The WiFi card may not work.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -266,7 +276,7 @@ le_result_t pa_wifiAp_SetCountryCode
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetChannel
 (
-    int8_t channelNumber
+    uint16_t channelNumber
         ///< [IN]
         ///< the channel number.
 );

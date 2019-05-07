@@ -34,7 +34,7 @@
  * WiFi platform adaptor shell script
  */
 //--------------------------------------------------------------------------------------------------
-#define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi.sh "
+#define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi "
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -145,8 +145,8 @@ static le_wifiAp_IeeeStdBitMask_t   SavedIeeeStdMask = 0x0004;
  * IEEE 802.11g is set by default
  */
 //--------------------------------------------------------------------------------------------------
-static int8_t MIN_CHANNEL_VALUE = LE_WIFIDEFS_MIN_CHANNEL_VALUE;
-static int8_t MAX_CHANNEL_VALUE = LE_WIFIDEFS_MAX_CHANNEL_VALUE;
+static uint16_t MIN_CHANNEL_VALUE = LE_WIFIDEFS_MIN_CHANNEL_VALUE;
+static uint16_t MAX_CHANNEL_VALUE = LE_WIFIDEFS_MAX_CHANNEL_VALUE;
 //--------------------------------------------------------------------------------------------------
 /**
  * Defines whether the SSID is hidden or not
@@ -155,10 +155,12 @@ static int8_t MAX_CHANNEL_VALUE = LE_WIFIDEFS_MAX_CHANNEL_VALUE;
 static bool                         SavedDiscoverable                     = true;
 //--------------------------------------------------------------------------------------------------
 /**
- * The WiFi channel associated with the SSID
+ * The WiFi channel associated with the SSID.
+ * In the 2.4 GHz band, 1, 6, and 11 are the only non-overlapping channels.
+ * Default channel is set to 6
  */
 //--------------------------------------------------------------------------------------------------
-static uint32_t                     SavedChannelNumber                    = 7;
+static uint16_t                     SavedChannelNumber                    = 6;
 //--------------------------------------------------------------------------------------------------
 /**
  * The maximum numbers of clients the AP is able to manage
@@ -626,6 +628,8 @@ le_result_t pa_wifiAp_Release
  *
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
+ * @return LE_NOT_FOUND     The WiFi card is absent.
+ * @return LE_NOT_POSSIBLE  The WiFi card may not work.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -634,7 +638,7 @@ le_result_t pa_wifiAp_Start
     void
 )
 {
-    int          status;
+    int     systemResult;
 
     // Check that an SSID is provided before starting
     if ('\0' == SavedSsid[0])
@@ -653,37 +657,59 @@ le_result_t pa_wifiAp_Start
 
     LE_DEBUG("Starting AP, SSID: %s", SavedSsid);
 
-    // Create WiFi AP PA Thread
-    WifiApPaThread = le_thread_Create("WifiApPaThread", WifiApPaThreadMain, NULL);
-    le_thread_SetJoinable(WifiApPaThread);
-    le_thread_AddChildDestructor(WifiApPaThread, ThreadDestructor, NULL);
-    le_thread_Start(WifiApPaThread);
-
-    // Mount WiFi network interface. Returned values:
-    //  0: if the interface is correctly mounted
-    // -1: if the fork() has failed (see man system)
-    // 91: if module is not loaded or interface not seen
-    status = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
-    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
-    {
-        LE_ERROR("WiFi AP Command \"%s\" Failed: (%d)", COMMAND_WIFI_HW_START, status);
-        goto error;
-    }
-
     // Create hostapd.conf file in /tmp
     if ( LE_OK != GenerateHostapdConf())
     {
         LE_ERROR("Failed to generate hostapd.conf");
-        goto error;
+        return LE_FAULT;
+    }
+
+    systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
+    /**
+     * Returned values:
+     *   0: if the interface is correctly moutned
+     *  50: if WiFi card is not inserted
+     * 100: if WiFi card may not work
+     * 127: if driver can not be installed
+     *  -1: if the fork() has failed (see man system)
+     */
+
+    if (0 == WEXITSTATUS(systemResult))
+    {
+        LE_DEBUG("WiFi hardware started correctly");
+        // Create WiFi AP PA Thread
+        WifiApPaThread = le_thread_Create("WifiApPaThread", WifiApPaThreadMain, NULL);
+        le_thread_SetJoinable(WifiApPaThread);
+        le_thread_AddChildDestructor(WifiApPaThread, ThreadDestructor, NULL);
+        le_thread_Start(WifiApPaThread);
+    }
+    // Return value of 50 means WiFi card is not inserted.
+    else if ( PA_NOT_FOUND == WEXITSTATUS(systemResult))
+    {
+        LE_ERROR("WiFi card is not inserted");
+        return LE_NOT_FOUND;
+    }
+    // Return value of 100 means WiFi card may not work.
+    else if ( PA_NOT_POSSIBLE == WEXITSTATUS(systemResult))
+    {
+        LE_ERROR("Unable to reset WiFi card");
+        return LE_NOT_POSSIBLE;
+    }
+    // WiFi card failed to start.
+    else
+    {
+        LE_WARN("Failed to start WiFi AP command \"%s\" systemResult (%d)",
+                COMMAND_WIFI_HW_START, systemResult);
+        return LE_FAULT;
     }
 
     // Start Access Point cmd: /bin/hostapd /etc/hostapd.conf
-    status = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_START);
-    if ((!WIFEXITED(status)) || (0 != WEXITSTATUS(status)))
+    systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFIAP_HOSTAPD_START);
+    if ((!WIFEXITED(systemResult)) || (0 != WEXITSTATUS(systemResult)))
     {
         LE_ERROR("WiFi Client Command \"%s\" Failed: (%d)",
                 COMMAND_WIFIAP_HOSTAPD_START,
-                status);
+                systemResult);
         // Remove generated hostapd.conf file
         remove(WIFI_HOSTAPD_FILE);
         goto error;
@@ -986,7 +1012,7 @@ le_result_t pa_wifiAp_SetDiscoverable
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetChannel
 (
-    int8_t channelNumber
+    uint16_t channelNumber
         ///< [IN]
         ///< the channel number.
 )
