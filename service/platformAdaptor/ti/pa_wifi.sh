@@ -14,6 +14,14 @@ fi
 CMD=$1
 # WiFi interface
 IFACE=wlan0
+# If WLAN interface exists but can not be brought up, means WiFi hardware is inserted,
+# drivers are loaded successfully, but firmware failed to boot, tiwifi.sh returns 100
+FIRMWAREFAILURE=100
+# If WLAN interface does not exist but driver is installed, means WiFi hardware is absent
+HARDWAREABSENCE=50
+# WiFi driver is not installed
+NODRIVER=100
+TIMEOUT=8
 # PATH
 export PATH=/legato/systems/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
@@ -32,7 +40,7 @@ CheckConnection()
     done
     if [ "${i}" -eq "${retries}" ]; then
         # Connection request time out.
-        exit 8
+        exit ${TIMEOUT}
     fi
     # Connected.
     exit 0
@@ -57,15 +65,23 @@ case ${CMD} in
     echo "WIFI_START"
     # Mount the WiFi network interface
     /etc/init.d/tiwifi start && exit 0
-    WLANSTRING=$(/sbin/ifconfig -a | grep ${IFACE})
-    if [ -n ${WLANSTRING} ]; then
-    # Interface exists but can not be brought up, means WiFi hardware
-    # is inserted, drivers are loaded successfully, do reset
-      WiFiReset && exit 0
+    # Store failure reason
+    FAILUREREASON=$?
+    # If tiwifi.sh indicates firmware fails to boot, do reset
+    if [ ${FAILUREREASON} -eq ${FIRMWAREFAILURE} ]; then
+        WiFiReset && exit 0
+        # Reset fail, do clean up
+        /etc/init.d/tiwifi stop
+        exit ${FAILUREREASON}
     fi
-    # Interface does not exist, or reset fail, do clean up
+    # Hardware is absent, do clean up
+    if [ ${FAILUREREASON} -eq ${HARDWAREABSENCE} ]; then
+        /etc/init.d/tiwifi stop
+        exit ${FAILUREREASON}
+    fi
+    # Other reasons, do clean up also
     /etc/init.d/tiwifi stop
-    exit 127 ;;
+    exit ${FAILUREREASON} ;;
 
   WIFI_STOP)
     echo "WIFI_STOP"
@@ -100,9 +116,9 @@ case ${CMD} in
     #Check WiFi stop called or not
     /sbin/lsmod | grep wlcore >/dev/null
     #Driver stays, hardware removed
-    [ $? -eq 0 ] && exit 127
+    [ $? -eq 0 ] && exit ${HARDWAREABSENCE}
     #WiFi stop called
-    exit 100 ;;
+    exit ${NODRIVER} ;;
 
   WIFIAP_HOSTAPD_START)
     echo "WIFIAP_HOSTAPD_START"

@@ -44,7 +44,7 @@ static bool     SavedDiscoverable  = true;
  * The WiFi channel associated with the SSID
  */
 //--------------------------------------------------------------------------------------------------
-static uint32_t SavedChannelNumber = 0;
+static uint16_t SavedChannelNumber = 0;
 //--------------------------------------------------------------------------------------------------
 /**
  * The maximum numbers of clients the AP is able to manage
@@ -558,7 +558,7 @@ le_result_t pa_wifiAp_SetDiscoverable
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiAp_SetChannel
 (
-    int8_t channelNumber
+    uint16_t channelNumber
         ///< [IN]
         ///< the channel number must be between 1 and 14.
 )

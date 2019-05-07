@@ -126,6 +126,8 @@ void le_wifiAp_RemoveNewEventHandler
  *
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
+ * @return LE_NOT_FOUND     The WiFi card is absent.
+ * @return LE_NOT_POSSIBLE  The WiFi card may not work.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -286,7 +288,7 @@ le_result_t le_wifiAp_SetDiscoverable
 //--------------------------------------------------------------------------------------------------
 le_result_t le_wifiAp_SetChannel
 (
-    int8_t channelNumber
+    uint16_t channelNumber
         ///< [IN]
         ///< the channel number.
 )

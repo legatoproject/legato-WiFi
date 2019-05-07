@@ -21,7 +21,7 @@
  */
 //--------------------------------------------------------------------------------------------------
 //Trailing space is needed to pass argument
-#define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi.sh "
+#define WIFI_SCRIPT_PATH "/legato/systems/current/apps/wifiService/read-only/pa_wifi "
 #define WPA_SUPPLICANT_FILE "/tmp/wpa_supplicant.conf"
 
 // Set of commands to drive the WiFi features.
@@ -49,10 +49,7 @@ ssid=\"%.*s\"\n \
 scan_ssid=%d\n"
 
 //--------------------------------------------------------------------------------------------------
-
-#define PATH_MAX_BYTES  1024
-#define PA_TIMEOUT      8
-#define PA_DUPLICATE    14
+#define PATH_MAX_BYTES      1024
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -369,11 +366,11 @@ static void *WifiClientPaThreadMain
                             // WLAN interface is up, local request
                             cause = LE_WIFICLIENT_CLIENT_REQUEST;
                             break;
-                        case 100:
+                        case PA_NOT_POSSIBLE:
                             // Driver removed, WiFi stop called
                             cause = LE_WIFICLIENT_HARDWARE_STOP;
                             break;
-                        case 127:
+                        case PA_NOT_FOUND:
                             // WLAN interface is gone, WiFi hardware is removed
                             cause = LE_WIFICLIENT_HARDWARE_DETACHED;
                             break;
@@ -481,8 +478,10 @@ le_result_t pa_wifiClient_Release
 /**
  * Start WiFi Client PA
  *
- * @return LE_FAULT  The function failed.
- * @return LE_OK     The function succeeded.
+ * @return LE_FAULT         The function failed.
+ * @return LE_OK            The function succeeded.
+ * @return LE_NOT_FOUND     The WiFi card is absent.
+ * @return LE_NOT_POSSIBLE  The WiFi card may not work.
  */
 //--------------------------------------------------------------------------------------------------
 le_result_t pa_wifiClient_Start
@@ -491,31 +490,50 @@ le_result_t pa_wifiClient_Start
 )
 {
     int systemResult;
-
-    /* Create WiFi Client PA Thread */
-    WifiClientPaThread = le_thread_Create("WifiClientPaThread", WifiClientPaThreadMain, NULL);
-    le_thread_SetJoinable(WifiClientPaThread);
-    le_thread_AddChildDestructor(WifiClientPaThread, ThreadDestructor, NULL);
-    le_thread_Start(WifiClientPaThread);
+    le_result_t result = LE_OK;
 
     systemResult = system(WIFI_SCRIPT_PATH COMMAND_WIFI_HW_START);
     /**
      * Returned values:
-     *  0: if the interface is correctly moutned
-     * -1: if the fork() has failed (see man system)
-     * 91: if module is not loaded or interface not seen
+     *   0: if the interface is correctly moutned
+     *  50: if WiFi card is not inserted
+     * 100: if WiFi card may not work
+     * 127: if driver can not be installed
+     *  -1: if the fork() has failed (see man system)
      */
-    if ((!WIFEXITED(systemResult)) || (0 != WEXITSTATUS(systemResult)))
+    // Return value of 0 means WLAN interface is up.
+    if (0 == WEXITSTATUS(systemResult))
     {
-        LE_WARN("Unable to start WiFi client command \"%s\" systemResult (%d)",
+        LE_DEBUG("WiFi client started correctly");
+
+        /* Create WiFi Client PA Thread */
+        WifiClientPaThread = le_thread_Create("WifiClientPaThread", WifiClientPaThreadMain, NULL);
+        le_thread_SetJoinable(WifiClientPaThread);
+        le_thread_AddChildDestructor(WifiClientPaThread, ThreadDestructor, NULL);
+        le_thread_Start(WifiClientPaThread);
+        return LE_OK;
+    }
+    // Return value of 50 means WiFi card is not inserted.
+    else if ( PA_NOT_FOUND == WEXITSTATUS(systemResult))
+    {
+        LE_ERROR("WiFi card is not inserted");
+        result = LE_NOT_FOUND;
+    }
+    // Return value of 100 means WiFi card may not work.
+    else if ( PA_NOT_POSSIBLE == WEXITSTATUS(systemResult))
+    {
+        LE_ERROR("Unable to reset WiFi card");
+        result = LE_NOT_POSSIBLE;
+    }
+    // WiFi card failed to start.
+    else
+    {
+        LE_WARN("Failed to start WiFi client command \"%s\" systemResult (%d)",
                 COMMAND_WIFI_HW_START, systemResult);
-        le_thread_Cancel(WifiClientPaThread);
-        le_thread_Join(WifiClientPaThread, NULL);
-        return LE_FAULT;
+        result = LE_FAULT;
     }
 
-    LE_DEBUG("WiFi client started correctly");
-    return LE_OK;
+    return result;
 }
 
 //--------------------------------------------------------------------------------------------------
