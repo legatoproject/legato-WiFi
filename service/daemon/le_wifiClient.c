@@ -112,11 +112,11 @@ static le_result_t ScanResult = LE_OK;
 
 //--------------------------------------------------------------------------------------------------
 /**
- * Event ID for WiFi Event message notification.
+ * Event ID for WiFi Event notification.
  *
  */
 //--------------------------------------------------------------------------------------------------
-static le_event_Id_t NewWifiEventId;
+static le_event_Id_t WifiEventId;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -124,7 +124,7 @@ static le_event_Id_t NewWifiEventId;
  *
  */
 //--------------------------------------------------------------------------------------------------
-static le_event_Id_t WifiEventId;
+static le_event_Id_t WifiEventIndicationId;
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -161,26 +161,44 @@ static char scanIfName[LE_WIFIDEFS_MAX_IFNAME_BYTES] = {0};
 
 //--------------------------------------------------------------------------------------------------
 /**
- * CallBack for PA Events.
+ * CallBack for PA WiFi Event Indications.
  */
 //--------------------------------------------------------------------------------------------------
-static void PaEventHandler
+static void PaEventIndicationHandler
 (
-    le_wifiClient_EventInd_t* wifiEventPtr,
+    le_wifiClient_EventInd_t* wifiEventIndicationPtr,
     void *contextPtr
 )
 {
     LE_DEBUG("WiFi event: %d, interface: %s, bssid: %s",
-            wifiEventPtr->event,
-            wifiEventPtr->ifName,
-            wifiEventPtr->apBssid);
+            wifiEventIndicationPtr->event,
+            wifiEventIndicationPtr->ifName,
+            wifiEventIndicationPtr->apBssid);
 
-    if (LE_WIFICLIENT_EVENT_DISCONNECTED == wifiEventPtr->event)
+    if (LE_WIFICLIENT_EVENT_DISCONNECTED == wifiEventIndicationPtr->event)
     {
-        LE_DEBUG("disconnectCause: %d", wifiEventPtr->disconnectionCause);
+        LE_DEBUG("disconnectCause: %d", wifiEventIndicationPtr->disconnectionCause);
     }
 
-    le_event_ReportWithRefCounting(WifiEventId, wifiEventPtr);
+    le_event_ReportWithRefCounting(WifiEventIndicationId, wifiEventIndicationPtr);
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * CallBack for PA Events.
+ * @deprecated pa_wifiClient_AddEventHandler() should not be used anymore.
+ * It has been replaced by pa_wifiClient_AddEventIndHandler().
+ */
+//--------------------------------------------------------------------------------------------------
+static void PaEventHandler
+(
+    le_wifiClient_Event_t event,
+    void *contextPtr
+)
+{
+    LE_DEBUG("Event: %d ", event);
+
+    le_event_Report(WifiEventId, (void *)&event, sizeof(le_wifiClient_Event_t));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -515,23 +533,25 @@ static void ScanThreadDestructor
 
     LE_DEBUG("Destruct scan thread");
     ScanThreadRef = NULL;
-    le_wifiClient_EventInd_t* wifiEventPtr = le_mem_ForceAlloc(WifiEventPool);
+    le_wifiClient_EventInd_t* wifiEventIndicationPtr = le_mem_ForceAlloc(WifiEventPool);
 
     if (scanResult == LE_OK)
     {
-        wifiEventPtr->event = LE_WIFICLIENT_EVENT_SCAN_DONE;
+        wifiEventIndicationPtr->event = LE_WIFICLIENT_EVENT_SCAN_DONE;
     }
     else
     {
         LE_WARN("Scan failed");
-        wifiEventPtr->event = LE_WIFICLIENT_EVENT_SCAN_FAILED;
+        wifiEventIndicationPtr->event = LE_WIFICLIENT_EVENT_SCAN_FAILED;
     }
 
-    wifiEventPtr->disconnectionCause = LE_WIFICLIENT_UNKNOWN_CAUSE;
-    strncpy(wifiEventPtr->ifName, scanIfName, LE_WIFIDEFS_MAX_IFNAME_LENGTH);
-    wifiEventPtr->ifName[LE_WIFIDEFS_MAX_IFNAME_LENGTH] = '\0';
-    wifiEventPtr->apBssid[0] = '\0';
-    PaEventHandler(wifiEventPtr, NULL);
+    wifiEventIndicationPtr->disconnectionCause = LE_WIFICLIENT_UNKNOWN_CAUSE;
+    strncpy(wifiEventIndicationPtr->ifName, scanIfName, LE_WIFIDEFS_MAX_IFNAME_LENGTH);
+    wifiEventIndicationPtr->ifName[LE_WIFIDEFS_MAX_IFNAME_LENGTH] = '\0';
+    wifiEventIndicationPtr->apBssid[0] = '\0';
+    PaEventIndicationHandler(wifiEventIndicationPtr, NULL);
+
+    PaEventHandler(wifiEventIndicationPtr->event, NULL);
 }
 
 
@@ -681,9 +701,9 @@ le_wifiClient_NewEventHandlerRef_t le_wifiClient_AddNewEventHandler
     }
 
     handlerRef = le_event_AddLayeredHandler("NewWiFiClientMsgHandler",
-        NewWifiEventId,
-        FirstLayerWifiClientEventHandler,
-        (le_event_HandlerFunc_t)handlerFuncPtr);
+                                            WifiEventId,
+                                            FirstLayerWifiClientEventHandler,
+                                            (le_event_HandlerFunc_t)handlerFuncPtr);
 
     le_event_SetContextPtr(handlerRef, contextPtr);
 
@@ -722,7 +742,7 @@ le_wifiClient_ConnectionEventHandlerRef_t le_wifiClient_AddConnectionEventHandle
     }
 
     handlerRef = le_event_AddLayeredHandler("WiFiClientMsgHandler",
-                                            WifiEventId,
+                                            WifiEventIndicationId,
                                             FirstLayerWifiClientConnectionEventHandler,
                                             (le_event_HandlerFunc_t)handlerFuncPtr);
 
@@ -2375,12 +2395,16 @@ void le_wifiClient_Init
     // Create the Safe Reference Map to use for FoundAccessPoint_t object Safe References.
     ScanApRefMap = le_ref_CreateMap("le_wifiClient_AccessPoints", INIT_AP_COUNT);
 
-    // Create an event Id for new WiFi Events
-    WifiEventId = le_event_CreateIdWithRefCounting("WifiConnectState");
+    // Create an event indication Id for WiFi Events
+    WifiEventIndicationId = le_event_CreateIdWithRefCounting("WifiConnectState");
     WifiEventPool = le_mem_CreatePool("WifiConnectStatePool", sizeof(le_wifiClient_EventInd_t));
-
     // register for events from PA.
-    pa_wifiClient_AddEventIndHandler(PaEventHandler, NULL);
+    pa_wifiClient_AddEventIndHandler(PaEventIndicationHandler, NULL);
+
+    // Create an event Id for WiFi Events
+    WifiEventId = le_event_CreateId("WifiClientEvent", sizeof(le_wifiClient_Event_t));
+    // register for events from PA.
+    pa_wifiClient_AddEventHandler(PaEventHandler, NULL);
 
     // Add a handler to handle the close
     le_msg_AddServiceCloseHandler(le_wifiClient_GetServiceRef(), CloseSessionEventHandler, NULL);
