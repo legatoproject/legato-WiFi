@@ -172,7 +172,7 @@ static le_mem_PoolRef_t WifiPaEventPool;
  * Maximum numbers of bytes in temparatory config string written to wpa_supplicant.conf
  */
 //--------------------------------------------------------------------------------------------------
-#define TEMP_CONFIG_MAX_BYTES 1024
+#define TEMP_CONFIG_MAX_BYTES 512
 
 //--------------------------------------------------------------------------------------------------
 /**
@@ -861,6 +861,38 @@ le_result_t pa_wifiClient_SetSecurityProtocol
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * This function writes configurations to wpa_supplicant file.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t WriteClientCfgFile
+(
+    const char *dataPtr,
+    FILE *filePtr
+)
+{
+    size_t length;
+
+    if ((NULL == filePtr) || (NULL == dataPtr))
+    {
+        LE_ERROR("Invalid parameter(s)");
+        return LE_FAULT;
+    }
+
+    length = strlen(dataPtr);
+    if (length > 0)
+    {
+        if (fwrite(dataPtr, 1, length, filePtr) != length)
+        {
+            LE_ERROR("Unable to write the wpa_supplicant file.");
+            return LE_FAULT;
+        }
+    }
+
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
  * This function generates the WPA supplicant configuration file.
  */
 //--------------------------------------------------------------------------------------------------
@@ -873,7 +905,6 @@ static le_result_t GenerateWpaSupplicant
     FILE    *filePtr;
     char     tmpConfig[TEMP_CONFIG_MAX_BYTES];
     char     tmpString[TEMP_STRING_MAX_BYTES];
-    uint8_t  length;
 
     LE_DEBUG("Generate Wpa Supplicant");
 
@@ -900,10 +931,20 @@ static le_result_t GenerateWpaSupplicant
     snprintf(tmpConfig, sizeof(tmpConfig), WPA_SUPPLICANT_CONFIG_COMMON,
              ssidLength, (char *)ssidPtr, HiddenAccessPoint);
 
+    //The common part and the security protocol part are written to wpa_supplicant.conf
+    //separately for easier debug.
+    tmpConfig[TEMP_CONFIG_MAX_BYTES - 1] = '\0';
+    if (LE_OK != WriteClientCfgFile(tmpConfig, filePtr))
+    {
+        LE_ERROR("Unable to write wpa_supplicant common part");
+        goto WRONG_CONFIG;
+    }
+
+    memset(tmpConfig, '\0', sizeof(tmpConfig));
     switch (SavedSecurityProtocol)
     {
         case LE_WIFICLIENT_SECURITY_NONE:
-            le_utf8_Append(tmpConfig, "key_mgmt=NONE\n", sizeof(tmpConfig), NULL);
+            le_utf8_Copy(tmpConfig, "key_mgmt=NONE\n", sizeof(tmpConfig), NULL);
             break;
 
         case LE_WIFICLIENT_SECURITY_WEP:
@@ -913,9 +954,9 @@ static le_result_t GenerateWpaSupplicant
                 LE_ERROR("No valid WEP key");
                 goto WRONG_CONFIG;
             }
-            le_utf8_Append(tmpConfig, "key_mgmt=NONE\n", sizeof(tmpConfig), NULL);
+            le_utf8_Copy(tmpConfig, "key_mgmt=NONE\n", sizeof(tmpConfig), NULL);
             snprintf(tmpString, sizeof(tmpString), "wep_key0=\"%s\"\n", SavedWepKey);
-            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
+            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpConfig), NULL);
             break;
 
         case LE_WIFICLIENT_SECURITY_WPA_PSK_PERSONAL:
@@ -935,7 +976,7 @@ static le_result_t GenerateWpaSupplicant
             {
                 snprintf(tmpString, sizeof(tmpString), "psk=%s\n", SavedPreSharedKey);
             }
-            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
+            le_utf8_Copy(tmpConfig, tmpString, sizeof(tmpConfig), NULL);
             break;
 
         case LE_WIFICLIENT_SECURITY_WPA_EAP_PEAP0_ENTERPRISE:
@@ -946,12 +987,14 @@ static le_result_t GenerateWpaSupplicant
                 LE_ERROR("No valid Username or Password");
                 goto WRONG_CONFIG;
             }
-
+            le_utf8_Copy(tmpConfig, "key_mgmt=WPA-EAP\n", sizeof(tmpConfig), NULL);
+            le_utf8_Append(tmpConfig, "eap=PEAP\n", sizeof(tmpConfig), NULL);
             snprintf(tmpString, sizeof(tmpString), "identity=\"%s\"\n", SavedUsername);
-            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
+            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpConfig), NULL);
+            memset(tmpString, '\0', sizeof(tmpString));
             snprintf(tmpString, sizeof(tmpString), "password=\"%s\"\n", SavedPassword);
-            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpString), NULL);
-            le_utf8_Append(tmpConfig, "phase1=\"peaplabel=0\"\n", sizeof(tmpConfig), NULL);
+            le_utf8_Append(tmpConfig, tmpString, sizeof(tmpConfig), NULL);
+            le_utf8_Append(tmpConfig, "phase1=\"peapver=0\"\n", sizeof(tmpConfig), NULL);
             le_utf8_Append(tmpConfig, "phase2=\"auth=MSCHAPV2\"\n", sizeof(tmpConfig), NULL);
             break;
 
@@ -962,18 +1005,16 @@ static le_result_t GenerateWpaSupplicant
 
     // Append "}" to complete the network block
     le_utf8_Append(tmpConfig, "}\n", sizeof(tmpConfig), NULL);
+    tmpConfig[TEMP_CONFIG_MAX_BYTES - 1] = '\0';
 
-    length = strlen(tmpConfig);
-    if ( length > (TEMP_CONFIG_MAX_BYTES - 1) )
+    if (LE_OK != WriteClientCfgFile(tmpConfig, filePtr))
     {
+        LE_ERROR("Unable to write wpa_supplicant security protocol part");
         goto WRONG_CONFIG;
     }
 
-    if ( length == fwrite(&tmpConfig, 1, length, filePtr))
-    {
-        fclose(filePtr);
-        return LE_OK;
-    }
+    fclose(filePtr);
+    return LE_OK;
 
 WRONG_CONFIG:
 
