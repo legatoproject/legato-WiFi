@@ -85,6 +85,9 @@ case ${CMD} in
 
   WIFI_STOP)
     echo "WIFI_STOP"
+    # If wpa_supplicant is still running, terminate it
+    (/bin/ps -ax | grep wpa_supplicant | grep ${IFACE} >/dev/null 2>&1) \
+    && /sbin/wpa_cli -i${IFACE} terminate
     # Unmount the WiFi network interface
     /etc/init.d/tiwifi stop || exit 127
     exit 0 ;;

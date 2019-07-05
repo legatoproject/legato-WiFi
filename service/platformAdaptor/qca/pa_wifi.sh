@@ -79,6 +79,9 @@ case ${CMD} in
         exit ${ret} ;;
 
   WIFI_STOP)
+    # If wpa_supplicant is still running, terminate it
+    (/bin/ps -ax | grep wpa_supplicant | grep ${IFACE} >/dev/null 2>&1) \
+    && /sbin/wpa_cli -i${IFACE} terminate
     # Unmount the WiFi network interface
     /usr/bin/qca9377 wifi client stop > /dev/null 2>&1 || exit ${ERROR}
     ;;
