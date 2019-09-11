@@ -1,0 +1,24 @@
+//--------------------------------------------------------------------------------------------------
+// Legato WiFi support
+//
+// Copyright (C) Sierra Wireless Inc.
+//--------------------------------------------------------------------------------------------------
+
+buildVars:
+{
+    LEGATO_WIFI_ROOT=${LEGATO_ROOT}/modules/WiFi
+    // File is selected by users, replace "ti" with "qca" to support qca chipset
+    LEGATO_WIFI_PA=${LEGATO_WIFI_ROOT}/service/platformAdaptor/ti/pa_wifi.sh
+}
+
+apps:
+{
+    // WiFi services
+    $LEGATO_WIFI_ROOT/service/wifiService.adef
+    $LEGATO_WIFI_ROOT/apps/tools/wifi/wifi.adef
+}
+
+commands:
+{
+    wifi = wifi:/bin/wifi
+}

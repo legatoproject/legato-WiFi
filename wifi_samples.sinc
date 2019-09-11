@@ -1,10 +1,12 @@
 //--------------------------------------------------------------------------------------------------
-// Sample system definition that includes essential services and WiFi-related services and sample
-// applications.
+// Legato WiFi sample applications
 //
 // Copyright (C) Sierra Wireless Inc.
 //--------------------------------------------------------------------------------------------------
 
-#include "$LEGATO_ROOT/default.sdef"
-#include "wifi.sinc"
-#include "wifi_samples.sinc"
+apps:
+{
+    $LEGATO_WIFI_ROOT/apps/sample/wifiClientTest/wifiClientTest.adef
+    $LEGATO_WIFI_ROOT/apps/sample/wifiApTest/wifiApTest.adef
+    $LEGATO_WIFI_ROOT/apps/sample/wifiWebAp/wifiWebAp.adef
+}
