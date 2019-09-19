@@ -70,16 +70,17 @@ case ${CMD} in
     # If tiwifi.sh indicates firmware fails to boot, do reset
     if [ ${FAILUREREASON} -eq ${FIRMWAREFAILURE} ]; then
         WiFiReset && exit 0
-        # Reset fail, do clean up
+        echo "Reset fail, perform clean up"
         /etc/init.d/tiwifi stop
         exit ${FAILUREREASON}
     fi
     # Hardware is absent, do clean up
     if [ ${FAILUREREASON} -eq ${HARDWAREABSENCE} ]; then
+        echo "Hardware is absent, perform clean up"
         /etc/init.d/tiwifi stop
         exit ${FAILUREREASON}
     fi
-    # Other reasons, do clean up also
+    echo "Clean up due to unknown error"
     /etc/init.d/tiwifi stop
     exit ${FAILUREREASON} ;;
 

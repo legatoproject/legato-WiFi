@@ -516,13 +516,13 @@ le_result_t pa_wifiClient_Start
     // Return value of 50 means WiFi card is not inserted.
     else if ( PA_NOT_FOUND == WEXITSTATUS(systemResult))
     {
-        LE_ERROR("WiFi card is not inserted");
+        LE_WARN("WiFi card is not inserted");
         result = LE_NOT_FOUND;
     }
     // Return value of 100 means WiFi card may not work.
     else if ( PA_NOT_POSSIBLE == WEXITSTATUS(systemResult))
     {
-        LE_ERROR("Unable to reset WiFi card");
+        LE_WARN("Unable to reset WiFi card");
         result = LE_NOT_POSSIBLE;
     }
     // WiFi card failed to start.
