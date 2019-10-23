@@ -122,7 +122,7 @@ case ${CMD} in
 
   WIFIAP_HOSTAPD_STOP)
     rm -f /tmp/dnsmasq.wlan.conf
-    touch /tmp/dnsmasq.wlan.conf
+    /usr/bin/unlink /etc/dnsmasq.d/dnsmasq.wlan.conf
     /etc/init.d/dnsmasq stop
     killall hostapd
     sleep 1;
@@ -140,7 +140,7 @@ case ${CMD} in
   DNSMASQ_RESTART)
     echo "interface=${IFACE}" >> /tmp/dnsmasq.wlan.conf
     /etc/init.d/dnsmasq stop
-    pkill -9 dnsmasq
+    pidof dnsmasq && (kill -9 `pidof dnsmasq` || exit 127)
     /etc/init.d/dnsmasq start || exit ${ERROR}
     ;;
 
