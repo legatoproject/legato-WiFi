@@ -18,6 +18,17 @@ apps:
     $LEGATO_WIFI_ROOT/apps/tools/wifi/wifi.adef
 }
 
+//Kernel modules for TIWIFI support
+#if ${LE_CONFIG_WIFI_PA_TI_USE_LEGATO} = y
+kernelModules:
+{
+    $LEGATO_ROOT/drivers/ti/wlcore/wlcore.mdef
+    $LEGATO_ROOT/drivers/ti/wlcore/wlcore_sdio.mdef
+    $LEGATO_ROOT/drivers/ti/wl18xx/wl18xx.mdef
+}
+#endif
+
+
 commands:
 {
     wifi = wifi:/bin/wifi

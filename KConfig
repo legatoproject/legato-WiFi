@@ -27,6 +27,13 @@ config WIFI_PA_TI
   Platform adaptor for TI wireless module, such as that on the mangOH WiFi IoT
   card.
 
+config WIFI_PA_TI_USE_LEGATO
+  bool "TI WiFi Drivers"
+  depends on WIFI_PA_TI
+  default n
+  ---help---
+  Embed TI Wilink device drivers in Legato.
+
 config WIFI_PA_TI_SIMU
   bool "TI simulator"
   ---help---
