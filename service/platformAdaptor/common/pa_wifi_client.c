@@ -32,6 +32,7 @@
 #define COMMAND_WIFI_UNSET_EVENT        "WIFI_UNSET_EVENT"
 #define COMMAND_WIFICLIENT_START_SCAN   "WIFICLIENT_START_SCAN"
 #define COMMAND_WIFICLIENT_DISCONNECT   "WIFICLIENT_DISCONNECT"
+#define COMMAND_WIFICLIENT_GET_DATA     "WIFI_GET_DATA"   // using iw (interface) link command
 //Trailing space is needed to pass another argument by WIFI_SCRIPT_PATH
 #define COMMAND_WIFICLIENT_CONNECT      "WIFICLIENT_CONNECT "
 
@@ -620,6 +621,189 @@ le_result_t pa_wifiClient_Scan
 
     IsScanRunning = false;
     return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This function is used to determine if target is connected to an a AP or not.
+ * If target is connected, this function will get the information of AP which is
+ * currently connecting.
+ *
+ * @return LE_OK            The function succeeded.
+ * @return LE_BAD_PARAMETER The function failed due to an invalid parameter.
+ * @return LE_NOT_FOUND     The target is not connected.
+ * @return LE_FAULT         The function failed.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t pa_wifiClient_GetLinkResult
+(
+    pa_wifiClient_AccessPoint_t *accessPointPtr,
+        ///< [IN][OUT]
+        ///< Structure provided by calling function.
+        ///< Results filled out if result was LE_OK.
+    char scanIfName[]
+        ///< [IN][OUT]
+        ///< Array provided by calling function.
+        ///< Store WLAN interface used for scan.
+)
+{
+    /* Lists of prefix to get data from respone of command */
+    const char bssidPrefix[] = "Connected to ";
+    const char ssidPrefix[] = "\tSSID: ";
+    const char rxPrefix[] = "\tRX: ";
+    const char txPrefix[] = "\tTX: ";
+    const char signalPrefix[] = "\tsignal: ";
+    const char isNotConnected[] = "Not connected.";
+
+    const unsigned int bssidPrefixLen = NUM_ARRAY_MEMBERS(bssidPrefix) - 1;
+    const unsigned int ssidPrefixLen = NUM_ARRAY_MEMBERS(ssidPrefix) - 1;
+    const unsigned int rxPrefixLen = NUM_ARRAY_MEMBERS(rxPrefix) - 1;
+    const unsigned int txPrefixLen = NUM_ARRAY_MEMBERS(txPrefix) - 1;
+    const unsigned int signalPrefixLen = NUM_ARRAY_MEMBERS(signalPrefix) - 1;
+    const unsigned int isNotConnectedLen = NUM_ARRAY_MEMBERS(isNotConnected) - 1;
+
+    char path[PATH_MAX_BYTES];
+    struct timeval tv;
+    fd_set fds;
+    time_t start = time(NULL);
+    le_result_t ret = LE_NOT_FOUND;
+    int err;
+    char *retStart;
+    char *retEnd;
+    FILE *iwLinkPipePtr;
+
+    LE_INFO("Link results");
+
+    /* Open the command for reading. */
+    iwLinkPipePtr = popen(WIFI_SCRIPT_PATH COMMAND_WIFICLIENT_GET_DATA, "r");
+
+    if (NULL == iwLinkPipePtr)
+    {
+        LE_ERROR("ERROR: Failed to run command \"%s\": errno:%d: \"%s\" ",
+                  COMMAND_WIFICLIENT_GET_DATA,
+                  errno,
+                  strerror(errno));
+        return LE_FAULT;
+    }
+
+    if (NULL == accessPointPtr)
+    {
+        LE_ERROR("ERROR: accessPoint == NULL");
+        ret = LE_BAD_PARAMETER;
+        goto cleanup;
+    }
+
+    /* Default values */
+    accessPointPtr->signalStrength = LE_WIFICLIENT_NO_SIGNAL_STRENGTH;
+    accessPointPtr->ssidLength = 0;
+    accessPointPtr->rx = 0;
+    accessPointPtr->tx = 0;
+    memset(&accessPointPtr->ssidBytes, 0, LE_WIFIDEFS_MAX_SSID_BYTES);
+    memset(&accessPointPtr->bssid, 0, LE_WIFIDEFS_MAX_BSSID_BYTES);
+
+    /* Read the output a line at a time - output it. */
+    while (iwLinkPipePtr)
+    {
+        // Set up the timeout. Here we can wait for 1 second
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+
+        FD_ZERO(&fds);
+        FD_SET(fileno(iwLinkPipePtr), &fds);
+        err = select(fileno(iwLinkPipePtr) + 1, &fds, NULL, NULL, &tv);
+        if (!err)
+        {
+            LE_DEBUG("loop=%lu", time(NULL) - start);
+            if ((time(NULL) - start) >= 5)
+            {
+                LE_WARN("Link timeout");
+                goto cleanup;
+            }
+
+            continue;
+        }
+        else if (err < 0)
+        {
+            LE_ERROR("select() failed(%d)", errno);
+            goto cleanup;
+        }
+        else if (FD_ISSET(fileno(iwLinkPipePtr), &fds))
+        {
+            LE_DEBUG("Read next scan result");
+            if (NULL != fgets(path, sizeof(path), iwLinkPipePtr))
+            {
+                LE_DEBUG("PARSING: '%s'", path);
+                if(0 == strncmp(isNotConnected,path,isNotConnectedLen))
+                {
+                    LE_DEBUG("Connection is not available");
+                    ret = LE_FAULT;
+                    goto cleanup;
+                }
+                else if (0 == strncmp(ssidPrefix, path, ssidPrefixLen))         // ssid
+                {
+                    accessPointPtr->ssidLength =
+                    strnlen(path, LE_WIFIDEFS_MAX_SSID_BYTES + ssidPrefixLen) - ssidPrefixLen - 1;
+
+                    LE_DEBUG("FOUND SSID: '%s'", &path[ssidPrefixLen]);
+
+                    memcpy(&accessPointPtr->ssidBytes, &path[ssidPrefixLen],
+                           accessPointPtr->ssidLength);
+                    LE_DEBUG("SSID: '%s'", &accessPointPtr->ssidBytes[0]);
+                }
+                else if (0 == strncmp(signalPrefix, path, signalPrefixLen))     //signal Strength
+                {
+                    LE_DEBUG("FOUND SIGNAL STRENGTH: '%s'", &path[signalPrefixLen]);
+                    accessPointPtr->signalStrength = strtol(&path[signalPrefixLen], NULL, 10);
+                    LE_DEBUG("signal(%d)", accessPointPtr->signalStrength);
+                    ret = LE_OK;
+                    goto cleanup;
+                }
+
+                else if (0 == strncmp(rxPrefix, path, rxPrefixLen))             // Rx data
+                {
+                    LE_DEBUG("FOUND RX DATA: '%s'", &path[rxPrefixLen]);
+                    accessPointPtr->rx = strtol(&path[rxPrefixLen], NULL, 10);
+                    LE_DEBUG("RX(%"PRIu64")", accessPointPtr->rx);
+                }
+                else if (0 == strncmp(txPrefix, path, txPrefixLen))             // Tx data
+                {
+                    LE_DEBUG("FOUND TX DATA: '%s'", &path[txPrefixLen]);
+                    accessPointPtr->tx = strtol(&path[txPrefixLen], NULL, 10);
+                    LE_DEBUG("TX(%"PRIu64")", accessPointPtr->tx);
+                }
+                else if (0 == strncmp(bssidPrefix, path, bssidPrefixLen))       // Bssid
+                {
+                    LE_DEBUG("FOUND BSSID: '%s'", &path[bssidPrefixLen]);
+                    memcpy(&accessPointPtr->bssid, &path[bssidPrefixLen],
+                           LE_WIFIDEFS_MAX_BSSID_LENGTH);
+                    LE_DEBUG("BSSID: '%s'", &accessPointPtr->bssid[0]);
+                    if ('\0' == scanIfName[0])
+                    {
+                        if (NULL != (retStart = strstr(path, "wlan")) &&
+                            NULL != (retEnd = strchr(path, ')')))
+                            {
+                                strncpy(scanIfName, retStart, retEnd - retStart);
+                                scanIfName[LE_WIFIDEFS_MAX_IFNAME_LENGTH] = '\0';
+                                LE_DEBUG("Interface: '%s'", scanIfName);
+                            }
+                    }
+                }
+            }
+            else
+            {
+                LE_DEBUG("End of link results");
+                goto cleanup;
+            }
+        }
+    }
+
+cleanup:
+    if (NULL != iwLinkPipePtr)
+    {
+        pclose(iwLinkPipePtr);
+        iwLinkPipePtr = NULL;
+    }
+    return ret;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1394,4 +1578,3 @@ le_result_t pa_wifiClient_AddEventIndHandler
     le_event_SetContextPtr(handlerRef, contextPtr);
     return LE_OK;
 }
-

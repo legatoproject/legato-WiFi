@@ -37,6 +37,8 @@ typedef struct
     uint8_t  ssidLength;                            ///< The number of bytes in the ssidBytes.
     uint8_t  ssidBytes[LE_WIFIDEFS_MAX_SSID_BYTES]; ///< Contains ssidLength number of bytes.
     char     bssid[LE_WIFIDEFS_MAX_BSSID_BYTES];    ///< Contains the bssid.
+    uint64_t rx;                                    ///< Rx of access point (bytes).
+    uint64_t tx;                                    ///< Tx of access point (bytes).
 } pa_wifiClient_AccessPoint_t;
 
 //--------------------------------------------------------------------------------------------------
@@ -202,6 +204,27 @@ LE_SHARED le_result_t pa_wifiClient_GetScanResult
 LE_SHARED le_result_t pa_wifiClient_ScanDone
 (
     void
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ *
+ * @return LE_OK            The function succeeded.
+ * @return LE_BAD_PARAMETER The function failed due to an invalid parameter.
+ * @return LE_NOT_FOUND     The target is not connected.
+ * @return LE_FAULT         The function failed.
+ */
+//--------------------------------------------------------------------------------------------------
+LE_SHARED le_result_t pa_wifiClient_GetLinkResult
+(
+    pa_wifiClient_AccessPoint_t *accessPointPtr,
+        ///< [IN][OUT]
+        ///< Structure provided by calling function.
+        ///< Results filled out if result was LE_OK.
+    char scanIfName[]
+        ///< [IN][OUT]
+        ///< Array provided by calling function.
+        ///< Store WLAN interface used for scan.
 );
 
 //--------------------------------------------------------------------------------------------------

@@ -386,6 +386,11 @@ case ${CMD} in
     ${TI_WIFI_SH} stop || exit 127
     exit 0 ;;
 
+  WIFI_GET_DATA)
+    echo "WIFI_GET_DATA"
+    /usr/sbin/iw ${IFACE} link || exit 127
+    exit 0 ;;
+
   WIFI_SET_EVENT)
     echo "WIFI_SET_EVENT"
     /usr/sbin/iw event || exit 127

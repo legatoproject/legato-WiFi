@@ -918,6 +918,137 @@ le_result_t le_wifiClient_Scan
 
 //--------------------------------------------------------------------------------------------------
 /**
+ * Get results of access point which is currently connecting.
+ *
+ * @return
+ *      - LE_OK     The function succeeded.
+ *      - LE_FAULT  The function failed.
+ */
+//--------------------------------------------------------------------------------------------------
+static le_result_t GetLinkResult
+(
+    pa_wifiClient_AccessPoint_t *accessPoint
+        ///< [OUT]
+        ///< The data of access point
+)
+{
+    if (!accessPoint)
+    {
+        LE_KILL_CLIENT("accessPoint is NULL !");
+        return LE_FAULT;
+    }
+
+    memset(scanIfName, 0, LE_WIFIDEFS_MAX_IFNAME_BYTES);
+    if (LE_OK != pa_wifiClient_GetLinkResult(accessPoint,scanIfName))
+    {
+        LE_ERROR("ERORR: Failed to get data from iw command");
+        return LE_FAULT;
+    }
+
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Get signal strength of access point which is currently connecting.
+ *
+ * @return
+ *      - LE_OK     The function succeeded.
+ *      - LE_FAULT  The function failed.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_GetCurrentSignalStrength
+(
+    int16_t *signalStrength
+        ///< [OUT]
+        ///< The signal strength
+)
+{
+    if (!signalStrength)
+    {
+        LE_KILL_CLIENT("signalStrength is NULL !");
+        return LE_FAULT;
+    }
+
+    pa_wifiClient_AccessPoint_t accessPoint;
+    LE_DEBUG("Get current signal strength");
+    if (LE_OK != GetLinkResult(&accessPoint))
+    {
+        return LE_FAULT;
+    }
+    *signalStrength = accessPoint.signalStrength;
+
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Get RX data of access point which is currently connecting.
+ *
+ * @return
+ *      - LE_OK     The function succeeded.
+ *      - LE_FAULT  The function failed.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_GetRxData
+(
+    uint64_t *rxData
+        ///< [OUT]
+        ///< The rx data
+)
+{
+    if (!rxData)
+    {
+        LE_KILL_CLIENT("rxBytes is NULL !");
+        return LE_FAULT;
+    }
+
+    pa_wifiClient_AccessPoint_t accessPoint;
+    LE_DEBUG("Get rx data");
+    if (LE_OK != GetLinkResult(&accessPoint))
+    {
+        return LE_FAULT;
+    }
+    *rxData = accessPoint.rx;
+
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Get TX data of access point which is currently connecting.
+ *
+ * @return
+ *       - LE_OK     The function succeeded.
+ *       - LE_FAULT  The function failed.
+ */
+//--------------------------------------------------------------------------------------------------
+le_result_t le_wifiClient_GetTxData
+(
+    uint64_t *txData
+        ///< [OUT]
+        ///< The tx data
+)
+{
+    if (!txData)
+    {
+        LE_KILL_CLIENT("txBytes is NULL !");
+        return LE_FAULT;
+    }
+
+    pa_wifiClient_AccessPoint_t accessPoint;
+    LE_DEBUG("Get tx data");
+    if (LE_OK != GetLinkResult(&accessPoint))
+    {
+        return LE_FAULT;
+    }
+    *txData = accessPoint.tx;
+
+    return LE_OK;
+}
+
+//--------------------------------------------------------------------------------------------------
+/**
  * Get the first WiFi Access Point found.
  *
  * @return
