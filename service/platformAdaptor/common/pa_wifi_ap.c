@@ -588,25 +588,11 @@ le_result_t pa_wifiAp_Init
     void
 )
 {
-    le_result_t result       = LE_FAULT;
-    int         systemResult;
+    le_result_t result = LE_OK;
 
     LE_INFO("pa_wifiAp_Init() called");
     // Create the event for signaling user handlers.
     WifiApPaEvent = le_event_CreateId("WifiApPaEvent", sizeof(le_wifiAp_Event_t));
-
-    systemResult = system("chmod 755 " WIFI_SCRIPT_PATH);
-
-    if (0 == WEXITSTATUS (systemResult))
-    {
-        LE_INFO("WiFi Access Point Command OK: chmod");
-        result = LE_OK;
-    }
-    else
-    {
-        LE_ERROR("WiFi Access Point Command Failed: chmod (%d)", systemResult);
-        result = LE_FAULT;
-    }
 
     return result;
 }
