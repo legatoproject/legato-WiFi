@@ -106,7 +106,7 @@ static void WifiEventHandler
 
     if (LogFilePipePtr == NULL)
     {
-        LE_ERROR("fopen failed for " LOGFILE ":  errno:%d %s", errno, strerror(errno));
+        LE_ERROR("fopen failed for " LOGFILE ":  errno:%d %s", errno, LE_ERRNO_TXT(errno));
         return;
     }
 
@@ -206,8 +206,8 @@ static void StartWebServer
         LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
             (tmpString),
             errno,
-            strerror(errno));
-        LE_ERROR("errno:%d %s", errno, strerror(errno));
+            LE_ERRNO_TXT(errno));
+        LE_ERROR("errno:%d %s", errno, LE_ERRNO_TXT(errno));
 
         return;
     }
@@ -248,7 +248,7 @@ static void StartWebServer
     }
     else
     {
-        LE_ERROR("ERROR: fopen failed for " LOGFILE ":  errno:%d %s", errno, strerror(errno));
+        LE_ERROR("ERROR: fopen failed for " LOGFILE ":  errno:%d %s", errno, LE_ERRNO_TXT(errno));
     }
 }
 

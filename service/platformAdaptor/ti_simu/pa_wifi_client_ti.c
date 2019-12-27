@@ -205,7 +205,7 @@ static void *WifiClientPaThreadMain
         LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
             (tmpString),
             errno,
-            strerror(errno));
+            LE_ERRNO_TXT(errno));
         return NULL;
     }
 
@@ -429,7 +429,7 @@ le_result_t pa_wifiClient_Scan
         LE_ERROR("Failed to run command: errno:%d: \"%s\" Cmd:"
             COMMAND_WIFICLIENT_START_SCAN,
             errno,
-            strerror(errno));
+            LE_ERRNO_TXT(errno));
         result = LE_FAULT;
     }
 
@@ -699,7 +699,7 @@ le_result_t pa_wifiClient_Connect
                     LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
                         (tmpString),
                         errno,
-                        strerror(errno));
+                        LE_ERRNO_TXT(errno));
                     result = LE_FAULT;
                 }
                 else
@@ -788,7 +788,7 @@ le_result_t pa_wifiClient_Connect
                     LE_ERROR("pa_wifi_Connect: Failed to run command:\"%s\" errno:%d %s",
                         (tmpString),
                         errno,
-                        strerror(errno));
+                        LE_ERRNO_TXT(errno));
                     result = LE_FAULT;
                 } else {
                     LE_INFO("Cmd successful: %s", tmpString);

@@ -290,9 +290,9 @@ static void *WifiApPaThreadMain
     if (NULL == IwThreadPipePtr)
     {
         LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
-                COMMAND_WIFI_SET_EVENT,
-                errno,
-                strerror(errno));
+                 COMMAND_WIFI_SET_EVENT,
+                 errno,
+                 LE_ERRNO_TXT(errno));
         return NULL;
     }
 

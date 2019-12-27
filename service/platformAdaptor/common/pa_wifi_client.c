@@ -288,7 +288,7 @@ static void *WifiClientPaThreadMain
         LE_ERROR("Failed to run command:\"%s\" errno:%d %s",
                 COMMAND_WIFI_SET_EVENT,
                 errno,
-                strerror(errno));
+                LE_ERRNO_TXT(errno));
         return NULL;
     }
 
@@ -614,7 +614,7 @@ le_result_t pa_wifiClient_Scan
         LE_ERROR("Failed to run command \"%s\": errno:%d: \"%s\" ",
                 COMMAND_WIFICLIENT_START_SCAN,
                 errno,
-                strerror(errno));
+                LE_ERRNO_TXT(errno));
         result = LE_FAULT;
     }
 
