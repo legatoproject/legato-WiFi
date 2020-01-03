@@ -56,13 +56,6 @@
 //--------------------------------------------------------------------------------------------------
 #define WIFI_HOSTAPD_FILE "/tmp/hostapd.conf"
 
-//--------------------------------------------------------------------------------------------------
-/**
- * Name servers configuration file
- */
-//--------------------------------------------------------------------------------------------------
-#define RESOLV_CFG_FILE "/etc/resolv.conf"
-
 // WiFi access point configuration.
 //--------------------------------------------------------------------------------------------------
 /**
@@ -1312,67 +1305,7 @@ le_result_t pa_wifiAp_SetIpRange
                 //Interface is generated when COMMAND_DNSMASQ_RESTART called
                 fprintf(filePtr, "dhcp-range=%s,%s,%dh\n", ipStartPtr, ipStopPtr, 24);
                 fprintf(filePtr, "dhcp-option=%d,%s\n", 3, ipApPtr);
-
-                FILE *resolvConfPtr = fopen(RESOLV_CFG_FILE, "r");
-                char buf[128];
-                char dns[256] = "";
-                char *dPtr;
-                int len, remain;
-
-                remain = 256;
-                if (resolvConfPtr)
-                {
-                    // Retrieve DNS IP addresses configured behind the
-                    // nameserver keyword on all lines of RESOLV_CFG_FILE
-                    while (fgets(buf, 128, resolvConfPtr))
-                    {
-                        if (strstr(buf, "nameserver"))
-                        {
-                            // if dns is not empty, we need to add a comma to
-                            // separate each dns
-                            if (strlen(dns))
-                            {
-                                strncat(dns, ",", 1);
-                                --remain;
-                            }
-
-                            dPtr = strchr(buf, ' ');
-                            ++dPtr; // move the pointer to the next character (current
-                                    // is pointing at the ' ')
-                            //determine the actual copying length
-                            len = strlen(dPtr);
-                            len = ((dPtr[len-1] == '\n') ? len-1 : len);
-
-                            // if dns array is full but more DNS servers, then
-                            // skip for the remaining.
-                            // we have to skip if remain == len, because we need
-                            // 1 more char for null character
-                            if (remain <= len)
-                            {
-                                break;
-                            }
-
-                            // concat dPtr to dns
-                            strncat(dns, dPtr, len);
-                            remain -= len;
-                        }
-                        // will skip the current line if it doesn't contain
-                        // the tag "nameserver"
-                    }
-
-                    fclose(resolvConfPtr);
-
-                    LE_DEBUG("dns to be written: %s", dns);
-
-                    fprintf(filePtr, "dhcp-option=%d,%s\n", 6, dns);
-                }
-                else
-                {
-                    LE_WARN("Cannot retrieve DNS address for dhcp-option 6, "
-                            "using device's own IP instead");
-                    fprintf(filePtr, "dhcp-option=%d,%s\n", 6, ipApPtr);
-                }
-
+                fprintf(filePtr, "dhcp-option=%d,%s\n", 6, ipApPtr);
                 fclose(filePtr);
             }
             else
