@@ -258,7 +258,7 @@ static void WifiClientEventIndHandler
             TestReadScanResults();
             if (ScanDoneEventCounter < NBR_OF_SCAN_LOOPS)
             {
-                sleep(2);
+                le_thread_Sleep(2);
                 LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: Start New Scan %d)", ScanDoneEventCounter);
                 le_wifiClient_Scan();
             }
@@ -322,7 +322,7 @@ static void WifiClientEventHandler
             TestReadScanResults();
             if (ScanDoneEventCounter < NBR_OF_SCAN_LOOPS)
             {
-                sleep(2);
+                le_thread_Sleep(2);
                 LE_DEBUG("LE_WIFICLIENT_EVENT_SCAN_DONE: Start New Scan %d)", ScanDoneEventCounter);
                 le_wifiClient_Scan();
             }
