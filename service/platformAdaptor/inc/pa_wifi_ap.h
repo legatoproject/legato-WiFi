@@ -89,7 +89,7 @@ LE_SHARED le_result_t pa_wifiAp_Release
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
  * @return LE_NOT_FOUND     The WiFi card is absent.
- * @return LE_NOT_POSSIBLE  The WiFi card may not work.
+ * @return LE_UNAVAILABLE   The WiFi card may not work.
  *
  */
 //--------------------------------------------------------------------------------------------------
