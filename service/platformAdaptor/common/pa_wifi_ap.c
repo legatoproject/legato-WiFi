@@ -615,7 +615,7 @@ le_result_t pa_wifiAp_Release
  * @return LE_FAULT         The function failed.
  * @return LE_OK            The function succeeded.
  * @return LE_NOT_FOUND     The WiFi card is absent.
- * @return LE_UNAVAILABLE   The WiFi card may not work.
+ * @return LE_NOT_POSSIBLE  The WiFi card may not work.
  *
  */
 //--------------------------------------------------------------------------------------------------
@@ -679,7 +679,7 @@ le_result_t pa_wifiAp_Start
     else if ( PA_NOT_POSSIBLE == WEXITSTATUS(systemResult))
     {
         LE_ERROR("Unable to reset WiFi card");
-        return LE_UNAVAILABLE;
+        return LE_NOT_POSSIBLE;
     }
     // WiFi card failed to start.
     else
