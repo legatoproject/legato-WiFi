@@ -6,5 +6,9 @@
 //--------------------------------------------------------------------------------------------------
 
 #include "$LEGATO_ROOT/default.sdef"
-#include "wifi.sinc"
+#if ${LE_CONFIG_ENABLE_WIFI} = y
+    // wifi.sinc already included in default.sdef
+#else
+    #include "wifi.sinc"
+#endif
 #include "wifi_samples.sinc"
