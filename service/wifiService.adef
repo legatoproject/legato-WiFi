@@ -37,5 +37,5 @@ extern:
 
 bindings:
 {
-    wifiService.daemon.le_secStore -> <root>.le_secStore
+    wifiService.daemon.le_secStore -> secStore.le_secStore
 }
