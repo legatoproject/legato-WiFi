@@ -181,13 +181,10 @@ void ExecuteWifiApCommand
             printf("ERROR: Missing or bad argument.\n");
             exit(EXIT_FAILURE);
         }
+
+        errno = 0;
         securityProtocol = strtol(secuProtoStr, NULL, 10);
-        if (errno != 0)
-        {
-            printf("ERROR: Bad argument value. Valid value is 0 or 1.\n");
-            exit(EXIT_FAILURE);
-        }
-        if ((securityProtocol < 0) || (securityProtocol > 1))
+        if ((ERANGE == errno) || (securityProtocol < 0) || (securityProtocol > 1))
         {
             printf("ERROR: Bad argument value. Valid value is 0 or 1.\n");
             exit(EXIT_FAILURE);
@@ -218,8 +215,9 @@ void ExecuteWifiApCommand
             exit(EXIT_FAILURE);
         }
 
+        errno = 0;
         stdMask = strtol(stdMaskPtr, NULL, 0);
-        if (errno != 0)
+        if (ERANGE == errno)
         {
             printf("ERROR: Invalid argument.\n");
             exit(EXIT_FAILURE);
@@ -289,8 +287,9 @@ void ExecuteWifiApCommand
             exit(EXIT_FAILURE);
         }
 
+        errno = 0;
         channelNo = strtol(channelPtr, NULL, 10);
-        if (errno != 0)
+        if (ERANGE == errno)
         {
             printf("ERROR: Invalid argument.\n");
             exit(EXIT_FAILURE);
@@ -406,8 +405,10 @@ void ExecuteWifiApCommand
             printf("ERROR: Missing or bad argument.\n");
             exit(EXIT_FAILURE);
         }
+
+        errno = 0;
         discoverable = strtol(discoverablePtr, NULL, 2);
-        if (errno != 0)
+        if (ERANGE == errno)
         {
             printf("ERROR: Invalid argument.\n");
             exit(EXIT_FAILURE);
@@ -435,8 +436,10 @@ void ExecuteWifiApCommand
             printf("ERROR: Missing or bad argument.\n");
             exit(EXIT_FAILURE);
         }
+
+        errno = 0;
         maxClients = strtol(maxClientsPtr, NULL, 10);
-        if ((errno != 0) || (maxClients < 0))
+        if ((ERANGE == errno) || (maxClients < 0))
         {
             printf("ERROR: Bad argument value. Should be a positive decimal value.\n");
             exit(EXIT_FAILURE);
